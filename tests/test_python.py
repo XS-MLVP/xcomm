@@ -50,3 +50,4 @@ async def test_async():
 if __name__ == "__main__":
     test_xdata()
     run(test_async())
+    print("version: %s" % version())

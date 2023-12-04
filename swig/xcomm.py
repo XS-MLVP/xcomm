@@ -151,3 +151,7 @@ XClock.AStep = XClock_AStep
 XClock.ACondition = XClock_ACondition
 XClock.ANext =XClock_ANext
 XClock.RunStep = XClock_RunStep
+
+xcomm_version = "0.0.1"
+if xcomm_version != version():
+    print("Warn: python wrapper version(%s) conflict with _pyxcomm.so version(%s)", xcomm_version, version())

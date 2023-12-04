@@ -17,6 +17,9 @@
 #include <cstdlib>
 #include <climits>
 
+#define xcomm_version "0.0.1"
+#define XCOMM_VERSION xcomm_version
+
 namespace xcomm {
 void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)
 {
@@ -98,6 +101,7 @@ enum class LogLevel {
 
 LogLevel get_log_level();
 void set_log_level(LogLevel val);
+std::string version();
 
 #define output(o, level, prefix, fmt, ...)                                     \
     {                                                                          \
@@ -220,6 +224,13 @@ inline u_int64_t xRandom(u_int64_t a, u_int64_t b)
 inline void XSeed(unsigned int seed)
 {
     srand(seed);
+}
+
+inline bool checkVersion()
+{
+    if (version() == XCOMM_VERSION) { return true; }
+    Warn("so version(%s) conflict with headers (%s)", version().c_str(),
+         XCOMM_VERSION) return false;
 }
 
 #define FOR_COUNT(n)                                                           \

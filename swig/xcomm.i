@@ -53,6 +53,7 @@
 %include "xcomm/xclock.h"
 %include "xcomm/xdata.h"
 %include "xcomm/xport.h"
+%include "xcomm/xutil.h"
 
 %constant void (*_TEST_DPI_LR)(xsvLogic *v) = xcomm::TEST_DPI_LR;
 %constant void (*_TEST_DPI_LW)(xsvLogic v) = xcomm::TEST_DPI_LW;

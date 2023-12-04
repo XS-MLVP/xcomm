@@ -10,4 +10,7 @@ void set_log_level(LogLevel val)
 {
     log_level = val;
 }
+std::string version(){
+    return XCOMM_VERSION;
+}
 } // namespace xcomm

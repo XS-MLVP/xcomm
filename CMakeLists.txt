@@ -14,3 +14,11 @@ add_subdirectory(tests)
 if ("$ENV{BUILD_SWIG}" STREQUAL "ON")
 	add_subdirectory(swig)
 endif()
+
+add_custom_target(copy_include ALL
+VERBATIM
+COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include"
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+							"${CMAKE_CURRENT_SOURCE_DIR}/include"
+							"${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/include"
+)
