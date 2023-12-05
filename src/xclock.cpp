@@ -27,7 +27,7 @@ bool XStep::ready()
     return this->clk->clk == this->target_clk;
 }
 #else
-XStep::XStep(XClock &clk, u_int64_t step = 1)
+XStep::XStep(XClock &clk, u_int64_t step)
 {
     Assert(false, "XStep needs C++20 support");
 }

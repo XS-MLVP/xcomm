@@ -25,19 +25,6 @@ bool schedule_awit(std::map<std::coroutine_handle<>, _XAWait *> *p)
     }
     return xhandl_list.size() == 0 && (*p).size() == 0;
 }
-#else
-
-bool schedule_awit(std::map<std::coroutine_handle<>, _XAWait *> *p)
-{
-    Assert(false, "schedule_awit need c++20 support!");
-}
-
-XCondition::XCondition(std::function<bool(void)> checker, void *p)
-{
-    Assert(false, "XCondition needs C++20 support");
-}
-
-#endif // __cplusplus >= 202002L
 
 bool _PromiseBase::set_handler_list(
     std::map<std::coroutine_handle<>, _XAWait *> *p)
@@ -113,5 +100,19 @@ bool XNext::ready()
     return false;
 }
 constexpr void XNext::await_resume() const noexcept {}
+
+#else
+
+bool schedule_awit(void *p)
+{
+    Assert(false, "schedule_awit need c++20 support!");
+}
+
+XCondition::XCondition(std::function<bool(void)> checker, void *p)
+{
+    Assert(false, "XCondition needs C++20 support");
+}
+
+#endif // __cplusplus >= 202002L
 
 } // namespace xcomm
