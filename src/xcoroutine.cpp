@@ -1,7 +1,8 @@
 #include "xcomm/xcoroutine.h"
 
 namespace xcomm {
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
+#pragma message("ENABLE_XCOROUTINE is enabled")
 
 std::map<std::coroutine_handle<>, _XAWait *> __xhandl_list__;
 
@@ -102,6 +103,7 @@ bool XNext::ready()
 constexpr void XNext::await_resume() const noexcept {}
 
 #else
+#pragma message("ENABLE_XCOROUTINE is not enabled, it needs C++20 support")
 
 bool schedule_awit(void *p)
 {
@@ -113,6 +115,6 @@ XCondition::XCondition(std::function<bool(void)> checker, void *p)
     Assert(false, "XCondition needs C++20 support");
 }
 
-#endif // __cplusplus >= 202002L
+#endif // ENABLE_XCOROUTINE
 
 } // namespace xcomm

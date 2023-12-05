@@ -9,7 +9,7 @@
 
 namespace xcomm {
 class XClock;
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
 class XStep : public _XAWait
 {
     u_int64_t target_clk;
@@ -40,7 +40,7 @@ struct XClockCallBack {
 class XClock
 {
     xfunction<int, bool> step_fc;
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
     std::map<std::coroutine_handle<>, _XAWait *> cor_handler;
 #endif
     std::vector<XClockCallBack> list_call_back_ris;
@@ -83,7 +83,7 @@ public:
                  std::string desc = "");
     void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
                  std::string desc = "");
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
     XStep AStep(int i = 1);
     XCondition ACondition(std::function<bool(void)> checker);
     XNext ANext(int n = 1);

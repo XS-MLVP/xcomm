@@ -1,7 +1,7 @@
 #include "xcomm/xclock.h"
 
 namespace xcomm {
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
 XStep::XStep(XClock &clk, u_int64_t step,
              std::map<std::coroutine_handle<>, _XAWait *> *p) :
     _XAWait(p)
@@ -43,7 +43,7 @@ void XClock::_step(bool d)
 
 void XClock::_shchedule_await()
 {
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
     schedule_awit(&this->cor_handler);
 #endif
 }
@@ -179,7 +179,7 @@ void XClock::StepFal(xfunction<void, u_int64_t, void *> func,
     return this->_add_cb(this->list_call_back_fal, func, args, desc);
 }
 
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
 XStep XClock::AStep(int i)
 {
     return XStep(*this, i, &this->cor_handler);

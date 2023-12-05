@@ -3,7 +3,8 @@
 
 #include "xcomm/xutil.h"
 
-#if __cplusplus >= 202002L
+#if ENABLE_XCOROUTINE
+
 #include <coroutine>
 #include <map>
 #include <type_traits>
@@ -140,6 +141,7 @@ public:
 } // namespace xcomm
 
 #else
+
 namespace xcomm {
 bool schedule_awit(void *p = nullptr);
 
@@ -150,5 +152,5 @@ public:
                void *p = nullptr);
 };
 } // namespace xcomm
-#endif // __cplusplus >= 202002L
+#endif // ENABLE_XCOROUTINE
 #endif
