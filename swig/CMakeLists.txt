@@ -60,5 +60,4 @@ add_custom_target(
   DEPENDS pyxspcomm_so_lnk
 )
 
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
 install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION . USE_SOURCE_PERMISSIONS)
