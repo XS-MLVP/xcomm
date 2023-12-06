@@ -27,14 +27,14 @@ python.i
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python/xspcomm)
-set_target_properties(pyxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${XCOMM_LIB_DIR})
+set_target_properties(pyxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR})
 
 # copy file
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py PROPERTIES GENERATED TRUE)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
-    COMMAND ${CMAKE_COMMAND} -E rename
-            ${XCOMM_LIB_DIR}/_pyxspcomm.so
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${SWIG_OUTFILE_DIR}/_pyxspcomm.so
             ${XCOMM_LIB_DIR}/_pyxspcomm.so.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py

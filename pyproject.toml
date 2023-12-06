@@ -3,5 +3,5 @@ requires = ["scikit-build-core"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "pyxcomm"
+name = "pyxspcomm"
 version = "0.0.1"
