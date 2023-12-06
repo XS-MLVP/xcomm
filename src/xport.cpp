@@ -1,6 +1,6 @@
-#include "xcomm/xport.h"
+#include "xspcomm/xport.h"
 
-namespace xcomm {
+namespace xspcomm {
 
 std::string XPort::asKey(std::string name)
 {
@@ -17,7 +17,7 @@ int XPort::PortCount()
     return this->port_list.size();
 }
 
-bool XPort::Add(std::string pin, xcomm::XData &pin_data)
+bool XPort::Add(std::string pin, xspcomm::XData &pin_data)
 {
     auto pin_name = this->asKey(pin);
     Assert("pin_name" != pin_name, "pin name cannot be empty!");
@@ -69,12 +69,12 @@ XPort &XPort::NewSubPort(std::string subprefix)
     return *port;
 }
 
-xcomm::XData &XPort::operator[](std::string key)
+xspcomm::XData &XPort::operator[](std::string key)
 {
     return this->Get(key);
 }
 
-xcomm::XData &XPort::Get(std::string key, bool raw_key)
+xspcomm::XData &XPort::Get(std::string key, bool raw_key)
 {
     Assert(this->port_list.count(raw_key ? key : this->asKey(key)) > 0,
            "key: %s not find!",
@@ -106,7 +106,7 @@ XPort &XPort::WriteOnFall()
     return *this;
 }
 
-XPort &XPort::ReadFresh(xcomm::WriteMode m)
+XPort &XPort::ReadFresh(xspcomm::WriteMode m)
 {
     for (auto &e : this->port_list) { e.second->ReadFresh(m); }
     return *this;
@@ -131,4 +131,4 @@ std::string XPort::String(std::string prefix)
     }
     return ret;
 }
-} // namespace xcomm
+} // namespace xspcomm

@@ -1,13 +1,13 @@
-#ifndef __xcomm_xdata__
-#define __xcomm_xdata__
+#ifndef __xspcomm_xdata__
+#define __xspcomm_xdata__
 
 #include <stdio.h>
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "xcomm/xcallback.h"
+#include "xspcomm/xcallback.h"
 
-namespace xcomm {
+namespace xspcomm {
 
 typedef unsigned char xsvLogic; /* scalar */
 
@@ -228,5 +228,5 @@ public:
         return (T)(this->operator u_int64_t());
     }
 };
-} // namespace xcomm
+} // namespace xspcomm
 #endif

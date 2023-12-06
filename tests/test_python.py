@@ -1,5 +1,5 @@
 
-from xcomm import *
+from xspcomm import *
 import sys
 from asyncio import run, create_task, sleep
 

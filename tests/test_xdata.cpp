@@ -1,7 +1,7 @@
-#include "xcomm/xcomm.h"
-#include "xcomm/xinstance.h"
+#include "xspcomm/xcomm.h"
+#include "xspcomm/xinstance.h"
 
-using namespace xcomm;
+using namespace xspcomm;
 
 int main(int argsc, const char **argsv)
 {

@@ -1,7 +1,7 @@
-#include "xcomm/xcomm.h"
-#include "xcomm/xinstance.h"
+#include "xspcomm/xcomm.h"
+#include "xspcomm/xinstance.h"
 
-namespace xcomm {
+namespace xspcomm {
 
 #define test_assert(c, fmt, ...)      \
     {                                 \
@@ -190,4 +190,4 @@ int test_xdata()
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
-} // namespace xcomm
+} // namespace xspcomm

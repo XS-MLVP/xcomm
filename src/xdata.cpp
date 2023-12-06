@@ -1,8 +1,8 @@
 
-#include "xcomm/xdata.h"
-#include "xcomm/xutil.h"
+#include "xspcomm/xdata.h"
+#include "xspcomm/xutil.h"
 
-namespace xcomm {
+namespace xspcomm {
 
 void TEST_DPI_LR(void *v)
 {
@@ -913,4 +913,4 @@ bool XData::Connect(XData &xdata)
                xdata.mName.c_str());
     }
 }
-} // namespace xcomm
+} // namespace xspcomm

@@ -1,13 +1,13 @@
-#ifndef __xcomm_xclock__
-#define __xcomm_xclock__
+#ifndef __xspcomm_xclock__
+#define __xspcomm_xclock__
 
-#include "xcomm/xdata.h"
-#include "xcomm/xport.h"
-#include "xcomm/xutil.h"
-#include "xcomm/xcoroutine.h"
-#include "xcomm/xcallback.h"
+#include "xspcomm/xdata.h"
+#include "xspcomm/xport.h"
+#include "xspcomm/xutil.h"
+#include "xspcomm/xcoroutine.h"
+#include "xspcomm/xcallback.h"
 
-namespace xcomm {
+namespace xspcomm {
 class XClock;
 #if ENABLE_XCOROUTINE
 class XStep : public _XAWait
@@ -55,19 +55,19 @@ class XClock
                  std::string desc);
 
 public:
-    std::vector<xcomm::XData *> pins;
-    std::vector<xcomm::XPort *> ports;
+    std::vector<xspcomm::XData *> pins;
+    std::vector<xspcomm::XPort *> ports;
     u_int64_t clk     = 0;
     bool stop_on_rise = true;
 
     void default_stop_on_rise(bool rise);
     XClock(xfunction<int, bool> stepfunc,
-           std::initializer_list<xcomm::XData *> pins  = {},
-           std::initializer_list<xcomm::XPort *> ports = {});
-    void Add(xcomm::XData *d);
-    void Add(xcomm::XData &d);
-    void Add(xcomm::XPort *d);
-    void Add(xcomm::XPort &d);
+           std::initializer_list<xspcomm::XData *> pins  = {},
+           std::initializer_list<xspcomm::XPort *> ports = {});
+    void Add(xspcomm::XData *d);
+    void Add(xspcomm::XData &d);
+    void Add(xspcomm::XPort *d);
+    void Add(xspcomm::XPort &d);
 
     /**
      * @brief Step the clock, and call all the callback functions. After every
@@ -90,6 +90,6 @@ public:
 #endif
 };
 
-} // namespace xcomm
+} // namespace xspcomm
 
 #endif

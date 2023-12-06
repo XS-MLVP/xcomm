@@ -8,7 +8,7 @@ install: build
 	cd build && make install
 
 clean:
-	rm -rf build
+	rm -rf build dist
 
 test_python: build
 	PYTHONPATH=build/lib/python python3 tests/test_python.py

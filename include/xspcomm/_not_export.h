@@ -1,5 +1,5 @@
-#ifndef __xcomm_no_export__
-#define __xcomm_no_export__
+#ifndef __xspcomm_no_export__
+#define __xspcomm_no_export__
 
 #include <functional>
 

@@ -1,5 +1,5 @@
 
-from .pyxcomm import *
+from .pyxspcomm import *
 import sys
 
 # PinBind

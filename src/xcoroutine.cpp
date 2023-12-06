@@ -1,6 +1,6 @@
-#include "xcomm/xcoroutine.h"
+#include "xspcomm/xcoroutine.h"
 
-namespace xcomm {
+namespace xspcomm {
 #if ENABLE_XCOROUTINE
 #pragma message("ENABLE_XCOROUTINE is enabled")
 
@@ -117,4 +117,4 @@ XCondition::XCondition(std::function<bool(void)> checker, void *p)
 
 #endif // ENABLE_XCOROUTINE
 
-} // namespace xcomm
+} // namespace xspcomm

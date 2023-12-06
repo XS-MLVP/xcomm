@@ -1,10 +1,10 @@
-%module(directors="1") pyxcomm
+%module(directors="1") pyxspcomm
 
 %{
-#include "xcomm/xclock.h"
-#include "xcomm/xdata.h"  
-#include "xcomm/xport.h"
-#include "xcomm/xcallback.h"
+#include "xspcomm/xclock.h"
+#include "xspcomm/xdata.h"  
+#include "xspcomm/xport.h"
+#include "xspcomm/xcallback.h"
 %}
 
 %feature("director") xfunction;
@@ -50,28 +50,28 @@
     $result = bytes;
 }
 
-%include "xcomm/xclock.h"
-%include "xcomm/xdata.h"
-%include "xcomm/xport.h"
-%include "xcomm/xutil.h"
+%include "xspcomm/xclock.h"
+%include "xspcomm/xdata.h"
+%include "xspcomm/xport.h"
+%include "xspcomm/xutil.h"
 
-%constant void (*_TEST_DPI_LR)(xsvLogic *v) = xcomm::TEST_DPI_LR;
-%constant void (*_TEST_DPI_LW)(xsvLogic v) = xcomm::TEST_DPI_LW;
-%constant void (*_TEST_DPI_VR)(xsvLogicVecVal *v) = xcomm::TEST_DPI_VR;
-%constant void (*_TEST_DPI_VW)(xsvLogicVecVal *v) = xcomm::TEST_DPI_VW;
+%constant void (*_TEST_DPI_LR)(xsvLogic *v) = xspcomm::TEST_DPI_LR;
+%constant void (*_TEST_DPI_LW)(xsvLogic v) = xspcomm::TEST_DPI_LW;
+%constant void (*_TEST_DPI_VR)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VR;
+%constant void (*_TEST_DPI_VW)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
 
 // Note: need include callback after director
-%include "xcomm/xcallback.h"
+%include "xspcomm/xcallback.h"
 
 %define %x_callback(Name, Ret, T...)
 %template(Name) xfunction<Ret,T>;
 %enddef
 
 // XData
-%x_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xcomm::XData*, u_int32_t, void *);
-%x_callback(cb_void_xsvLogicp, void, xcomm::xsvLogic *);
-%x_callback(cb_void_xsvLogic, void, xcomm::xsvLogic);
-%x_callback(cb_void_xsvlogicVecValp, void, xcomm::xsvLogicVecVal *);
+%x_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int32_t, void *);
+%x_callback(cb_void_xsvLogicp, void, xspcomm::xsvLogic *);
+%x_callback(cb_void_xsvLogic, void, xspcomm::xsvLogic);
+%x_callback(cb_void_xsvlogicVecValp, void, xspcomm::xsvLogicVecVal *);
 
 // XClock
 %x_callback(cb_int_bool, int, bool);

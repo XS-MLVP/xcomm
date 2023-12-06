@@ -1,7 +1,7 @@
-#ifndef __xcomm_xcoroutine__
-#define __xcomm_xcoroutine__
+#ifndef __xspcomm_xcoroutine__
+#define __xspcomm_xcoroutine__
 
-#include "xcomm/xutil.h"
+#include "xspcomm/xutil.h"
 
 #if ENABLE_XCOROUTINE
 
@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <typeinfo>
 
-namespace xcomm {
+namespace xspcomm {
 
 class _XAWait;
 extern std::map<std::coroutine_handle<>, _XAWait *> __xhandl_list__;
@@ -138,11 +138,11 @@ public:
     constexpr void await_resume() const noexcept;
 };
 
-} // namespace xcomm
+} // namespace xspcomm
 
 #else
 
-namespace xcomm {
+namespace xspcomm {
 bool schedule_awit(void *p = nullptr);
 
 class XCondition
@@ -151,6 +151,6 @@ public:
     XCondition(std::function<bool(void)> checker,
                void *p = nullptr);
 };
-} // namespace xcomm
+} // namespace xspcomm
 #endif // ENABLE_XCOROUTINE
 #endif

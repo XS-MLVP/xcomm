@@ -1,9 +1,9 @@
-#ifndef __xcomm_xcallback__
-#define __xcomm_xcallback__
+#ifndef __xspcomm_xcallback__
+#define __xspcomm_xcallback__
 
-#include "xcomm/xutil.h"
+#include "xspcomm/xutil.h"
 #include <type_traits>
-#include "xcomm/_not_export.h"
+#include "xspcomm/_not_export.h"
 #include <cstddef>
 
 template <typename R, typename... Args>

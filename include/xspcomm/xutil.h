@@ -1,5 +1,5 @@
-#ifndef __xcomm_xutil_h__
-#define __xcomm_xutil_h__
+#ifndef __xspcomm_xutil_h__
+#define __xspcomm_xutil_h__
 
 #include <stdio.h>
 #include <string>
@@ -22,7 +22,7 @@ typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;
 typedef uint64_t u_int64_t;
 
-namespace xcomm {
+namespace xspcomm {
 void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)
 {
     fprintf(out, "stack trace:\n");
@@ -107,7 +107,7 @@ std::string version();
 
 #define output(o, level, prefix, fmt, ...)                                     \
     {                                                                          \
-        if (level >= xcomm::get_log_level()) {                                 \
+        if (level >= xspcomm::get_log_level()) {                                 \
             fprintf(o, "[%s:%d] %s ", __FILE__, __LINE__, prefix);             \
             fprintf(o, fmt, ##__VA_ARGS__);                                    \
             fprintf(o, "%s\n", "");                                            \
@@ -115,40 +115,40 @@ std::string version();
     }
 #define Info(fmt, ...)                                                         \
     {                                                                          \
-        output(stdout, xcomm::LogLevel::info, "[ info]", fmt, ##__VA_ARGS__);  \
+        output(stdout, xspcomm::LogLevel::info, "[ info]", fmt, ##__VA_ARGS__);  \
     }
 #define Warn(fmt, ...)                                                         \
     {                                                                          \
-        output(stdout, xcomm::LogLevel::warning, "[ warn]", fmt,               \
+        output(stdout, xspcomm::LogLevel::warning, "[ warn]", fmt,               \
                ##__VA_ARGS__);                                                 \
     }
 #define Error(fmt, ...)                                                        \
     {                                                                          \
-        output(stderr, xcomm::LogLevel::error, "[error]", fmt, ##__VA_ARGS__); \
+        output(stderr, xspcomm::LogLevel::error, "[error]", fmt, ##__VA_ARGS__); \
     }
 #define Debug(fmt, ...)                                                        \
     {                                                                          \
-        output(stdout, xcomm::LogLevel::debug, "[debug]", fmt, ##__VA_ARGS__); \
+        output(stdout, xspcomm::LogLevel::debug, "[debug]", fmt, ##__VA_ARGS__); \
     }
 #define DebugC(c, fmt, ...)                                                    \
     {                                                                          \
         if (c) {                                                               \
-            output(stdout, xcomm::LogLevel::debug, "[debug]", fmt,             \
+            output(stdout, xspcomm::LogLevel::debug, "[debug]", fmt,             \
                    ##__VA_ARGS__);                                             \
         }                                                                      \
     }
 #define Fatal(fmt, ...)                                                        \
     {                                                                          \
-        output(stderr, xcomm::LogLevel::fatal, "[fatal]", fmt, ##__VA_ARGS__); \
+        output(stderr, xspcomm::LogLevel::fatal, "[fatal]", fmt, ##__VA_ARGS__); \
         exit(-1);                                                              \
     }
 
 #define Assert(c, fmt, ...)                                                    \
     {                                                                          \
         if (!(c)) {                                                            \
-            output(stderr, xcomm::LogLevel::fatal, "[assert fail]", fmt,       \
+            output(stderr, xspcomm::LogLevel::fatal, "[assert fail]", fmt,       \
                    ##__VA_ARGS__);                                             \
-            xcomm::Traceback();                                                \
+            xspcomm::Traceback();                                                \
             exit(-1);                                                          \
         }                                                                      \
     }
@@ -230,15 +230,15 @@ inline void XSeed(unsigned int seed)
 
 inline bool checkVersion()
 {
-    if (version() == XCOMM_VERSION) { return true; }
+    if (version() == XSPCOMM_VERSION) { return true; }
     Warn("so version(%s) conflict with headers (%s)", version().c_str(),
-         XCOMM_VERSION) return false;
+         XSPCOMM_VERSION) return false;
 }
 
 #define FOR_COUNT(n)                                                           \
     auto __n = n;                                                              \
     for (int __i = 0; __i < __n; __i++)
 
-} // namespace xcomm
+} // namespace xspcomm
 
 #endif

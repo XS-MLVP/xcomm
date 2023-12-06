@@ -1,6 +1,6 @@
-#include "xcomm/xclock.h"
+#include "xspcomm/xclock.h"
 
-namespace xcomm {
+namespace xspcomm {
 #if ENABLE_XCOROUTINE
 XStep::XStep(XClock &clk, u_int64_t step,
              std::map<std::coroutine_handle<>, _XAWait *> *p) :
@@ -74,15 +74,15 @@ void XClock::default_stop_on_rise(bool rise)
     this->stop_on_rise = rise;
 }
 XClock::XClock(xfunction<int, bool> stepfunc,
-               std::initializer_list<xcomm::XData *> pins,
-               std::initializer_list<xcomm::XPort *> ports)
+               std::initializer_list<xspcomm::XData *> pins,
+               std::initializer_list<xspcomm::XPort *> ports)
 {
     this->step_fc = stepfunc;
     for (auto &d : pins) { this->Add(d); }
     for (auto &d : ports) { this->Add(d); }
 }
 
-void XClock::Add(xcomm::XData *d)
+void XClock::Add(xspcomm::XData *d)
 {
     if (contians(this->pins, d)) {
         Warn("pin(%s) is already added", d->mName.c_str());
@@ -91,7 +91,7 @@ void XClock::Add(xcomm::XData *d)
     d->SetWriteMode(d->Imme);
     this->pins.push_back(d);
 }
-void XClock::Add(xcomm::XData &d)
+void XClock::Add(xspcomm::XData &d)
 {
     if (contians(this->pins, &d)) {
         Warn("pin(%s) is already added", d.mName.c_str());
@@ -101,7 +101,7 @@ void XClock::Add(xcomm::XData &d)
     this->pins.push_back(&d);
 }
 
-void XClock::Add(xcomm::XPort *d)
+void XClock::Add(xspcomm::XPort *d)
 {
     if (contians(this->ports, d)) {
         Warn("port(%s*) is already added", d->prefix.c_str());
@@ -110,7 +110,7 @@ void XClock::Add(xcomm::XPort *d)
     this->ports.push_back(d);
 }
 
-void XClock::Add(xcomm::XPort &d)
+void XClock::Add(xspcomm::XPort &d)
 {
     if (contians(this->ports, &d)) {
         Warn("port(%s*) is already added", d.prefix.c_str());
@@ -194,4 +194,4 @@ XNext XClock::ANext(int n)
 }
 #endif
 
-} // namespace xcomm
+} // namespace xspcomm
