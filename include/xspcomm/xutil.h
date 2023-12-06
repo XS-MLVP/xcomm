@@ -7,7 +7,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <vector>
-#include <execinfo.h>
 #include <cxxabi.h>
 #include "sys/time.h"
 #include <ctime>
@@ -17,6 +16,10 @@
 #include <cstdlib>
 #include <climits>
 
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+
 typedef uint8_t u_int8_t;
 typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;
@@ -25,6 +28,7 @@ typedef uint64_t u_int64_t;
 namespace xspcomm {
 void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)
 {
+    #ifdef HAVE_EXECINFO_H
     fprintf(out, "stack trace:\n");
     void *addrlist[max_frames + 1];
     int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void *));
@@ -70,6 +74,7 @@ void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)
     }
     free(funcname);
     free(symbollist);
+    #endif
 }
 
 inline long uTime()

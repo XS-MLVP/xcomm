@@ -2,13 +2,14 @@
 set(CMAKE_VERBOSE_MAKEFILE ON)
 cmake_policy(SET CMP0078 NEW)
 cmake_policy(SET CMP0086 NEW)
+cmake_policy(SET CMP0148 NEW)
 
 find_package(SWIG 4.2.0 REQUIRED)
 include(${SWIG_USE_FILE})
 
 # Include python
-find_package(PythonLibs REQUIRED)
-include_directories(${PYTHON_INCLUDE_PATH})
+find_package(Python COMPONENTS Interpreter Development)
+include_directories(${Python_INCLUDE_DIRS})
 
 # Include headers
 include_directories(../include)

@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.15)
 project(xspcomm VERSION 0.0.1)
 
+include(CheckIncludeFile)
+check_include_file("execinfo.h" HAVE_EXECINFO_H)
+if(HAVE_EXECINFO_H)
+    add_definitions(-DHAVE_EXECINFO_H)
+else()
+    message(WARNING "The <execinfo.h> not find, xutil.Assert will not print the call stack.")
+endif()
 add_definitions(-DXSPCOMM_VERSION="${PROJECT_VERSION}")
 
 include(CheckCXXCompilerFlag)
