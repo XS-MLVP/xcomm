@@ -2,7 +2,10 @@
 
 build:
 	cmake . -Bbuild
-	cd build && make
+	cd build && make -j`nproc`
+
+install: build
+	cd build && make install
 
 clean:
 	rm -rf build
