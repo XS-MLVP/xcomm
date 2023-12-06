@@ -17,8 +17,10 @@
 #include <cstdlib>
 #include <climits>
 
-#define xcomm_version "0.0.1"
-#define XCOMM_VERSION xcomm_version
+typedef uint8_t u_int8_t;
+typedef uint16_t u_int16_t;
+typedef uint32_t u_int32_t;
+typedef uint64_t u_int64_t;
 
 namespace xcomm {
 void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)

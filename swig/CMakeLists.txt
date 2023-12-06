@@ -33,6 +33,9 @@ set_target_properties(pyxcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${XCOMM_LIB_DI
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/pyxcomm.py PROPERTIES GENERATED TRUE)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pyxcomm.py
+    COMMAND ${CMAKE_COMMAND} -E rename
+            ${XCOMM_LIB_DIR}/_pyxcomm.so
+            ${XCOMM_LIB_DIR}/_pyxcomm.so.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/pyxcomm.py
             ${XCOMM_LIB_DIR}/pyxcomm.py
@@ -42,7 +45,16 @@ add_custom_command(
     DEPENDS pyxcomm
 )
 
+add_custom_command(
+    OUTPUT so_lnk
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "_pyxcomm.so.${PROJECT_VERSION}"
+            "_pyxcomm.so"
+    WORKING_DIRECTORY ${XCOMM_LIB_DIR}
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/pyxcomm.py
+)
+
 add_custom_target(
   _DummyTarget ALL
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/pyxcomm.py
+  DEPENDS so_lnk
 )

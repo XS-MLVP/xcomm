@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.15)
 project(xcomm VERSION 0.0.1)
+
+add_definitions(-DXCOMM_VERSION="${PROJECT_VERSION}")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
