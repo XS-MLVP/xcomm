@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(xcomm VERSION 0.0.1)
+project(xspcomm VERSION 0.0.1)
 
 add_definitions(-DXSPCOMM_VERSION="${PROJECT_VERSION}")
 
