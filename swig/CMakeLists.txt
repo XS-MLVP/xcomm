@@ -43,6 +43,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/xcomm.py
             ${XCOMM_LIB_DIR}/__init__.py
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/info.py
+            ${XCOMM_LIB_DIR}/info.py
     DEPENDS pyxspcomm
 )
 
