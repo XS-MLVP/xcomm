@@ -32,6 +32,16 @@ int test_xdata()
                 "check u_int32  fail");
     test_assert(x4 == 0xf4 && x4.mWidth == 64 && x4.DataValid(),
                 "check u_int64  fail");
+    
+    XData zx_z;
+    XData zx_x(32, XData::In);
+    zx_z = "z";
+    zx_x = "0xf123faxz";
+    test_assert(zx_z == "z", "xz=%s", zx_z.String().c_str());
+    zx_z = "x";
+    test_assert(zx_z == "x", "xz=%s", zx_z.String().c_str());
+    test_assert(zx_x == "f123fa??", "xx=%s", zx_x.String().c_str());
+
     XData x5 = (int8_t)0xf1;
     XData x6 = (int16_t)0xf2;
     XData x7 = (int32_t)0xf3;

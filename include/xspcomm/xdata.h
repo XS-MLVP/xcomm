@@ -57,6 +57,8 @@ public:
     PinBind(xsvLogicVecVal *p, int index);
     PinBind(xsvLogic *p);
     PinBind &operator=(const u_int8_t &v);
+    PinBind &operator=(const std::string &v);
+    PinBind &operator=(std::string &v);
     operator u_int8_t();
     PinBind &Set(int v);
     int AsInt32();
@@ -177,6 +179,10 @@ public:
     bool Connect(XData &xdata);
     bool operator==(XData &data);
     bool operator==(u_int64_t data);
+    bool operator==(std::string &str);
+    bool operator==(const std::string &str);
+    bool operator==(const char *str);
+    bool operator==(char *str);
     XData &operator=(XData &data);
     XData &operator=(const char *str);
     XData &operator=(std::string &data);

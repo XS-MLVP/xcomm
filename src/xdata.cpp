@@ -81,6 +81,21 @@ PinBind &PinBind::operator=(const u_int8_t &v)
     return *this;
 }
 
+PinBind &PinBind::operator=(const std::string &v){
+    if(sLower(v) == "z"){
+        return this->operator=(2);
+    }
+    if(sLower(v) == "x"){
+        return this->operator=(3);
+    }
+    Assert(false, "Only support set Z or X");
+    return *this;
+}
+
+PinBind &PinBind::operator=(std::string &v) {
+    return this->operator=((const std::string &)v);
+}
+
 PinBind::operator u_int8_t()
 {
     if (this->pLgc) {
@@ -574,6 +589,25 @@ bool XData::operator==(u_int64_t data)
     return this->udata == data && this->xdata == 0;
 }
 
+bool XData::operator==(const std::string &str)
+{
+    return sLower(this->String()) == sLower(str);
+}
+
+bool XData::operator==(std::string &str){
+    return this->operator==((const std::string)str);
+}
+
+bool XData::operator==(char *str){
+    return this->operator==((const char *)str);
+}
+
+bool XData::operator==(const char *str)
+{
+    return this->operator==(std::string(str));
+}
+
+
 XData &XData::operator=(u_int64_t data)
 {
     if (this->mIOType == IOType::Output) {
@@ -656,6 +690,27 @@ XData &XData::operator=(const char *str)
 }
 XData &XData::operator=(std::string &data)
 {
+    if(this->mWidth == 0){
+        if(sLower(data) == "z")return this->operator=(2);
+        if(sLower(data) == "x")return this->operator=(3);
+        Assert(false, "for string values, Logica Data only support set Z or X");
+    }else{
+        if(sLower(data) == "z"){
+            for(int i=0;i<this->vecSize;i++){
+                this->pVecData[i].aval = 0;
+                this->pVecData[i].bval = 1;
+            }
+            return *this;
+        }
+        if(sLower(data) == "x"){
+            for(int i=0;i<this->vecSize;i++){
+                this->pVecData[i].aval = 1;
+                this->pVecData[i].bval = 1;
+            }
+            return *this;
+        }
+    }
+
     auto prefix = data.substr(0, 2);
     Assert(this->mIOType != IOType::Output,
            "Can not assign value to ouput.PIN");
@@ -668,9 +723,10 @@ XData &XData::operator=(std::string &data)
     int tsz   = txt.length();
     int index = 0;
     if (prefix == "0b") {
+        txt = sLower(txt);
         for (int i = 0; i < tsz; i++) {
             if (txt[i] == '_') continue;
-            Assert(txt[i] == '0' || txt[i] == '1',
+            Assert(txt[i] == '0' || txt[i] == '1' || txt[i] == 'z' || txt[i] == 'x',
                    "find no 0/1 (%c) value: %s(%d) at %d", txt[i], txt.c_str(),
                    tsz, i);
             auto vec_idx = index / 32;
@@ -678,6 +734,12 @@ XData &XData::operator=(std::string &data)
             if (vec_idx >= this->vecSize) break;
             if (txt[i] == '1') {
                 bit32_set(this->pVecData[vec_idx].aval, vec_off);
+            }else if(txt[i] == 'z'){
+                bit32_set(this->pVecData[vec_idx].bval, vec_off);
+            }else if (txt[i] == 'x')
+            {
+                bit32_set(this->pVecData[vec_idx].aval, vec_off);
+                bit32_set(this->pVecData[vec_idx].bval, vec_off);
             }
             index += 1;
         }
@@ -687,13 +749,22 @@ XData &XData::operator=(std::string &data)
             if (txt[i] == '_') continue;
             u_int32_t hex_val = (u_int32_t)txt[i] - 48;
             if (hex_val > 9) { hex_val = (u_int32_t)txt[i] - 97 + 10; }
-            Assert(hex_val >= 0 && hex_val <= 15,
-                   "find no hex(%c) value: %s(%d) at %d", txt[i], txt.c_str(),
+            Assert(hex_val >= 0 && hex_val <= 15 || hex_val == 0x23 || hex_val == 0x21,
+                   "find no hex(%c: 0x%x) value: %s(%d) at %d", txt[i], hex_val, txt.c_str(),
                    tsz, i);
             auto vec_idx = index / 8;
             auto vec_off = index % 8;
             if (vec_idx >= this->vecSize) break;
-            bit32_hex(this->pVecData[vec_idx].aval, vec_off, hex_val);
+            if(txt[i] == 'z'){
+                bit32_hex(this->pVecData[vec_idx].aval, vec_off, 0x0);
+                bit32_hex(this->pVecData[vec_idx].bval, vec_off, 0xf);
+            }else if (txt[i] == 'x')
+            {
+                bit32_hex(this->pVecData[vec_idx].aval, vec_off, 0xf);
+                bit32_hex(this->pVecData[vec_idx].bval, vec_off, 0xf);
+            }else{
+                bit32_hex(this->pVecData[vec_idx].aval, vec_off, hex_val);
+            }
             index += 1;
         }
     } else if (prefix == "::") {
