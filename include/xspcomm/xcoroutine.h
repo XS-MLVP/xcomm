@@ -123,7 +123,7 @@ public:
         std::map<std::coroutine_handle<>, _XAWait *> *p = &__xhandl_list__);
     XCondition *clone() const override;
     bool ready() override;
-    constexpr void await_resume() const noexcept;
+    constexpr void await_resume() const noexcept {};
 };
 
 class XNext : public _XAWait
@@ -135,7 +135,7 @@ public:
           std::map<std::coroutine_handle<>, _XAWait *> *p = &__xhandl_list__);
     XNext *clone() const override;
     bool ready() override;
-    constexpr void await_resume() const noexcept;
+    constexpr void await_resume() const noexcept {};
 };
 
 } // namespace xspcomm

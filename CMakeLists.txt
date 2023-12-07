@@ -17,12 +17,14 @@ if(COMPILER_SUPPORTS_CXX20)
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -std=c++20 -fcoroutines")
 	add_definitions(-DENABLE_XCOROUTINE=true)
+	set(ENABLE_XCOROUTINE true)
 else()
     message(WARNING "The compiler ${CMAKE_CXX_COMPILER} has no C++20 support. If you need coroutines, please use a different C++ compiler.")
 	set(CMAKE_CXX_STANDARD 17)
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	add_definitions(-DENABLE_XCOROUTINE=false)
+	set(ENABLE_XCOROUTINE false)
 endif()
 
 
@@ -42,6 +44,8 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 							"${CMAKE_CURRENT_SOURCE_DIR}/include"
 							"${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"
 COMMAND sed -i "s/XSPCOMM_VERSION/\"${PROJECT_VERSION}\"/g" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/xspcomm/xutil.h
+COMMAND sed -i "s/ENABLE_XCOROUTINE/${ENABLE_XCOROUTINE}/g" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/xspcomm/xclock.h
+COMMAND sed -i "s/ENABLE_XCOROUTINE/${ENABLE_XCOROUTINE}/g" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/xspcomm/xcoroutine.h
 )
 
 install( DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/ DESTINATION include )

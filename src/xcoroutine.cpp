@@ -81,8 +81,6 @@ bool XCondition::ready()
     return this->checker();
 }
 
-constexpr void XCondition::await_resume() const noexcept {}
-
 XNext::XNext(int n, std::map<std::coroutine_handle<>, _XAWait *> *p) :
     _XAWait(p)
 {
@@ -100,7 +98,6 @@ bool XNext::ready()
     this->step -= 1;
     return false;
 }
-constexpr void XNext::await_resume() const noexcept {}
 
 #else
 #pragma message("ENABLE_XCOROUTINE is not enabled, it needs C++20 support")
