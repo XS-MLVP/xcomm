@@ -4,7 +4,7 @@ build:
 	cmake . -Bbuild
 	cd build && make -j`nproc`
 
-install: build
+install: clean build
 	cd build && make install
 
 clean:

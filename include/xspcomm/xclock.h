@@ -55,15 +55,20 @@ class XClock
                  std::string desc);
 
 public:
-    std::vector<xspcomm::XData *> pins;
+    std::vector<xspcomm::XData *> clock_pins;
     std::vector<xspcomm::XPort *> ports;
     u_int64_t clk     = 0;
     bool stop_on_rise = true;
 
     void default_stop_on_rise(bool rise);
+    XClock();
     XClock(xfunction<int, bool> stepfunc,
-           std::initializer_list<xspcomm::XData *> pins  = {},
+           std::initializer_list<xspcomm::XData *> clock_pins  = {},
            std::initializer_list<xspcomm::XPort *> ports = {});
+
+    void ReInit(xfunction<int, bool> stepfunc,
+                std::initializer_list<xspcomm::XData *> clock_pins  = {},
+                std::initializer_list<xspcomm::XPort *> ports = {});
     void Add(xspcomm::XData *d);
     void Add(xspcomm::XData &d);
     void Add(xspcomm::XPort *d);

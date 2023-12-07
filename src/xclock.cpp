@@ -73,34 +73,54 @@ void XClock::default_stop_on_rise(bool rise)
 {
     this->stop_on_rise = rise;
 }
+
+XClock::XClock() : XClock(nullptr, {}, {}){};
+
+/// @brief set the step function, bind clock pins which need 0/1 and bind ports
+/// to write/read
+/// @param stepfunc
+/// @param clock_pins the clock pins which need set high/low
+/// @param ports
 XClock::XClock(xfunction<int, bool> stepfunc,
-               std::initializer_list<xspcomm::XData *> pins,
+               std::initializer_list<xspcomm::XData *> clock_pins,
                std::initializer_list<xspcomm::XPort *> ports)
 {
+    this->ReInit(stepfunc, clock_pins, ports);
+}
+
+void XClock::ReInit(xfunction<int, bool> stepfunc,
+                    std::initializer_list<xspcomm::XData *> clock_pins,
+                    std::initializer_list<xspcomm::XPort *> ports)
+{
     this->step_fc = stepfunc;
-    for (auto &d : pins) { this->Add(d); }
+    for (auto &d : clock_pins) { this->Add(d); }
     for (auto &d : ports) { this->Add(d); }
 }
 
+/// @brief add a clock pin which need set high/low
 void XClock::Add(xspcomm::XData *d)
 {
-    if (contians(this->pins, d)) {
+    if (contians(this->clock_pins, d)) {
         Warn("pin(%s) is already added", d->mName.c_str());
         return;
     }
     d->SetWriteMode(d->Imme);
-    this->pins.push_back(d);
+    this->clock_pins.push_back(d);
 }
+
+/// @brief add a clock pin which need set high/low
 void XClock::Add(xspcomm::XData &d)
 {
-    if (contians(this->pins, &d)) {
+    if (contians(this->clock_pins, &d)) {
         Warn("pin(%s) is already added", d.mName.c_str());
         return;
     }
     d.SetWriteMode(d.Imme);
-    this->pins.push_back(&d);
+    this->clock_pins.push_back(&d);
 }
 
+
+/// @brief add a port which need write/read on rise/fall
 void XClock::Add(xspcomm::XPort *d)
 {
     if (contians(this->ports, d)) {
@@ -110,6 +130,7 @@ void XClock::Add(xspcomm::XPort *d)
     this->ports.push_back(d);
 }
 
+/// @brief add a port which need write/read on rise/fall
 void XClock::Add(xspcomm::XPort &d)
 {
     if (contians(this->ports, &d)) {
@@ -145,7 +166,7 @@ void XClock::RunStep(int s)
 
 void XClock::_step_fal()
 {
-    for (auto &v : this->pins) { *v = 0; }
+    for (auto &v : this->clock_pins) { *v = 0; }
     this->_step(false);
     for (auto &p : this->ports) { p->WriteOnFall(); }
     this->_step(true);
@@ -155,7 +176,7 @@ void XClock::_step_fal()
 
 void XClock::_step_ris()
 {
-    for (auto &v : this->pins) { *v = 1; }
+    for (auto &v : this->clock_pins) { *v = 1; }
     this->_step(false);
     for (auto &p : this->ports) { p->WriteOnRise(); }
     this->_step(true);
@@ -168,13 +189,13 @@ void XClock::Reset()
     this->clk = 0;
 }
 
-void XClock::StepRis(xfunction<void, u_int64_t, void *> func,
-                     void *args, std::string desc)
+void XClock::StepRis(xfunction<void, u_int64_t, void *> func, void *args,
+                     std::string desc)
 {
     return this->_add_cb(this->list_call_back_ris, func, args, desc);
 }
-void XClock::StepFal(xfunction<void, u_int64_t, void *> func,
-                     void *args, std::string desc)
+void XClock::StepFal(xfunction<void, u_int64_t, void *> func, void *args,
+                     std::string desc)
 {
     return this->_add_cb(this->list_call_back_fal, func, args, desc);
 }
