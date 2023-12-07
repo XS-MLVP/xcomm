@@ -168,6 +168,7 @@ public:
     void SetVU8(std::vector<unsigned char> &buffer);
     std::vector<unsigned char> GetVU8();
     bool GetBits(u_int32_t *buffer, u_int32_t count);
+    bool GetBits(u_int8_t *buffer, u_int32_t count);
     void OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
                   void *args = nullptr, std::string desc = "");
     void ReadFresh(WriteMode m);

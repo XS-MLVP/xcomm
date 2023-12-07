@@ -480,6 +480,18 @@ bool XData::GetBits(u_int32_t *buffer, u_int32_t count)
     return ret;
 }
 
+ bool XData::GetBits(u_int8_t *buffer, u_int32_t count){
+    Assert(this->mWidth > 0, "only svVec support GetBits");
+    this->update_read();
+    auto range = std::min(count, 4*this->vecSize);
+    bool ret   = true;
+    for (int i = 0; i < range; i++) {
+        buffer[i] = ((unsigned char *)&this->pVecData[i/4].aval)[i%4];
+        if (this->pVecData[i/4].bval != 0) { ret = false; }
+    }
+    return ret;
+ }
+
 void XData::SetVU8(std::vector<unsigned char> &buffer)
 {
     Assert(this->mWidth > 0, "only svVec support SetVU8");

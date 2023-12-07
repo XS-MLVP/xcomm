@@ -1,18 +1,18 @@
-#### xcomm 介绍
+#### xspcomm 介绍
 
-xcomm 为 xspecker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
+xspcomm 为 xspecker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xspcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xspcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
 
 **编译：**
 通过make命令进行编译， 参数 BUILD_SWIG=ON 可开启SWIG-Python支持，编译完成后生成文件位于 build/lib：
 ```
 lib/
-├── include/xcomm                # xcomm 头文件
-├── libxcomm.so                  # xcomm 动态连接库
+├── include/xspcomm                # xspcomm 头文件
+├── libxspcomm.so                    # xspcomm 动态连接库
 └── python                       
-    └── xcomm                    # python模块（需要 make BUILD_SWIG=ON）
-        ├── __init__.py          # 模块入口文件
-        ├── _pyxcomm.so          # 二进制python库
-        └── pyxcomm.py           # SWIG生成的 python wrapper
+    └── xspcomm                    # python模块（需要 make BUILD_SWIG=ON）
+        ├── __init__.py            # 模块入口文件
+        ├── _pyxspcomm.so          # 二进制python库
+        └── pyxspcomm.py           # SWIG生成的 python wrapper
 ```
 
 **测试：**
@@ -22,13 +22,37 @@ $make BUILD_SWIG=ON
 $make test_python
 ```
 
+**打包与安装：（python wheel）**
+默认打包so动态库和头文件，打包PYTHON需要开启 BUILD_SWIG=ON
+```
+$pip install pipx
+$cd xcomm
+$BUILD_SWIG=ON pipx run build      // 打包
+```
+打包完成后，会在dist目录生成 whl 安装包
+
+安装测试
+```
+$pip install dist/pyxspcomm-0.0.1-cp310-cp310-manylinux_2_35_x86_64.whl
+$python -m xspcomm.info --help      # 仅在开启 BUILD_SWIG=ON 后才有该命令
+Usage: python -m xspcomm.info [option]
+--help:    print this help
+--export:  print export cmd of XSPCOMM_ROOT, XSPCOMM_INCLUDE, XSPCOMM_LIB
+--version: print python wrapper version
+--root:    print xcomm root path
+--include: print xcomm include path
+--lib:     print xcomm lib path
+--path:    print xcomm all path [default]
+```
+
 ##### 一、基本数据操作
 
-xcomm 包含操作DUT（Design Under Test）的基本数据类型：**XData、XPort、XClock**三种数据定义。
+xspcomm 包含操作DUT（Design Under Test）的基本数据类型：**XData、XPort、XClock**三种数据定义。
 
-1. **XData** 电路的IO接口数据，通过 DPI 读写电路的IO接口。定义位于xcomm/xdaya.h
+1. **XData** 电路的IO接口数据（与电路引脚绑定），通过 DPI 读写电路的IO接口。支持 0，1，Z，X 四种状态写入与读取。定义位于xspcomm/xdaya.h
 
 **XData 主要接口与成员变量：**
+
 初始化
 ```
 // 默认构造函数
@@ -57,8 +81,20 @@ XData a(128, IOType::Input);
 
 a = 0x1234     // 直接赋值 int, unsigned int 等
 a = "0b11011"  // 通过字符串进行二进制赋值
+a = "0b1101z"  // 通过字符串进行二进制赋值，最后一位设置成高阻态
 a = "0xfffff"  // 通过字符串进行八进制赋值
 a = "::fffff"  // 直接赋值字符串ascii码
+a = "X"        // 设置128位全为不定态
+
+// 通过vector读写数据
+uint8 buffer[128/8]
+a.GetBits(buffer, sizeof(buffer));
+a.SetBits(buffer, sizeof(buffer));
+
+// 读取数据到buffer 或者 vector
+std::vector<unsigned char> vector(buffer)
+auto ret = a.GetVU8()
+a.SetVU8(vector);
 
 uint32_t x = a.W();    // 转 uint32
 uint64_t x =a.U();     // 转 uint64
@@ -79,29 +115,141 @@ uint32_t mWidth;     // 位宽（bit）
 
 2. **XPort** XData的封装，可对多个XData进行操作
 
-XPort 主要接口与成员变量：
+**XPort 主要接口与成员变量：**
+
+初始化
+```
+XPort(std::string prefix = "");
 ```
 
+主要方法
+```
+int PortCount();                                            // 引脚个数
+bool Add(std::string pin, xspcomm::XData &pin_data);        // 添加引脚
+bool Del(std::string pin);                                  // 删除引脚
+bool Connect(XPort &target);                                // 和另外一个port进行连接
+XPort &NewSubPort(std::string subprefix);                   // 创建子port
+xspcomm::XData &operator[](std::string key);                // 按key获取引脚
+xspcomm::XData &Get(std::string key, bool raw_key = false); // 同上
+XPort &Flip();                                              // port中所有引脚值进行反转
+XPort &AsBiIO();                                            // 把port中所有引脚设置为 BiIO （能输入能能输出）
+XPort &WriteOnRise();                                       // 通过DPI刷入所有上升沿引脚的值
+XPort &WriteOnFall();                                       // 通过DPI刷入所有下降沿引脚的值
+XPort &ReadFresh(xspcomm::WriteMode m);                     // 刷新引脚读书（通过DPI）
+XPort &SetZero();                                           // 设置所有引脚的值为 0
+```
+
+成员变量
+```
+std::string prefix;                                   // 引脚（XData）名称前缀
+std::map<std::string, xspcomm::XData *> port_list;    // 引脚列表
 ```
 
 3. **XClock** 基于XPort，对电路的时钟封装，用于驱动电路
 
 XClock 主要接口与成员变量：
+
+初始化
 ```
+// stepfunc 为 DUT后端提供的电路推进方法，例如 verilaor 的 step_eval 等
+// xfunction<ret, Args...> 功能等价于 std::function<ret(Args...)>，主用于SWIG导出
+XClock();
+XClock(xfunction<int, bool> stepfunc,
+       std::initializer_list<xspcomm::XData *> clock_pins  = {},
+       std::initializer_list<xspcomm::XPort *> ports = {});
+void ReInit(xfunction<int, bool> stepfunc,
+       std::initializer_list<xspcomm::XData *> clock_pins  = {},
+       std::initializer_list<xspcomm::XPort *> ports = {});
+
 ```
 
+主要方法
+```
+void Add(xspcomm::XData &d);          // 添加 clk 引脚
+void Add(xspcomm::XPort &d);          // 添加 port
+void Step(int s = 1);                 // 推进时钟
+void RunStep(int s = 1);              // 同上
+void Reset();                         // 重置
+
+// 添加上升沿回调
+void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
+             std::string desc = "");
+// 添加下降沿回调
+void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
+             std::string desc = "");
+// 异步方法
+XStep AStep(int i = 1);                                          // 等待 i 个 step
+XCondition ACondition(std::function<bool(void)> checker);        // 条件等待
+XNext ANext(int n = 1);                                          // 等待 i 个调度
+```
 
 ##### 二、异步（协程）编程
 
-TBD
+xspcomm在clock类中提供AStep(int i = 1)、ACondition(std::function<bool(void)> checker)、ANext(int n = 1) 三个协程方法，可用于异步编程，示例伪代码如下：
 
-##### 三、SWIG回调（python）
+```
+#include "xspcomm/xclock"
+#include "xspcomm/xcoroutine.h"
 
-TBD
+...
+
+// 接收数据
+xcoroutine<bool> send(XClock &clk, XPort &port){
+    // 等待port中的 a_valid 信号拉高
+    co_await clck.ACondition([&port](){return port["a_valid"]==1;});
+    // 返回结果
+    co_return port["data] == 0xffff;
+}
+
+// 循环接收，打印结果
+xcoroutine<> infinite_loop(XClock &clk, XPort &port){
+    while(true){
+        auto ret = co_await send(clk, port);
+        printf("send result is 0xffff: %s\n", ret ? "Yes":"No");
+        // 等待下一个时钟
+        co_await clk.AStep();
+    }
+}
+
+int main(){
+    ...
+    // 开启协程
+    infinite_loop(clk, port);
+    // 推动1000个时钟（协程默认会在Step过程中进行调度）
+    clk.Step(1000);
+    return 0;
+}
+
+```
+
+##### 三、python 编程
+
+SWIG生成的python模块名称为 xspcomm，包含XData、XPort、XClock等基础类。同C++一样支持的异步方法有：XClock.AStep，XClock.ACondition，XClock.ANext。新增加异步方法 XClock.RunStep 用于驱动xclock，功能同同步模式下的 XClock.Step。
+
+```
+from xspcomm import *
+from asyncio import run, create_task
+
+async def test_async():
+    clk = XClock(lambda a: 0)
+    clk.StepRis(lambda c : print("lambda ris: ", c))
+    task = create_task(clk.RunStep(30))
+    print("test      AStep:", clk.clk)
+    await clk.AStep(3)
+    print("test ACondition:", clk.clk)
+    await clk.ACondition(lambda: clk.clk == 20)
+    print("test        cpm:", clk.clk)
+    await task
+
+if __name__ == "__main__":
+    print("version: %s" % version())
+    run(test_async())
+
+```
 
 ##### 四、其他可用接口
 
-头文件 xcomm/xutil.h 提供以下基本功能
+头文件 xspcomm/xutil.h 提供以下基本功能
 ```
 LogLevel get_log_level()          // 获取当前日志 level
 void set_log_level(LogLevel val)  // 设置当前日志 level
