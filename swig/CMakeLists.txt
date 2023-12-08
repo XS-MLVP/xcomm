@@ -69,7 +69,7 @@ add_custom_command(
 )
 
 add_custom_target(
-  _DummyTarget ALL
+    _DummyTarget_create_pyxspcomm_so_link ALL
   DEPENDS pyxspcomm_so_lnk
 )
 
