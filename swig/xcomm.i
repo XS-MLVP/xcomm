@@ -60,13 +60,35 @@
 %constant void (*_TEST_DPI_VR)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VR;
 %constant void (*_TEST_DPI_VW)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
 
-// Note: need include callback after director
-%include "xspcomm/xcallback.h"
+// callbacks constraints:
+// (1) use d_callback define cb before %include "xspcomm/xcallback.h"
+// (2) use x_callback define cb after %include "xspcomm/xcallback.h"
+
+%define %d_callback(Name, Ret, T...)
+%feature("director") xfunction<Ret,T>;
+%ignore xfunction<Ret,T>::operator bool;
+%ignore xfunction<Ret,T>::operator();
+%enddef
 
 %define %x_callback(Name, Ret, T...)
 %template(Name) xfunction<Ret,T>;
 %enddef
 
+// d_callback defines
+// XData
+%d_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int32_t, void *);
+%d_callback(cb_void_xsvLogicp, void, xspcomm::xsvLogic *);
+%d_callback(cb_void_xsvLogic, void, xspcomm::xsvLogic);
+%d_callback(cb_void_xsvlogicVecValp, void, xspcomm::xsvLogicVecVal *);
+
+// XClock
+%d_callback(cb_int_bool, int, bool);
+%d_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
+
+// Note: need include callback after director
+%include "xspcomm/xcallback.h"
+
+// x_callback defines
 // XData
 %x_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int32_t, void *);
 %x_callback(cb_void_xsvLogicp, void, xspcomm::xsvLogic *);
@@ -75,5 +97,4 @@
 
 // XClock
 %x_callback(cb_int_bool, int, bool);
-
 %x_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
