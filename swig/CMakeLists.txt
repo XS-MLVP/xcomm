@@ -43,7 +43,7 @@ set_target_properties(pyxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFI
 # copy file
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py PROPERTIES GENERATED TRUE)
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
+    OUTPUT ${XCOMM_LIB_DIR}/info.py
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/_pyxspcomm.so
             ${XCOMM_LIB_DIR}/_pyxspcomm.so.${PROJECT_VERSION}
@@ -65,7 +65,7 @@ add_custom_command(
             "_pyxspcomm.so.${PROJECT_VERSION}"
             "_pyxspcomm.so"
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
+    DEPENDS ${XCOMM_LIB_DIR}/info.py
 )
 
 add_custom_target(
