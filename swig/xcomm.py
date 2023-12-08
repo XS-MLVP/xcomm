@@ -82,7 +82,7 @@ class xclock_cb_step(cb_int_bool):
     def __init__(self, func):
         cb_int_bool.__init__(self)
         self.func = func
-    def __call__(self, dump: bool):
+    def call(self, dump: bool):
         return self.func(dump)
 
 class xclock_cb_step_rf(cb_void_u64_voidp):
@@ -92,7 +92,7 @@ class xclock_cb_step_rf(cb_void_u64_voidp):
         self.func = func
         self.args = args
         self.kwargs = kwargs
-    def __call__(self, cycle: int, args=None):
+    def call(self, cycle: int, args=None):
         return self.func(cycle, *self.args, **self.kwargs)
 
 import asyncio

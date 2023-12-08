@@ -22,7 +22,15 @@ public:
 	virtual ~xfunction(){}
 	virtual R operator() (Args... __args) {
 		if(this->force_callable){
-			return this->target->operator()(__args...);
+			return this->target->call(__args...);
+		}
+		if(*this)return this->func.operator()(__args...);
+		return R();
+	}
+
+	virtual R call(Args... __args) {
+		if(this->force_callable){
+			Assert(false, "call cannot be called in force_callable mode!");
 		}
 		if(*this)return this->func.operator()(__args...);
 		return R();
