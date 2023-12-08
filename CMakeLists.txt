@@ -38,7 +38,7 @@ if ("$ENV{BUILD_SWIG}" STREQUAL "ON")
 	add_subdirectory(swig)
 endif()
 
-add_custom_target(copy_include ALL
+add_custom_target(copy_xspcomm_include ALL
 VERBATIM
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 							"${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -46,6 +46,7 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 COMMAND sed -i "s/XSPCOMM_VERSION/\"${PROJECT_VERSION}\"/g" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/xspcomm/xutil.h
 COMMAND sed -i "s/ENABLE_XCOROUTINE/${ENABLE_XCOROUTINE}/g" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/xspcomm/xclock.h
 COMMAND sed -i "s/ENABLE_XCOROUTINE/${ENABLE_XCOROUTINE}/g" ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/xspcomm/xcoroutine.h
+DEPENDS ${PROJECT_NAME}
 )
 
 install( DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/ DESTINATION include )

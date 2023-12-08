@@ -11,7 +11,7 @@ clean:
 	rm -rf build dist
 
 test_python: build
-	PYTHONPATH=build/lib/python python3 tests/test_python.py
+	PYTHONPATH=build/python python3 tests/test_python.py
 
 run: build
 	./build/tests/test_xdata
