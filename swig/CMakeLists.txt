@@ -1,8 +1,18 @@
 # Include SWIG
 set(CMAKE_VERBOSE_MAKEFILE ON)
-cmake_policy(SET CMP0078 NEW)
-cmake_policy(SET CMP0086 NEW)
-cmake_policy(SET CMP0148 NEW)
+
+if(POLICY CMP0078)
+    message("Find CMP0078, set it be NEW")
+    cmake_policy(SET CMP0078 NEW)
+endif()
+if(POLICY CMP0086)
+    message("Find CMP0086, set it be NEW")
+    cmake_policy(SET CMP0086 NEW)
+endif()
+if(POLICY CMP0148)
+    message("Find CMP0148, set it be NEW")
+    cmake_policy(SET CMP0148 NEW)
+endif()
 
 find_package(SWIG 4.2.0 REQUIRED)
 include(${SWIG_USE_FILE})
