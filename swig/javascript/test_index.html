@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test JSXSPCOMM</title>
+</head>
+<body>
+
+<h1>This is a JSXSPCOMM test</h1>
+
+</body>
+<script src="emnapi.min.js"></script>
+<script src="jsxspcomm.js"></script>
+<script>
+Module.onRuntimeInitialized = function () {
+  var binding;
+  try {
+    binding = Module.emnapiInit({ context: emnapi.getDefaultContext() });
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+  var msg = 'hello ' + binding.XData();
+  window.alert(msg);
+};
+</script>
+</html>
