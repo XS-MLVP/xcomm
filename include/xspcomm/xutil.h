@@ -17,7 +17,9 @@
 #include <climits>
 
 #ifdef HAVE_EXECINFO_H
+#ifndef FORCE_NO_EXECINFO_H
 #include <execinfo.h>
+#endif
 #endif
 
 typedef uint8_t u_int8_t;
@@ -29,6 +31,7 @@ namespace xspcomm {
 void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)
 {
     #ifdef HAVE_EXECINFO_H
+    #ifndef FORCE_NO_EXECINFO_H
     fprintf(out, "stack trace:\n");
     void *addrlist[max_frames + 1];
     int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void *));
@@ -74,6 +77,7 @@ void inline Traceback(FILE *out = stderr, unsigned int max_frames = 63)
     }
     free(funcname);
     free(symbollist);
+    #endif
     #endif
 }
 
@@ -223,7 +227,7 @@ inline u_int64_t xRandom(u_int64_t a, u_int64_t b)
     if (b < UINT32_MAX) {
         v = v % size;
     } else {
-        v = (v << 32 + rand()) % size;
+        v = ((v << 32) + rand()) % size;
     }
     return a + v;
 }

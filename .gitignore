@@ -5,7 +5,7 @@ build/
 dist/
 *.pyc
 .pyodide-xbuildenv/
-
+node_modules/
 # Compiled Object files
 *.slo
 *.lo

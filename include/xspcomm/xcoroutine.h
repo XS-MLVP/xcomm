@@ -32,6 +32,7 @@ public:
     virtual _XAWait *clone() const = 0;
     virtual bool await_ready() noexcept;
     virtual void await_suspend(std::coroutine_handle<> handler);
+    virtual ~_XAWait(){}
 };
 
 template <typename T>
@@ -47,7 +48,7 @@ public:
     {}
     std::coroutine_handle<XPromise<T>> handle;
     bool ready() override { return handle.promise().is_returned; }
-    XCorutine<T> *clone() const { return new XCorutine<T>(*this); }
+    XCorutine<T> *clone() const override { return new XCorutine<T>(*this); }
     T await_resume() const noexcept
     {
         if constexpr (!std::is_same<T, void>::value) {
