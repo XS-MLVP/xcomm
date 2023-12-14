@@ -41,6 +41,12 @@ int test_xdata()
     zx_z = "x";
     test_assert(zx_z == "x", "xz=%s", zx_z.String().c_str());
     test_assert(zx_x == "f123fa??", "xx=%s", zx_x.String().c_str());
+    zx_x.value = 0xff;
+    test_assert(zx_x == 0xff, "set value(0xff) fail zx_x: %s", zx_x.String().c_str());
+    test_assert(zx_x.value == 0xff, "read value(0xff) fail zx_x: %s", zx_x.String().c_str());
+    test_assert(zx_x.value == zx_x, "value == *self fail");
+    uint32_t value = zx_x.value;
+    test_assert(value == zx_x, "value == *self fail");
 
     XData x5 = (int8_t)0xf1;
     XData x6 = (int16_t)0xf2;

@@ -96,7 +96,7 @@ public:
     static const WriteMode Imme = WriteMode::Imme;
     static const WriteMode Rise = WriteMode::Rise;
     static const WriteMode Fall = WriteMode::Fall;
-
+    XData & value;
 private:
     std::vector<XDataCallBack> call_back_on_change;
     xfunction<void, xsvLogic *> bitRead        = nullptr;

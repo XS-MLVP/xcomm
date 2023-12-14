@@ -324,7 +324,7 @@ void XData::_dpi_check(){
 
 XData::XData() : XData(0, IOType::InOut){};
 XData::XData(uint32_t width, IOType itype, std::string name) :
-    mWidth(width), mIOType(itype), pinbind_bit(&this->mLogicData), mName(name)
+    mWidth(width), mIOType(itype), pinbind_bit(&this->mLogicData), mName(name), value(*this)
 {
     this->ReInit(width, itype, name);
 }
@@ -367,7 +367,8 @@ XData::XData(XData &t) :
     mWidth(t.mWidth),
     mIOType(t.mIOType),
     pinbind_bit(&this->mLogicData),
-    mLogicData(t.mLogicData)
+    mLogicData(t.mLogicData),
+    value(*this)
 {
     auto write_fc = [this]() {
         this->_dpi_write();

@@ -42,6 +42,8 @@
 %constant void (*_TEST_DPI_VR)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VR;
 %constant void (*_TEST_DPI_VW)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
 
+%ignore xspcomm::XData::value;
+
 // callbacks constraints:
 // (1) use d_callback define cb before %include "xspcomm/xcallback.h"
 // (2) use x_callback define cb after %include "xspcomm/xcallback.h"
