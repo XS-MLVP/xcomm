@@ -159,6 +159,8 @@ public:
     void BindDPIRW(xfunction<void, void *> read, xfunction<void, void *> write);
     void BindDPIRW(xfunction<void, void *> read,
                    xfunction<void, unsigned char> write);
+    void BindDPIRW(void (*read)(void *), void (*write)(const void *));
+    void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
     void _TestBindDPIL();
     void _TestBindDPIV();
     void SetBits(u_int8_t *buffer, int count, u_int8_t *mask = nullptr,

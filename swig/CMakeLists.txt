@@ -30,3 +30,4 @@ elseif(${swig_target} STREQUAL "javascript")
 else()
     message(FATAL_ERROR "BUILD_SWIG should be set to python/java/javascript, but it is: ${swig_target}")
 endif()
+

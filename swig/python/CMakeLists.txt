@@ -50,4 +50,4 @@ add_custom_target(
   DEPENDS pyxspcomm_so_lnk
 )
 
-install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION . USE_SOURCE_PERMISSIONS)
+install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/mcv/python USE_SOURCE_PERMISSIONS)
