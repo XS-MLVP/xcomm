@@ -3,13 +3,13 @@
 xspcomm 为 xspecker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xspcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xspcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
 
 **编译：**
-通过make命令进行编译， 参数 BUILD_SWIG=ON 可开启SWIG-Python支持，编译完成后生成文件位于 build/lib：
+通过make命令进行编译， 参数 BUILD_SWIG=python 可开启SWIG-Python支持，编译完成后生成文件位于 build/lib：
 ```
 lib/
 ├── include/xspcomm                # xspcomm 头文件
 ├── libxspcomm.so                    # xspcomm 动态连接库
 └── python                       
-    └── xspcomm                    # python模块（需要 make BUILD_SWIG=ON）
+    └── xspcomm                    # python模块（需要 make BUILD_SWIG=python）
         ├── __init__.py            # 模块入口文件
         ├── _pyxspcomm.so          # 二进制python库
         └── pyxspcomm.py           # SWIG生成的 python wrapper
@@ -18,23 +18,23 @@ lib/
 **测试：**
 make命令默认编译执行 tests/test_xdata.cpp。 若要运行 tests/tests_python.py 执行如下命令：
 ```
-$make BUILD_SWIG=ON
+$make BUILD_SWIG=python
 $make test_python
 ```
 
 **打包与安装：（python wheel）**
-默认打包so动态库和头文件，打包PYTHON需要开启 BUILD_SWIG=ON
+默认打包so动态库和头文件，打包PYTHON需要开启 BUILD_SWIG=python
 ```
 $pip install pipx
 $cd xcomm
-$BUILD_SWIG=ON pipx run build      // 打包
+$BUILD_SWIG=python pipx run build      // 打包
 ```
 打包完成后，会在dist目录生成 whl 安装包
 
 安装测试
 ```
 $pip install dist/pyxspcomm-0.0.1-cp310-cp310-manylinux_2_35_x86_64.whl
-$python -m xspcomm.info --help      # 仅在开启 BUILD_SWIG=ON 后才有该命令
+$python -m xspcomm.info --help      # 仅在开启 BUILD_SWIG=python 后才有该命令
 Usage: python -m xspcomm.info [option]
 --help:    print this help
 --export:  print export cmd of XSPCOMM_ROOT, XSPCOMM_INCLUDE, XSPCOMM_LIB
