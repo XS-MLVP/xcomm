@@ -27,6 +27,17 @@ $(document).ready(function(){
       x1.value = 0xff123
       log("x1.value    = " + x1.value)
       log("x1.String() = " + x1.String());
+      var clk = new xsp.XClock((a,b,c,d)=>{
+        log("setp: " + a)
+      })
+      clk.StepRis((c)=>{
+        log("ris: " + c)
+      })
+      clk.StepFal((c)=>{
+        log("fal: " + c)
+      })
+      console.log(clk)
+      clk.Step(5)
     })
   })
 

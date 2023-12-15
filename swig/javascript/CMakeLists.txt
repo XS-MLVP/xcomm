@@ -35,7 +35,7 @@ if(NOT EXISTS "${NODE_MODULES_PATH}/@emnapi")
 endif()
 
 # Include headers
-include_directories(${NODE_MODULES_PATH}/node-addon-api ${NODE_MODULES_PATH}/emnapi/include)
+include_directories(${NODE_MODULES_PATH}/node-addon-api ${NODE_MODULES_PATH}/emnapi/include .)
 link_directories(${NODE_MODULES_PATH}/emnapi/lib/wasm32-emscripten)
 
 # Add swig module
