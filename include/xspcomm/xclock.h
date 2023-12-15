@@ -47,7 +47,7 @@ class XClock
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
 
-    void _step(bool d);
+    virtual void _step(bool d);
     void _shchedule_await();
     void _call_back(std::vector<XClockCallBack> &list);
     void _add_cb(std::vector<XClockCallBack> &cblist,
@@ -80,8 +80,8 @@ public:
      */
     void Step(int s = 1);
     void RunStep(int s = 1);
-    void _step_fal();
-    void _step_ris();
+    virtual void _step_fal();
+    virtual void _step_ris();
 
     void Reset();
     void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
