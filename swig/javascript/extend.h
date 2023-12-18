@@ -10,6 +10,7 @@ namespace xspcomm {
 class JSXClock : public xspcomm::XClock
 {
 public:
+
     JSXClock(Napi::Function callback) : xspcomm::XClock(nullptr, {}, {})
     {
         this->js_step_fc = Napi::Persistent(callback);
@@ -31,6 +32,7 @@ public:
     void Step(int s = 1) { return xspcomm::XClock::Step(s); }
     void RunStep(int s = 1) { return xspcomm::XClock::RunStep(s); }
     void Reset() { return xspcomm::XClock::Reset(); }
+    u_int64_t GetClk() { return this->clk; }
 
     void _step_fal() override
     {

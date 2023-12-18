@@ -16,28 +16,50 @@
 $(document).ready(function(){
   $("#output").val("")
   function log(msg){
+    console.log(msg)
     $("#output").val(
       $("#output").val() + "log> " + msg + "\n"
     )
   }
   import("./xspcomm.js").then((m)=>{
+    console.log("import xspcomm.js success")
     m.xsp_run(function(xsp){
       log("test XData")
       var x1 = new xsp.XData(32, xsp.XData.In)
       x1.value = 0xff123
       log("x1.value    = " + x1.value)
-      log("x1.String() = " + x1.String());
-      var clk = new xsp.XClock((a,b,c,d)=>{
-        log("setp: " + a)
-      })
+      log("x1.String() = " + x1.String())
+
+      var x2 = new xsp.XData(128, xsp.XData.In)
+      var bgval = BigInt("0x123456789abcdef0123456789abcdef")
+      x2.value = bgval
+      log("x2.value    = " + x2.value.toString(16) + " type = " + typeof(x2.value))
+      log("bgval       = " + bgval.toString(16))
+      log("x2.String   = " + x2.String())
+
+      var clk = new xsp.XClock((a,b,c,d)=>{})
       clk.StepRis((c)=>{
-        log("ris: " + c)
+        log("clock: " + c)
       })
-      clk.StepFal((c)=>{
-        log("fal: " + c)
-      })
+      
       console.log(clk)
       clk.Step(5)
+      // Async Test
+      log("test async")
+      async function async_task1(){
+        log("task1 start at clk = " + clk.clk + " need stop at clk = " + (clk.clk + 5))
+        await clk.AStep(5)
+        log("task1 end at clk = " + clk.clk)
+      }
+      async function async_task2(){
+        log("task2 wait for clk == 100, at clk=" + clk.clk)
+        await clk.ACondition(()=>{return clk.clk >= 100})
+        log("task2 end at clk = " + clk.clk)
+      }
+      async_task1()
+      async_task2()
+      clk.RunStep(200)
+      log("test async end")
     })
   })
 
