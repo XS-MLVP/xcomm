@@ -10,8 +10,12 @@ set_property(SOURCE python.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(pyxspcomm LANGUAGE python SOURCES 
 python.i)
+target_link_options(pyxspcomm PRIVATE
+        -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+        -Wl,-rpath,~/.local/lib 
+        -Wl,-rpath,/usr/local/lib )
 target_link_libraries(pyxspcomm PRIVATE xspcomm)
-target_link_options(pyxspcomm PRIVATE -Wl,-rpath,/usr/local/lib -Wl,-rpath,~/.local/lib)
+
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)
