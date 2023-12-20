@@ -1,6 +1,4 @@
 # set compiler
-set(CMAKE_C_COMPILER emcc)
-set(CMAKE_CXX_COMPILER em++)
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_jsswig)
 
 #options

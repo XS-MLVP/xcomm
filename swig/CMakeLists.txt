@@ -20,7 +20,7 @@ include(${SWIG_USE_FILE})
 # Include headers
 include_directories(../include)
 
-string(TOLOWER "$ENV{BUILD_SWIG}" swig_target)
+string(TOLOWER "$ENV{BUILD_XSPCOMM_SWIG}" swig_target)
 if (${swig_target} STREQUAL "python")
     add_subdirectory(python)
 elseif(${swig_target} STREQUAL "java")
@@ -29,8 +29,6 @@ elseif(${swig_target} STREQUAL "javascript")
     add_subdirectory(javascript)
 elseif(${swig_target} STREQUAL "on")
     add_subdirectory(python)
-    add_subdirectory(javascript)
 else()
-    message(FATAL_ERROR "BUILD_SWIG should be set to python/java/javascript, but it is: ${swig_target}")
+    message(FATAL_ERROR "BUILD_XSPCOMM_SWIG should be set to python/java/javascript, but it is: ${swig_target}")
 endif()
-
