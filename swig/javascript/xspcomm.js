@@ -2,9 +2,8 @@ export function xsp_run(fc){
 // Load js
 requirejs(["./jsxspcomm.js", "./emnapi.min.js"], function(_, napi){
     console.log("load jsxspcomm.js emnapi.min.js complete")
-    Module.onRuntimeInitialized = function () {
-        var xsp = Module.emnapiInit({ context: napi.getDefaultContext()})
-        
+    Promise.all([xspcomm()]).then(([A]) => {
+        var xsp = A.emnapiInit({ context: napi.getDefaultContext()})
         // Override XData
         class XData extends xsp.XData{
             constructor(...args){
@@ -110,6 +109,6 @@ requirejs(["./jsxspcomm.js", "./emnapi.min.js"], function(_, napi){
 
         // call test bench
         fc(xsp)
-    }
+    })
 })
 }
