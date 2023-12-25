@@ -38,10 +38,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_subdirectory(src)
 add_subdirectory(tests)
-
-if (NOT "$ENV{BUILD_XSPCOMM_SWIG}" STREQUAL "")
-	add_subdirectory(swig)
-endif()
+add_subdirectory(swig)
 
 add_custom_target(copy_xspcomm_include ALL
 VERBATIM
