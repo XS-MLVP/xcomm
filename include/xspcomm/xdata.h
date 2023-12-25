@@ -154,6 +154,7 @@ public:
     bool SetWriteMode(WriteMode mode);
     void WriteOnRise();
     void WriteOnFall();
+    void WriteDirect();
     void SetIgnoreSameDataWrite(bool w) { this->ignore_same_write = w; }
     bool DataValid();
     void BindDPIRW(xfunction<void, void *> read, xfunction<void, void *> write);

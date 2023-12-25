@@ -214,6 +214,11 @@ bool XData::SetWriteMode(WriteMode mode)
     return true;
 };
 
+void XData::WriteDirect(){
+    if (this->bitWrite) this->bitWrite(this->mLogicData);
+    if (this->vecWrite) this->vecWrite(this->pVecData);
+}
+
 void XData::WriteOnRise()
 {
     if (this->mIOType == IOType::Output) return;
