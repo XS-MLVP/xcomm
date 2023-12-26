@@ -106,6 +106,10 @@ def XClock__init__(self, step_func):
 
 XClock.__init__ = XClock__init__
 
+def XClock__getEvent(self):
+    return self._step_event
+
+XClock.getEvent = XClock__getEvent
 
 XClock_old_StepRis = XClock.StepRis
 XClock_old_StepFal = XClock.StepFal
@@ -151,6 +155,30 @@ XClock.AStep = XClock_AStep
 XClock.ACondition = XClock_ACondition
 XClock.ANext =XClock_ANext
 XClock.RunStep = XClock_RunStep
+
+class XPin:
+    def __init__(self, xdata, event):
+        self.xdata = xdata
+        self.event = event
+
+    def __str__(self):
+        return f"XPin({self.xdata})"
+
+    def __getattribute__(self, name):
+        if name == "xdata" or name == "event":
+            return object.__getattribute__(self, name)
+        return self.xdata.__getattribute__(name)
+
+    def __setattr__(self, name, value):
+        if name == "xdata" or name == "event":
+            return object.__setattr__(self, name, value)
+        return self.xdata.__setattr__(name, value)
+
+    def __getitem__(self, key):
+        return self.xdata[key]
+
+    def __setitem__(self, key, value):
+        self.xdata[key] = value
 
 xcomm_version = "0.0.1"
 if xcomm_version != version():
