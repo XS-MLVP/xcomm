@@ -17,6 +17,10 @@
     $result = bytes;
 }
 
+%{
+    #include "xspcomm/thirdcall.h"
+%}
+%include "xspcomm/thirdcall.h"
 %include ../xcomm.i
 
 %pythoncode%{

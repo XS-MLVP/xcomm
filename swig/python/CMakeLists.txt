@@ -9,7 +9,9 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_pyswig)
 set_property(SOURCE python.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(pyxspcomm LANGUAGE python SOURCES 
-python.i)
+python.i
+thirdcall.cpp
+)
 target_link_options(pyxspcomm PRIVATE
         -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         -Wl,-rpath,~/.local/lib 
