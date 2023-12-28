@@ -26,7 +26,7 @@ add_custom_command(
             ${SWIG_OUTFILE_DIR}/libjavaxspcomm.so
             ${XCOMM_LIB_DIR}/libjavaxspcomm.so.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/util/*.java
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/*.java
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/*.java
