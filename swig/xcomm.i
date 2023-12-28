@@ -37,10 +37,10 @@
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 
-%constant void (*_TEST_DPI_LR)(xsvLogic *v) = xspcomm::TEST_DPI_LR;
-%constant void (*_TEST_DPI_LW)(xsvLogic v) = xspcomm::TEST_DPI_LW;
-%constant void (*_TEST_DPI_VR)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VR;
-%constant void (*_TEST_DPI_VW)(xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
+%constant void (*_TEST_DPI_LR)(xspcomm::xsvLogic *v) = xspcomm::TEST_DPI_LR;
+%constant void (*_TEST_DPI_LW)(xspcomm::xsvLogic v) = xspcomm::TEST_DPI_LW;
+%constant void (*_TEST_DPI_VR)(xspcomm::xsvLogicVecVal *v) = xspcomm::TEST_DPI_VR;
+%constant void (*_TEST_DPI_VW)(xspcomm::xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
 
 %ignore xspcomm::XData::value;
 
