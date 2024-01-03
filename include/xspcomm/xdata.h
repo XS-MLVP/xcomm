@@ -107,8 +107,8 @@ private:
     PinBind **pinbind_vec = nullptr;
     uint32_t ubuff[2];
     uint32_t xbuff[2];
-    uint64_t xdata             = 0;
-    uint64_t udata             = 0;
+    volatile uint64_t xdata    = 0;
+    volatile uint64_t udata    = 0;
     uint32_t vecSize           = 0;
     uint32_t zero_mask         = -1;
     xsvLogicVecVal *__pVecData = nullptr; // 01ZX  -> 00,01,10,11
