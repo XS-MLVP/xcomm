@@ -1,6 +1,5 @@
 include_directories(../include)
-
-if(NOT ${XSPCOMM_WASM_LIB})
+if(NOT "${XSPCOMM_WASM_LIB}" STREQUAL "TRUE")
 add_executable(test_xdata test_xdata.cpp)
 target_link_libraries(test_xdata ${PROJECT_NAME})
 endif()
