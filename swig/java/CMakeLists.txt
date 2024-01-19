@@ -47,4 +47,4 @@ add_custom_target(
   DEPENDS javaxspcomm_so_lnk
 )
 # Install
-install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/mcv/java USE_SOURCE_PERMISSIONS)
+install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/picker/java USE_SOURCE_PERMISSIONS)
