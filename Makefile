@@ -11,7 +11,7 @@ clean:
 	rm -rf build dist
 
 test_python: build
-	PYTHONPATH=build/python python3 tests/test_python.py
+	LD_PRELOAD=build/lib/libuvmps_vcs.so PYTHONPATH=build/python python3 tests/test_python.py
 
 test_pythird_call: build
 	cd tests && (PYTHONPATH=../build/python PYTHON_THIRD_MODUEL=test_pythirdcall python3 test_pythirdcall.py)

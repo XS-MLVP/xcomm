@@ -1,49 +1,56 @@
-#include "xspcomm/uvm_pubsb.h"
+#include "xspcomm/uvm_pbsb.h"
+#include "xspcomm/_uvmc_pbsb.h"
 
 namespace xspcomm {
+
+UVMSub::UVMSub(std::string channel){
+    this->ptr_sub = new UVMCSub(channel);
+}
+
+UVMSub::~UVMSub(){
+    delete (UVMCSub*)this->ptr_sub;
+}
 
 void UVMSub::SetHandler(
     std::function<void(const uvm_msg&)> handler)
 {
-    this->handler = handler;
+    ((UVMCSub*)this->ptr_sub)->SetHandler(handler);
 }
 
-virtual void UVMSub::Handler(const uvm_msg &data) override
+void UVMSub::Connect()
 {
-    if (this->handler) {
-        this->handler(data);
-    } else {
-        printf("[warn] called with datasize: %ld to empty handler\n",
-               data.size());
-    }
-}
-
-virtual void UVMSub::Connect() override
-{
-    return UVMCPub.Connect();
+    ((UVMCSub*)this->ptr_sub)->Connect();
 }
 
 std::string UVMSub::GetChannel()
 {
-    return this->channel;
+    ((UVMCSub*)this->ptr_sub)->channel;
 }
 
-virtual void UVMPub::SendMsg(uvm_msg &msg) override
-{
-    return UVMCPub.SendMsg(msg);
+UVMPub::UVMPub(std::string channel){
+    this->ptr_pub = new UVMCPub(channel);
 }
 
-virtual void UVMPub::Connect() override
+UVMPub::~UVMPub(){
+    delete (UVMCPub*)this->ptr_pub;
+}
+
+void UVMPub::SendMsg(uvm_msg &msg)
 {
-    return UVMCPub.Connect();
+    ((UVMCPub*)this->ptr_pub)->SendMsg(msg);
+}
+
+void UVMPub::Connect()
+{
+    ((UVMCPub*)this->ptr_pub)->Connect();
 }
 
 std::string UVMPub::GetChannel()
 {
-    return this->channel;
+    return ((UVMCPub*)this->ptr_pub)->channel;
 }
 
-void uvm_pbsub_run(uint64_t time)
+void uvm_pbsub_run(double time)
 {
     sc_run(time);
 }

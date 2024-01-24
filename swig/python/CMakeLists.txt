@@ -6,8 +6,53 @@ include_directories(${Python_INCLUDE_DIRS})
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_pyswig)
 
 # Add swig module
+string(TOLOWER "$ENV{BUILD_XSPCOMM_VCS_UVMPS}" swig_vcs_pubsub)
+if (NOT "${swig_vcs_pubsub}" STREQUAL "")
+set(VCS_HOME "$ENV{VCS_HOME}")
+set(UVMC_HOME "$ENV{UVMC_HOME}")
+set_property(SOURCE python_uvmps.i PROPERTY CPLUSPLUS ON)
+swig_add_library(pyxspcomm LANGUAGE python SOURCES 
+python_uvmps.i
+thirdcall.cpp
+)
+add_dependencies(pyxspcomm uvmps_vcs)
+target_link_options(pyxspcomm PRIVATE
+        -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+        -Wl,-rpath,~/.local/lib 
+        -Wl,-rpath,/usr/local/lib
+        -L./
+        -L/lib64
+	-L${VCS_HOME}/linux64/lib
+        -no-pie
+        -Wl,--no-as-needed
+        -rdynamic
+        -Wl,-whole-archive
+        -lvcsucli
+        -Wl,-no-whole-archive
+        -luclinative
+        -lvirsim
+        -lerrorinf
+        -lsnpsmalloc
+        -lvfs
+        -lvcsnew
+        -lrt
+        -lmdb
+        -ldl
+        -lc
+        -lm
+        -lpthread
+        -lvcs_tls
+        -lvcsucli
+)
+target_link_libraries(pyxspcomm PRIVATE xspcomm 
+    ${VCS_HOME}/linux64/lib/libvcs_tls.so
+    ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libuvmps_vcs.so
+    /lib64/libnuma.so.1
+    #${VCS_HOME}/linux64/lib/vcs_tls.o
+    #${VCS_HOME}/linux64/lib/vcs_save_restore.o
+)
+else()
 set_property(SOURCE python.i PROPERTY CPLUSPLUS ON)
-
 swig_add_library(pyxspcomm LANGUAGE python SOURCES 
 python.i
 thirdcall.cpp
@@ -17,7 +62,7 @@ target_link_options(pyxspcomm PRIVATE
         -Wl,-rpath,~/.local/lib 
         -Wl,-rpath,/usr/local/lib )
 target_link_libraries(pyxspcomm PRIVATE xspcomm)
-
+endif()
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)

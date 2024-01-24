@@ -2,34 +2,33 @@
 #define __xspcomm_uvm_pbsb__
 
 #include "xspcomm/uvm_msg.h"
-#include "xspcomm/_uvmc_pbsb.h"
 #include <functional>
 
 namespace xspcomm {
 
-class UVMSub : public UVMCSub
+class UVMSub
 {
-    std::function<void(const std::vector<uint8_t> &)> handler = nullptr;
+    void *ptr_sub = nullptr;
 public:
-    UVMSub(std::string channel) : UVMCSubBase(channel) {}
-    ~UVMCSub() {}
+    UVMSub(std::string channel);
+    ~UVMSub();
     void SetHandler(std::function<void(const uvm_msg &)> handler);
-    virtual void Handler(const uvm_msg &data) override;
-    virtual void Connect() override;
+    void Connect();
     std::string GetChannel();
 };
 
-class UVMPub: public UVMCPub
+class UVMPub
 {
+    void *ptr_pub = nullptr;
 public:
-    UVMPub(std::string channel): UVMCPub(channel) {}
-    ~UVMPub() {}
-    virtual void SendMsg(uvm_msg &msg) override;
-    virtual void Connect() override;
+    UVMPub(std::string channel);
+    ~UVMPub();
+    void SendMsg(uvm_msg &msg);
+    void Connect();
     std::string GetChannel();
 };
 
-void uvm_pbsub_run(uint64_t time);
+void uvm_pbsub_run(double time);
 
 } // namespace xspcomm
 

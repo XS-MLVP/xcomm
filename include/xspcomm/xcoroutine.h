@@ -2,6 +2,7 @@
 #define __xspcomm_xcoroutine__
 
 #include "xspcomm/xutil.h"
+#include <functional>
 
 #if ENABLE_XCOROUTINE
 

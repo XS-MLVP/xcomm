@@ -11,3 +11,30 @@ endif()
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}" SOVERSION ${PROJECT_VERSION})
+
+string(TOLOWER "$ENV{BUILD_XSPCOMM_VCS_UVMPS}" swig_vcs_pubsub)
+if (NOT "${swig_vcs_pubsub}" STREQUAL "")
+
+set(VCS_HOME "$ENV{VCS_HOME}")
+set(UVMC_HOME "$ENV{UVMC_HOME}")
+
+if (NOT EXISTS "${VCS_HOME}")
+message(FATAL_ERROR "VCS_HOME not set")
+endif()
+
+if (NOT EXISTS "${UVMC_HOME}")
+message(FATAL_ERROR "UVMC_HOME not set")
+endif()
+
+
+set(SYSCAN syscan -cpp g++ -cc gcc -full64 -cflags -g -cflags -DVCS -tlm2 -cflags -I${VCS_HOME}/include/systemc233/tlm_utils -cflags -I${UVMC_HOME}/src/connect/sc)
+set(VCS vcs -q -sysc=deltasync -lca  -sysc -cpp g++ -cc gcc -timescale=1ns/1ps -CFLAGS -DVCS ${VCS_HOME}/etc/uvm/src/dpi/uvm_dpi.cc -slave -full64)
+add_custom_target(
+    uvmps_vcs ALL
+    COMMAND ${SYSCAN} -cflags -I${CMAKE_CURRENT_SOURCE_DIR}/../include ${CMAKE_CURRENT_SOURCE_DIR}/uvm_pbsb.cpp  ${UVMC_HOME}/src/connect/sc/uvmc.cpp
+    COMMAND ${VCS} sc_main
+    COMMAND cp simv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libuvmps_vcs.so.${PROJECT_VERSION}
+    COMMAND cd ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} && ln -s libuvmps_vcs.so.${PROJECT_VERSION} libuvmps_vcs.so
+)
+
+endif()
