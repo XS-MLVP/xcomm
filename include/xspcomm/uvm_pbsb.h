@@ -28,7 +28,7 @@ public:
     std::string GetChannel();
 };
 
-void uvm_pbsub_run(double time);
+void uvm_pbsb_run(double time);
 
 } // namespace xspcomm
 

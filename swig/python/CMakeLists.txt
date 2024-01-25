@@ -22,34 +22,9 @@ target_link_options(pyxspcomm PRIVATE
         -Wl,-rpath,/usr/local/lib
         -L./
         -L/lib64
-	-L${VCS_HOME}/linux64/lib
-        -no-pie
-        -Wl,--no-as-needed
-        -rdynamic
-        -Wl,-whole-archive
-        -lvcsucli
-        -Wl,-no-whole-archive
-        -luclinative
-        -lvirsim
-        -lerrorinf
-        -lsnpsmalloc
-        -lvfs
-        -lvcsnew
-        -lrt
-        -lmdb
-        -ldl
-        -lc
-        -lm
-        -lpthread
-        -lvcs_tls
-        -lvcsucli
 )
 target_link_libraries(pyxspcomm PRIVATE xspcomm 
-    ${VCS_HOME}/linux64/lib/libvcs_tls.so
     ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libuvmps_vcs.so
-    /lib64/libnuma.so.1
-    #${VCS_HOME}/linux64/lib/vcs_tls.o
-    #${VCS_HOME}/linux64/lib/vcs_save_restore.o
 )
 else()
 set_property(SOURCE python.i PROPERTY CPLUSPLUS ON)

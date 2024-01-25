@@ -50,7 +50,7 @@ std::string UVMPub::GetChannel()
     return ((UVMCPub*)this->ptr_pub)->channel;
 }
 
-void uvm_pbsub_run(double time)
+void uvm_pbsb_run(double time)
 {
     sc_run(time);
 }
