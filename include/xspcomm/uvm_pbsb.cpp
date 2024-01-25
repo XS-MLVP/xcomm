@@ -12,7 +12,7 @@ UVMSub::~UVMSub(){
 }
 
 void UVMSub::SetHandler(
-    std::function<void(const uvm_msg&)> handler)
+    Xfunction<void, const uvm_msg&> handler)
 {
     ((UVMCSub*)this->ptr_sub)->SetHandler(handler);
 }

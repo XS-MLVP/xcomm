@@ -7,7 +7,7 @@
 #include "uvm_msg.h"
 #include <cstdint>
 #include <string>
-#include <functional>
+#include "xspcomm/xcallback.h"
 
 #include "simple_target_socket.h"
 #include "simple_initiator_socket.h"
@@ -18,7 +18,7 @@ class UVMCSub: public sc_core::sc_module
 {
     tlm_utils::simple_target_socket<UVMCSub> in;
     tlm::tlm_analysis_port<tlm::tlm_generic_payload> ap;
-    std::function<void(const uvm_msg&)> handler = nullptr;
+    xfunction<void, const uvm_msg&> handler = nullptr;
 public:
     std::string channel;
     UVMCSub(std::string channel) : channel(channel), in("in"), ap("ap")
@@ -26,7 +26,7 @@ public:
         this->in.register_b_transport(this, &UVMCSub::b_transport);
     }
     ~UVMCSub() {}
-    void SetHandler(std::function<void(const uvm_msg&)> cb){
+    void SetHandler(xfunction<void, const uvm_msg&> cb){
         this->handler = cb;
     }
     virtual void b_transport(tlm::tlm_generic_payload &gp, sc_core::sc_time &t)
@@ -43,7 +43,7 @@ public:
     virtual void Handler(const uvm_msg &msg)
     {
         if(this->handler){
-            this->handler(msg);
+            this->handler.call(msg);
         }else{
             printf("[warn] raw UVMCSub::handler called, with datasize: %ld\n",
                msg.data.size());

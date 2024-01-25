@@ -2,6 +2,7 @@
 #define __xspcomm_uvm_pbsb__
 
 #include "xspcomm/uvm_msg.h"
+#include "xspcomm/callback.h"
 #include <functional>
 
 namespace xspcomm {
@@ -12,7 +13,7 @@ class UVMSub
 public:
     UVMSub(std::string channel);
     ~UVMSub();
-    void SetHandler(std::function<void(const uvm_msg &)> handler);
+    void SetHandler(xfunction<void, const uvm_msg &> handler);
     void Connect();
     std::string GetChannel();
 };
