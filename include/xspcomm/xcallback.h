@@ -1,8 +1,9 @@
 #ifndef __xspcomm_xcallback__
 #define __xspcomm_xcallback__
 
-#include "xspcomm/xutil.h"
+//#include "xspcomm/xutil.h"
 #include <type_traits>
+#include "stdio.h"
 #include "xspcomm/_not_export.h"
 #include <cstddef>
 
@@ -30,7 +31,7 @@ public:
 
 	virtual R call(Args... __args) {
 		if(this->force_callable){
-			Assert(false, "call cannot be called in force_callable mode!");
+			printf("[**** Error ****] call cannot be called in force_callable mode!\n");
 		}
 		if(*this)return this->func.operator()(__args...);
 		return R();

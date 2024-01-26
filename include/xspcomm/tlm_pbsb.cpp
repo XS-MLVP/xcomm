@@ -1,58 +1,69 @@
-#include "xspcomm/uvm_pbsb.h"
+#include "xspcomm/tlm_pbsb.h"
 #include "xspcomm/_uvmc_pbsb.h"
 
 namespace xspcomm {
 
-UVMSub::UVMSub(std::string channel){
+TLMSub::TLMSub(std::string channel){
     this->ptr_sub = new UVMCSub(channel);
 }
 
-UVMSub::~UVMSub(){
+TLMSub::~TLMSub(){
     delete (UVMCSub*)this->ptr_sub;
 }
 
-void UVMSub::SetHandler(
-    Xfunction<void, const uvm_msg&> handler)
+void TLMSub::SetHandler(
+    xfunction<void, const tlm_msg&> handler)
 {
     ((UVMCSub*)this->ptr_sub)->SetHandler(handler);
 }
 
-void UVMSub::Connect()
+void TLMSub::Connect()
 {
     ((UVMCSub*)this->ptr_sub)->Connect();
 }
 
-std::string UVMSub::GetChannel()
+std::string TLMSub::GetChannel()
 {
     ((UVMCSub*)this->ptr_sub)->channel;
 }
 
-UVMPub::UVMPub(std::string channel){
+TLMPub::TLMPub(std::string channel){
     this->ptr_pub = new UVMCPub(channel);
 }
 
-UVMPub::~UVMPub(){
+TLMPub::~TLMPub(){
     delete (UVMCPub*)this->ptr_pub;
 }
 
-void UVMPub::SendMsg(uvm_msg &msg)
+void TLMPub::SendMsg(tlm_msg &msg)
 {
     ((UVMCPub*)this->ptr_pub)->SendMsg(msg);
 }
 
-void UVMPub::Connect()
+void TLMPub::Connect()
 {
     ((UVMCPub*)this->ptr_pub)->Connect();
 }
 
-std::string UVMPub::GetChannel()
+std::string TLMPub::GetChannel()
 {
     return ((UVMCPub*)this->ptr_pub)->channel;
 }
 
-void uvm_pbsb_run(double time)
+#ifdef USE_VCS
+void tlm_pbsb_run(double time)
 {
     sc_run(time);
 }
+
+void tlm_vcs_init(int argc, char **argv){
+    VcsMain(argc, argv);
+    VcsInit();
+}
+
+void tlm_vcs_step(uint64_t delay){
+    VcsSimUntil(&delay);
+}
+#endif
 
 } // namespace xspcomm

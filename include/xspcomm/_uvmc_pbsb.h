@@ -4,7 +4,7 @@
 #include <tlm.h>
 #include <systemc.h>
 #include "uvmc.h"
-#include "uvm_msg.h"
+#include "tlm_msg.h"
 #include <cstdint>
 #include <string>
 #include "xspcomm/xcallback.h"
@@ -18,32 +18,32 @@ class UVMCSub: public sc_core::sc_module
 {
     tlm_utils::simple_target_socket<UVMCSub> in;
     tlm::tlm_analysis_port<tlm::tlm_generic_payload> ap;
-    xfunction<void, const uvm_msg&> handler = nullptr;
+    xfunction<void, const tlm_msg&> handler = nullptr;
 public:
     std::string channel;
-    UVMCSub(std::string channel) : channel(channel), in("in"), ap("ap")
+    UVMCSub(std::string channel) : channel(channel), in("in"), ap("ap"), sc_core::sc_module(channel)
     {
         this->in.register_b_transport(this, &UVMCSub::b_transport);
     }
     ~UVMCSub() {}
-    void SetHandler(xfunction<void, const uvm_msg&> cb){
+    void SetHandler(xfunction<void, const tlm_msg&> cb){
         this->handler = cb;
     }
     virtual void b_transport(tlm::tlm_generic_payload &gp, sc_core::sc_time &t)
     {
         auto address = gp.get_data_ptr();
         std::vector<uint8_t> data(address, address + gp.get_data_length());
-        uvm_msg msg(address, address + gp.get_data_length());
+        tlm_msg msg(address, address + gp.get_data_length());
         msg.cmd         = gp.get_command();
         msg.resp_status = gp.get_response_status();
         this->Handler(msg);
         sc_core::wait(t);
         ap.write(gp);
     }
-    virtual void Handler(const uvm_msg &msg)
+    virtual void Handler(const tlm_msg &msg)
     {
-        if(this->handler){
-            this->handler.call(msg);
+        if(this->handler != nullptr){
+            this->handler(msg);
         }else{
             printf("[warn] raw UVMCSub::handler called, with datasize: %ld\n",
                msg.data.size());
@@ -58,14 +58,14 @@ class UVMCPub: public sc_core::sc_module
 {
     tlm_utils::simple_initiator_socket<UVMCPub> out;
     tlm::tlm_analysis_port<tlm::tlm_generic_payload> ap;
-    std::vector<uvm_msg*> data_to_send;
+    std::vector<tlm_msg*> data_to_send;
     bool exit = false;
     sc_core::sc_event not_empty;
 
 public:
     std::string channel;
     UVMCPub(std::string channel) :
-        channel(channel), out("out"), ap("ap")
+        channel(channel), out("out"), ap("ap"), sc_core::sc_module(channel)
     {
         SC_THREAD(__run__);
     }
@@ -98,7 +98,7 @@ public:
             delete data;
         }
     }
-    virtual void SendMsg(uvm_msg &msg)
+    virtual void SendMsg(tlm_msg &msg)
     {
         this->data_to_send.push_back(&msg);
         this->not_empty.notify();
