@@ -91,23 +91,26 @@
 # -------------------------------------------------------------
 # refine callback
 
-class _tlm_sub_handler(cb_void_tlm_msg):
-    def __init__(self, func):
-        cb_void_tlm_msg.__init__(self)
-        self.func = func
-    def call(self, msg):
-        return self.func(msg)
+def _tlm_sub_handler(fc):
+    class Func(cb_void_tlm_msg):
+        def __init__(self, func):
+            cb_void_tlm_msg.__init__(self)
+            self.func = func
+            self.set_force_callable()
+        def call(self, msg):
+            return self.func(msg)
+    return Func(fc).__disown__()
 
 TLMSub_old_init__  = TLMSub.__init__
 TLMSUB_old_SetHandler = TLMSub.SetHandler
 
 def TLMSub_SetHandler(self, cb):
-    return TLMSUB_old_SetHandler(self, _tlm_sub_handler(cb))    
+    return TLMSUB_old_SetHandler(self, _tlm_sub_handler(cb))
 
 def TLMSub__init__(self: TLMSub, ch: str, cb=None):
     ob = TLMSub_old_init__(self, ch)
     if callable(cb):
-       TLMSUB_old_SetHandler(self, _tlm_sub_handler(cb)) 
+       TLMSUB_old_SetHandler(self, _tlm_sub_handler(cb))
     return ob
 
 TLMSub.__init__ = TLMSub__init__
