@@ -30,7 +30,8 @@ public:
     // For c++
     tlm_command cmd;
     tlm_response_status resp_status;
-    tlm_gp_option option std::vector<uint8_t> data;
+    tlm_gp_option option;
+    std::vector<uint8_t> data;
     tlm_msg() {
         this->cmd = TLM_IGNORE_COMMAND;
         this->resp_status = TLM_OK_RESPONSE;
@@ -38,12 +39,12 @@ public:
     }
     tlm_msg(uint8_t *addr_start, uint8_t *addr_end) : data(addr_start, addr_end)
     {
-        this->cmd = TLM_IGNORE_COMMAND;
-        this->resp_status = TLM_OK_RESPONSE;
-        this->option = TLM_MIN_PAYLOAD;
+        tlm_msg();
     }
     // For swig-python
-    tlm_msg(std::vector<unsigned char> &data) : data(data) {}
+    tlm_msg(std::vector<unsigned char> &data) : data(data) {
+        tlm_msg();
+    }
     void from_bytes(std::vector<unsigned char> &data) { this->data = data; }
     std::vector<unsigned char> as_bytes() { return this->data; }
 };
