@@ -247,7 +247,35 @@ if __name__ == "__main__":
 
 ```
 
-##### 四、其他可用接口
+##### 四、通过 TLM 连通 UVM 与 Python
+
+本项目提供基于 UVMC 的方式进行 UVM 和 Python（C++）的通信
+
+以VCS为例，DUT示例编译骤如下：
+
+```
+...
+# 1 通过swig生成python wrapper
+$swig -D'MODULE_NAME="tlm_pbsb"' -python -c++ -DUSE_VCS -I${XSP_COMM_INCLUDE} \
+-o tlmps.cpp ${XSP_COMM_INCLUDE}/xspcomm/python_tlm_pbsb.i
+
+# 2 编译通信模块
+$SYSCAN -full64 -cflags -DUSE_VCS -cflags -I{PYTHON_INCLUDE} \
+-cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/xspcomm/tlm_pbsb.cpp tlmps.cpp
+
+# 3 以slave模式编译 DUT
+$VLOGAN -full64 +incdir+common tlm.sv +define+UVM_OBJECT_MUST_HAVE_CONSTRUCTOR
+$VCS -e VcsMain -full64 sv_main ${VCS_HOME}/linux64/lib/vcs_tls.o -slave
+
+# 4 重命名
+$mv simv _tlm_pbsb.so
+$mv simv.daidir _tlm_pbsb.so.daidir
+...
+```
+
+编译完成后，可以通过 import 加载dut，具体例子请参考：tests/tlm
+
+##### 五、其他可用接口
 
 头文件 xspcomm/xutil.h 提供以下基本功能
 ```

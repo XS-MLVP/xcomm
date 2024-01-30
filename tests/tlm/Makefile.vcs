@@ -11,6 +11,9 @@ endif
 ifndef XSP_COMM_INCLUDE
 $(error XSP_COMM_INCLUDE is not set)
 endif
+ifndef PYTHON_INCLUDE
+$(error PYTHON_INCLUDE is not set)
+endif
 
 
 VERBOSE=+UVM_VERBOSITY=UVM_MEDIUM
@@ -45,7 +48,7 @@ all:
 
 comp:
 	swig -D'MODULE_NAME="tlm_pbsb"' -python -c++ -DUSE_VCS -I${XSP_COMM_INCLUDE} -o tlmps.cpp ${XSP_COMM_INCLUDE}/xspcomm/python_tlm_pbsb.i
-	$(SYSCAN) -full64 -cflags -DUSE_VCS -cflags -I/nfs/app/anaconda3/include/python3.8 -cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/xspcomm/tlm_pbsb.cpp tlmps.cpp
+	$(SYSCAN) -full64 -cflags -DUSE_VCS -cflags -I${PYTHON_INCLUDE} -cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/xspcomm/tlm_pbsb.cpp tlmps.cpp
 	$(VLOGAN) -full64 +incdir+common tlm.sv +define+UVM_OBJECT_MUST_HAVE_CONSTRUCTOR
 	$(VCS_ELAB) -e VcsMain -full64 sv_main ${VCS_HOME}/linux64/lib/vcs_tls.o -slave
 	mv simv _tlm_pbsb.so
