@@ -34,8 +34,9 @@ public:
         auto address = gp.get_data_ptr();
         std::vector<uint8_t> data(address, address + gp.get_data_length());
         tlm_msg msg(address, address + gp.get_data_length());
-        msg.cmd         = gp.get_command();
-        msg.resp_status = gp.get_response_status();
+        msg.cmd         = (tlm_command)gp.get_command();
+        msg.resp_status = (tlm_response_status)gp.get_response_status();
+        msg.option      = (tlm_gp_option)gp.get_gp_option();
         this->Handler(msg);
         sc_core::wait(t);
         ap.write(gp);
@@ -86,16 +87,17 @@ public:
             this->data_to_send.pop_back();
             tlm::tlm_command cmd                 = (tlm::tlm_command)data->cmd;
             tlm::tlm_response_status resp_status = (tlm::tlm_response_status)data->resp_status;
+            tlm::tlm_gp_option option            = (tlm::tlm_gp_option)data->option;
             auto vdata                           = data->data;
             tlm::tlm_generic_payload gp;
             gp.set_data_length(vdata.size());
             gp.set_data_ptr(vdata.data());
             gp.set_command(cmd);
             gp.set_response_status(resp_status);
+            gp.set_gp_option(option);
             auto dtime = sc_core::sc_time(0, sc_core::SC_NS);
             out->b_transport(gp, dtime);
             ap.write(gp);
-            delete data;
         }
     }
     virtual void SendMsg(tlm_msg &msg)
