@@ -11,6 +11,7 @@
 
 #include "simple_target_socket.h"
 #include "simple_initiator_socket.h"
+#include <map>
 
 namespace xspcomm {
 
@@ -18,7 +19,8 @@ class UVMCSub: public sc_core::sc_module
 {
     tlm_utils::simple_target_socket<UVMCSub> in;
     tlm::tlm_analysis_port<tlm::tlm_generic_payload> ap;
-    xfunction<void, const tlm_msg&> handler = nullptr;
+    std::map<uint64_t obj, xfunction<void, const tlm_msg&>> handler;
+    bool is_connected = false;
 public:
     std::string channel;
     UVMCSub(std::string channel) : channel(channel), in("in"), ap("ap"), sc_core::sc_module(channel)
@@ -26,8 +28,16 @@ public:
         this->in.register_b_transport(this, &UVMCSub::b_transport);
     }
     ~UVMCSub() {}
-    void SetHandler(xfunction<void, const tlm_msg&> cb){
-        this->handler = cb;
+    void SetHandler(uint64_t key, xfunction<void, const tlm_msg&> cb){
+        this->handler[key] = cb;
+    }
+    void DelHandler(uint64_t key){
+        if(this->handler.count(key)){
+            this->handler.erase(key);
+        }
+    }
+    bool IsHandlerEmpty(){
+        return this->handler.empty();
     }
     virtual void b_transport(tlm::tlm_generic_payload &gp, sc_core::sc_time &t)
     {
@@ -43,15 +53,20 @@ public:
     }
     virtual void Handler(const tlm_msg &msg)
     {
-        if(this->handler != nullptr){
-            this->handler(msg);
+        if(!this->handler.empty()){
+            for(auto &kv: this->handler){
+                kv.second(msg);
+            }
         }else{
             printf("[warn] raw UVMCSub::handler called, with datasize: %ld\n",
                msg.data.size());
         }
     }
     virtual void Connect(){
-        uvmc::uvmc_connect(this->in, this->channel.c_str());
+        if(!this->is_connected){
+            uvmc::uvmc_connect(this->in, this->channel.c_str());
+            this->is_connected = true;
+        }
     }
 };
 
@@ -62,7 +77,8 @@ class UVMCPub: public sc_core::sc_module
     std::vector<tlm_msg*> data_to_send;
     bool exit = false;
     sc_core::sc_event not_empty;
-
+    bool is_connected = false;
+    std::map<uint64_t, uint64_t> sender;
 public:
     std::string channel;
     UVMCPub(std::string channel) :
@@ -75,6 +91,17 @@ public:
     {
         this->exit = true;
         this->not_empty.notify();
+    }
+    void SetSender(uint64_t key){
+        this->sender[key] = this;
+    }
+    void DelSender(uint64_t key){
+        if(this->sender.count(key)){
+            this->sender.erase(key);
+        }
+    }
+    bool IsSenderEmpty(){
+        return this->sender.empty();
     }
     void __run__()
     {
@@ -107,7 +134,10 @@ public:
     }
 
     virtual void Connect(){
-        uvmc::uvmc_connect(this->out, this->channel.c_str());
+        if(!this->is_connected){
+            uvmc::uvmc_connect(this->out, this->channel.c_str());
+            this->is_connected = true;
+        }
     }
 };
 

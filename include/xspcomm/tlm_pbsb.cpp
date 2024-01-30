@@ -1,20 +1,33 @@
 #include "xspcomm/tlm_pbsb.h"
 #include "xspcomm/_uvmc_pbsb.h"
+#include <map>
+#include <string>
 
 namespace xspcomm {
 
+std::map<std::string, TLMSub*> subs;
+std::map<std::string, TLMPub*> pubs;
+
 TLMSub::TLMSub(std::string channel){
-    this->ptr_sub = new UVMCSub(channel);
+    if(!subs.count(channel)){
+        subs[channel] = new UVMCSub(channel);
+    }
+    this->ptr_sub = subs[channel];
 }
 
 TLMSub::~TLMSub(){
-    delete (UVMCSub*)this->ptr_sub;
+    auto ptr = ((UVMCSub*))this->ptr_sub;
+    ptr.DelHandler(this);
+    if(ptr->IsHandlerEmpty()){
+        subs.erase(ptr->channel);
+        delete ptr;
+    }
 }
 
 void TLMSub::SetHandler(
     xfunction<void, const tlm_msg&> handler)
 {
-    ((UVMCSub*)this->ptr_sub)->SetHandler(handler);
+    ((UVMCSub*)this->ptr_sub)->SetHandler(this, handler);
 }
 
 void TLMSub::Connect()
@@ -28,11 +41,19 @@ std::string TLMSub::GetChannel()
 }
 
 TLMPub::TLMPub(std::string channel){
-    this->ptr_pub = new UVMCPub(channel);
+    if(!pubs.count(channel)){
+        pubs[channel] = new UVMCPub(channel);
+    }
+    this->ptr_pub = pubs[channel];
 }
 
 TLMPub::~TLMPub(){
-    delete (UVMCPub*)this->ptr_pub;
+    auto ptr = ((UVMCSub*))this->ptr_pub;
+    ptr.DelSender(this);
+    if(ptr->IsSenderEmpty()){
+        pubs.erase(ptr->channel);
+        delete ptr;
+    }
 }
 
 void TLMPub::SendMsg(tlm_msg &msg)
