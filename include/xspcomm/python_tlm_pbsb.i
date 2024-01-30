@@ -1,4 +1,4 @@
-%module(directors="1") tlm_pbsb
+%module(directors="1") MODULE_NAME
 
 %typemap(in) std::vector<unsigned char>& (std::vector<unsigned char> temp) {
     if (!PyBytes_Check($input)) {
