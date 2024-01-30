@@ -116,4 +116,10 @@ def TLMSub__init__(self: TLMSub, ch: str, cb=None):
 TLMSub.__init__ = TLMSub__init__
 TLMSub.SetHandler = TLMSub_SetHandler
 
+old_tlm_vcs_init = tlm_vcs_init
+def new_tlm_vcs_init(*args):
+    return old_tlm_vcs_init(args)
+tlm_vcs_init = new_tlm_vcs_init
+
+
 %}
