@@ -5,8 +5,8 @@
 
 namespace xspcomm {
 
-std::map<std::string, TLMSub*> subs;
-std::map<std::string, TLMPub*> pubs;
+std::map<std::string, UVMCSub*> subs;
+std::map<std::string, UVMCPub*> pubs;
 
 TLMSub::TLMSub(std::string channel){
     if(!subs.count(channel)){
@@ -16,8 +16,8 @@ TLMSub::TLMSub(std::string channel){
 }
 
 TLMSub::~TLMSub(){
-    auto ptr = ((UVMCSub*))this->ptr_sub;
-    ptr.DelHandler(this);
+    UVMCSub* ptr = (UVMCSub*)this->ptr_sub;
+    ptr->DelHandler(this);
     if(ptr->IsHandlerEmpty()){
         subs.erase(ptr->channel);
         delete ptr;
@@ -48,8 +48,8 @@ TLMPub::TLMPub(std::string channel){
 }
 
 TLMPub::~TLMPub(){
-    auto ptr = ((UVMCSub*))this->ptr_pub;
-    ptr.DelSender(this);
+    UVMCPub* ptr = (UVMCPub*)this->ptr_pub;
+    ptr->DelSender(this);
     if(ptr->IsSenderEmpty()){
         pubs.erase(ptr->channel);
         delete ptr;

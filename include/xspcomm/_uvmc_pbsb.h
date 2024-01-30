@@ -19,7 +19,7 @@ class UVMCSub: public sc_core::sc_module
 {
     tlm_utils::simple_target_socket<UVMCSub> in;
     tlm::tlm_analysis_port<tlm::tlm_generic_payload> ap;
-    std::map<uint64_t obj, xfunction<void, const tlm_msg&>> handler;
+    std::map<void*, xfunction<void, const tlm_msg&>> handler;
     bool is_connected = false;
 public:
     std::string channel;
@@ -28,10 +28,10 @@ public:
         this->in.register_b_transport(this, &UVMCSub::b_transport);
     }
     ~UVMCSub() {}
-    void SetHandler(uint64_t key, xfunction<void, const tlm_msg&> cb){
+    void SetHandler(void* key, xfunction<void, const tlm_msg&> cb){
         this->handler[key] = cb;
     }
-    void DelHandler(uint64_t key){
+    void DelHandler(void* key){
         if(this->handler.count(key)){
             this->handler.erase(key);
         }
@@ -78,7 +78,7 @@ class UVMCPub: public sc_core::sc_module
     bool exit = false;
     sc_core::sc_event not_empty;
     bool is_connected = false;
-    std::map<uint64_t, uint64_t> sender;
+    std::map<void*, void*> sender;
 public:
     std::string channel;
     UVMCPub(std::string channel) :
@@ -92,10 +92,10 @@ public:
         this->exit = true;
         this->not_empty.notify();
     }
-    void SetSender(uint64_t key){
+    void SetSender(void* key){
         this->sender[key] = this;
     }
-    void DelSender(uint64_t key){
+    void DelSender(void* key){
         if(this->sender.count(key)){
             this->sender.erase(key);
         }
