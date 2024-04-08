@@ -203,6 +203,22 @@ int test_xdata()
     a.Invert();
     test_assert(~uint32_t(2) == a, "~ check fail: %s", a.String().c_str());
 
+    // test sub data
+    XData full(128, IOType::InOut, "full");
+    full = "0xffffffffffffffffffffffffffffffff";
+
+    auto x30_64 = full.SubDataRef("x30_64", 30, 64);
+    auto x30_93 = full.SubDataRef("x30_93", 30, 93);
+    *x30_64 = "0xababa12ba98babab";
+
+    test_assert("ffffffffeaeae84aea62eaeaffffffff" == full.String() && full.DataValid(), "data(0x%s) need be: 0xffffffffeaeae84aea62eaeaffffffff", full.String().c_str());
+    test_assert("ababa12ba98babab" == x30_64->String() && x30_64->DataValid(), "data(0x%s) need be: ababa12ba98babab", x30_64->String().c_str());
+
+    *x30_93 = "0xf1010101010101010202020f";
+
+    test_assert("fc4040404040404040808083ffffffff" == full.String() && full.DataValid(), "data(0x%s) need be: fc4040404040404040808083ffffffff", full.String().c_str());
+    test_assert("11010101010101010202020f" == x30_93->String() && x30_93->DataValid(), "data(0x%s) need be: 11010101010101010202020f", x30_93->String().c_str());
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }

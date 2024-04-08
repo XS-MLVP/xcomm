@@ -384,6 +384,9 @@ XData::XData(XData &t) :
     this->udata     = t.udata;
     this->vecSize   = t.vecSize;
     this->zero_mask = t.zero_mask;
+    this->write_mode = t.write_mode;
+    this->sub_offset = t.sub_offset;
+    this->sub_pVecRef = t.sub_pVecRef;
     // pointers
     if (this->vecSize > 0) {
         this->pVecData =
@@ -401,6 +404,12 @@ XData::XData(XData &t) :
     }
     this->pinbind_bit.write_fc = write_fc;
     this->_sv_to_local();
+    if(this->sub_pVecRef != nullptr){
+        Warn("You are copying a ref xdata. bind _sub_data_fake_dpirw ...");
+        this->vecRead = [this](void*data){return this->_sub_data_fake_dpir(data);};
+        if(this->mIOType != IOType::Output)this->vecWrite = [this](void*data){return this->_sub_data_fake_dpiw(data);};
+        this->update_read();
+    }
 };
 XData::~XData()
 {
@@ -412,6 +421,99 @@ XData::~XData()
         this->pVecData = nullptr;
     }
 }
+
+XData *XData::SubDataRef(std::string name, uint32_t start, uint32_t width){
+    Assert(this->mWidth > 0, "Only svVec support SubDataRef, need mWidth > 0");
+    Assert(start + width <= this->mWidth, "SubDataRef out of range (start + witdth=%d > mWidth=%d)", start + width, this->mWidth);
+    XData *sub = new XData(width, this->mIOType, name);
+    sub->SetWriteMode(WriteMode::Imme);
+    sub->sub_offset = start;
+    sub->sub_pVecRef = this->pVecData;
+    sub->vecRead = [sub](void*data){return sub->_sub_data_fake_dpir(data);};
+    if(sub->mIOType != IOType::Output)sub->vecWrite = [sub](void*data){return sub->_sub_data_fake_dpiw(data);};
+    sub->update_read();
+    return sub;
+}
+
+void XData::_sub_data_fake_dpirw(void *data, bool is_read){
+    DebugC(false, "_sub_data_fake_dpirw: %s", is_read ? "Read": "Write");
+    xsvLogicVecVal * p = this->sub_pVecRef;
+    // read data from ref
+    uint32_t start_p = this->sub_offset / 32;
+    uint32_t start_f = this->sub_offset % 32;
+    uint32_t end_p = (this->sub_offset + this->mWidth) / 32;
+    uint32_t end_f = (this->sub_offset + this->mWidth) % 32;
+    uint32_t maskv = (((this->mWidth % 32) ? 1:0) << (this->mWidth % 32)) - 1;
+    uint32_t maska = (1 << start_f) - 1;
+    // copy/write data
+    // from/dist:      |_|_|_|_|_|_|
+    //                 /     /
+    // to/from:        |_|_|_|
+    // FIXME: ugly implementation
+    for (int i = 0; i < this->vecSize; i++){
+        uint32_t a = start_p + i;
+        uint32_t b = (a + 1 >= end_p) ? end_p : (a + 1);
+        // short case: data in one section
+        if(start_p == end_p){
+            if(is_read){
+                this->pVecData[i].aval = (p[a].aval >> start_f ) & maskv;
+                this->pVecData[i].bval = (p[a].bval >> start_f ) & maskv;
+            }else{
+                p[a].aval = ((~(maskv << start_f)) & p[a].aval) | ((this->pVecData[i].aval & maskv) << start_f);
+                p[a].bval = ((~(maskv << start_f)) & p[a].bval) | ((this->pVecData[i].bval & maskv) << start_f);
+            }
+        // normal case: data in one more sections
+        }else{
+            uint32_t maskt = -1;
+            uint32_t margin_shift = 32 - start_f;
+            uint32_t maskb = ~maska;
+            if(i == this->vecSize - 1){
+                maskt = maskv;
+            }
+            if(a != b){
+                if(is_read){
+                    this->pVecData[i].aval = (p[a].aval >> start_f);
+                    this->pVecData[i].bval = (p[a].bval >> start_f);
+                    if(start_f != 0){
+                        this->pVecData[i].aval = (this->pVecData[i].aval | (p[b].aval << margin_shift)) & maskt;
+                        this->pVecData[i].bval = (this->pVecData[i].bval | (p[b].bval << margin_shift)) & maskt;
+                    }
+                }else{
+                    p[a].aval = (maska & p[a].aval) | (this->pVecData[i].aval << start_f);
+                    p[a].bval = (maska & p[a].bval) | (this->pVecData[i].bval << start_f);
+                    if(start_f != 0){
+                        p[b].aval = (maskb & p[b].aval) | (this->pVecData[i].aval >> margin_shift);
+                        p[b].bval = (maskb & p[b].bval) | (this->pVecData[i].bval >> margin_shift);
+                    }
+                }
+            }else{
+                // to the last section
+                Assert(start_f <= end_f, "Error! Need start offset(%d) < end offset(%d)", start_f, end_f);
+                Assert(i == this->vecSize - 1, "Error! need at the last section [i(%d) != vsize(%d)]", i, this->vecSize);
+                uint32_t mask = ((1 << end_f) - 1) ^ maska;
+                if(is_read){
+                    this->pVecData[i].aval = (this->pVecData[i].aval & ~mask) | ((p[a].aval & mask) >> start_f);
+                    this->pVecData[i].bval = (this->pVecData[i].bval & ~mask) | ((p[a].bval & mask) >> start_f);
+                }else{
+                    p[a].aval = (p[a].aval & ~mask) | ((this->pVecData[i].aval << start_f) & mask);
+                    p[a].bval = (p[a].bval & ~mask) | ((this->pVecData[i].bval << start_f) & mask);
+                }
+            }
+        }
+    }
+    // update local
+    this->_sv_to_local();
+    this->_update_shadow();
+}
+
+void XData::_sub_data_fake_dpir(void *data){
+    return this->_sub_data_fake_dpirw(data, true);
+}
+
+void XData::_sub_data_fake_dpiw(void *data){
+    return this->_sub_data_fake_dpirw(data, false);
+}
+
 void XData::BindDPIRW(xfunction<void, void *> read,
                       xfunction<void, void *> write)
 {

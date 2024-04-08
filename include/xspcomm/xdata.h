@@ -121,6 +121,8 @@ private:
     xsvLogic last_mLogicData      = 0;
     bool last_is_write            = false;
     bool ignore_same_write        = true;
+    u_int32_t sub_offset          = 0;       // for sub data
+    xsvLogicVecVal * sub_pVecRef  = nullptr; // for sub data
 
 private:
     void update_read();
@@ -135,6 +137,9 @@ private:
     void _dpi_check();
     bool _need_write();
     void _update_last_write();
+    void _sub_data_fake_dpirw(void *data, bool is_read);
+    void _sub_data_fake_dpir(void * data);
+    void _sub_data_fake_dpiw(void * data);
 
 public:
     // basic
@@ -150,6 +155,7 @@ public:
     XData(uint32_t width, IOType itype, std::string name = "");
     XData(XData &t);
     ~XData();
+    XData *SubDataRef(std::string name, uint32_t start, uint32_t width);
     WriteMode GetWriteMode();
     bool SetWriteMode(WriteMode mode);
     void WriteOnRise();
