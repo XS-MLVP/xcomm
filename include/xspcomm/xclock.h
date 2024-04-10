@@ -74,6 +74,8 @@ public:
     void Add(xspcomm::XPort *d);
     void Add(xspcomm::XPort &d);
 
+    // Propagate Combinational Logic
+    void eval();
     /**
      * @brief Step the clock, and call all the callback functions. After every
      * step, it stop on a rise edge (clock = 1).

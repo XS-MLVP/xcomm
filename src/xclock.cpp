@@ -184,6 +184,11 @@ void XClock::_step_ris()
     this->_call_back(this->list_call_back_ris);
 }
 
+void XClock::eval()
+{
+    this->_step(false);
+}
+
 void XClock::Reset()
 {
     this->clk = 0;
