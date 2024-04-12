@@ -219,6 +219,12 @@ int test_xdata()
     test_assert("fc4040404040404040808083ffffffff" == full.String() && full.DataValid(), "data(0x%s) need be: fc4040404040404040808083ffffffff", full.String().c_str());
     test_assert("11010101010101010202020f" == x30_93->String() && x30_93->DataValid(), "data(0x%s) need be: 11010101010101010202020f", x30_93->String().c_str());
 
+    auto x0_1 = full.SubDataRef("x0_1", 0, 1);
+    auto x1_0 = full.SubDataRef("x1_0", 1, 0);
+    *x0_1 = 0;
+    *x1_0 = 0;
+    test_assert("fc4040404040404040808083fffffffc" == full.String() && full.DataValid(), "data(0x%s) need be: fc4040404040404040808083fffffffc", full.String().c_str());
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }

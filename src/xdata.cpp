@@ -342,7 +342,7 @@ void XData::ReInit(uint32_t width, IOType itype, std::string name)
         this->_sv_to_local();
         this->_update_shadow();
     };
-    if (width > 1) {
+    if (width >= 1) {
         // svDPI Vec is 32 bits
         this->vecSize = width / 32 + ((width % 32 != 0) ? 1 : 0);
         this->pVecData =
@@ -426,7 +426,7 @@ XData *XData::SubDataRef(std::string name, uint32_t start, uint32_t width){
     Assert(this->mWidth > 0, "Only svVec support SubDataRef, need mWidth > 0");
     Assert(start + width <= this->mWidth, "SubDataRef out of range (start + witdth=%d > mWidth=%d)", start + width, this->mWidth);
     XData *sub = new XData(width, this->mIOType, name);
-    sub->SetWriteMode(WriteMode::Imme);
+    if(sub->mIOType != IOType::Output)sub->SetWriteMode(WriteMode::Imme);
     sub->sub_offset = start;
     sub->sub_pVecRef = this->pVecData;
     sub->vecRead = [sub](void*data){return sub->_sub_data_fake_dpir(data);};
@@ -437,7 +437,6 @@ XData *XData::SubDataRef(std::string name, uint32_t start, uint32_t width){
 
 void XData::_sub_data_fake_dpirw(void *data, bool is_read){
     DebugC(false, "_sub_data_fake_dpirw: %s", is_read ? "Read": "Write");
-    xsvLogicVecVal * p = this->sub_pVecRef;
     // read data from ref
     uint32_t start_p = this->sub_offset / 32;
     uint32_t start_f = this->sub_offset % 32;
@@ -445,6 +444,22 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
     uint32_t end_f = (this->sub_offset + this->mWidth) % 32;
     uint32_t maskv = (((this->mWidth % 32) ? 1:0) << (this->mWidth % 32)) - 1;
     uint32_t maska = (1 << start_f) - 1;
+
+    if (this->vecSize == 0 && this->mWidth == 0) {
+        if(is_read){
+            auto aval = (this->sub_pVecRef[start_p].aval >> start_f) & 1;
+            auto bval = (this->sub_pVecRef[start_p].bval >> start_f) & 1;
+            this->mLogicData = bval * 2 + aval;
+        }else{
+            uint32_t mask = 1 << start_f;
+            uint32_t maskb = ~mask;
+            this->sub_pVecRef[start_p].aval = (maskb & this->sub_pVecRef[start_p].aval) | ((this->mLogicData & 1) << start_f);
+            this->sub_pVecRef[start_p].bval = (maskb & this->sub_pVecRef[start_p].bval) | (((this->mLogicData >> 1) & 1) << start_f);
+        }
+        return;
+    }
+
+    xsvLogicVecVal * p = this->sub_pVecRef;
     // copy/write data
     // from/dist:      |_|_|_|_|_|_|
     //                 /     /
