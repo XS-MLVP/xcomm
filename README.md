@@ -1,6 +1,6 @@
 #### xspcomm 介绍
 
-xspcomm 为 xspecker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xspcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xspcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
+xspcomm 为 picker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xspcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xspcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
 
 **编译：**
 通过make命令进行编译， 参数 BUILD_XSPCOMM_SWIG=python 可开启SWIG-Python支持 (目前swig接口支持python, javascript, java)，编译完成后生成文件位于 build/lib：
