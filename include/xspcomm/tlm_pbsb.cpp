@@ -82,8 +82,10 @@ void tlm_vcs_init(int argc, char **argv){
     VcsInit();
 }
 
+uint64_t _vcs_time = 0;
 void tlm_vcs_step(uint64_t delay){
-    VcsSimUntil(&delay);
+    _vcs_time += delay;
+    VcsSimUntil(&_vcs_time);
 }
 #endif
 
