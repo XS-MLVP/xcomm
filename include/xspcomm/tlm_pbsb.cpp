@@ -71,6 +71,13 @@ std::string TLMPub::GetChannel()
     return ((UVMCPub*)this->ptr_pub)->channel;
 }
 
+void step(double time, double scale){
+    sc_run(time);
+#ifdef USE_VCS
+    tlm_vcs_step((uint64_t)(time * scale));
+#endif
+}
+
 #ifdef USE_VCS
 void tlm_pbsb_run(double time)
 {

@@ -39,6 +39,8 @@ public:
 
 void tlm_pbsb_run(double time);
 
+void step(double time, double scale = 1.0f);
+
 #ifdef USE_VCS
 void tlm_vcs_init(int argc, char **argv);
 void tlm_vcs_step(uint64_t delay);
