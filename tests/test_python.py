@@ -13,7 +13,7 @@ def test_xdata():
 
     c.value = l_value
 
-    b.value = a    
+    b.value = a
     a.value = "0x123123123123123123123"
     b.value = 0xffffffff
     b[0] = 0
@@ -47,7 +47,48 @@ async def test_async():
     print("test        cpm:", clk.clk)
     await task
 
+async def test_async_event():
+    print("test_async_event")
+    clk = XClock(lambda a: 0)
+    clk.StepRis(lambda c : print("lambda ris: ", c))
+    task = create_task(clk.RunStep(30))
+
+    async def awaited_func(event, event2):
+        await event.wait()
+        print("event has been waited")
+        event2.set()
+        print("event2 has been set")
+
+    async def set_event(event, event2):
+        await clk.AStep(2)
+        event.set()
+        print("event has been set")
+        await event2.wait()
+        print("event2 has been waited")
+
+
+    # Wrong usage: use asyncio.Event
+    # set and wait will not occur in the same cycle
+    import asyncio
+    events = [asyncio.Event() for _ in range(2)]
+    create_task(awaited_func(events[0], events[1]))
+    create_task(set_event(events[0], events[1]))
+
+    await clk.AStep(5)
+
+
+    # Right usage: use Event in xspcomm
+    # All set and wait will occur in the same cycle
+    events = [Event() for _ in range(2)]
+    create_task(awaited_func(events[0], events[1]))
+    create_task(set_event(events[0], events[1]))
+
+
+    await task
+
+
 if __name__ == "__main__":
     test_xdata()
     run(test_async())
+    run(test_async_event())
     print("version: %s" % version())

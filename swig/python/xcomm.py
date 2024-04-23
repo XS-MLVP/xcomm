@@ -95,7 +95,30 @@ class xclock_cb_step_rf(cb_void_u64_voidp):
     def call(self, cycle: int, args=None):
         return self.func(cycle, *self.args, **self.kwargs)
 
+# Async
 import asyncio
+
+timestamp = 0
+def tick_timestamp():
+    global timestamp
+    timestamp = (timestamp + 1) % 2**32
+
+def has_unwait_task():
+    for task in asyncio.all_tasks():
+        if "XClock_RunStep" not in task.__repr__() and "wait_for" not in task.__repr__():
+            return True
+    return False
+
+async def tick_clock_ready():
+    global timestamp
+    timestamp_old = timestamp
+    await asyncio.sleep(0)
+    while has_unwait_task() or timestamp_old != timestamp:
+        await asyncio.sleep(0)
+        timestamp_old = timestamp
+
+
+
 XClock_old_init__ = XClock.__init__
 def XClock__init__(self, step_func):
     self._step_event = asyncio.Event()
@@ -147,6 +170,7 @@ async def XClock_ANext(self):
 
 async def XClock_RunStep(self, cycle: int):
     for i in range(cycle):
+        await tick_clock_ready()
         XClock_Step(self, 1)
         await asyncio.sleep(0)
 
@@ -155,6 +179,48 @@ XClock.AStep = XClock_AStep
 XClock.ACondition = XClock_ACondition
 XClock.ANext =XClock_ANext
 XClock.RunStep = XClock_RunStep
+
+
+class Event:
+    def __init__(self):
+        self.event = asyncio.Event()
+
+    async def wait(self):
+        await self.event.wait()
+        tick_timestamp()
+
+    def set(self):
+        self.event.set()
+
+    def clear(self):
+        self.event.clear()
+
+
+class Queue:
+    def __init__(self):
+        self.queue = asyncio.Queue()
+
+    async def put(self, value):
+        await self.queue.put(value)
+        tick_timestamp()
+
+    async def get(self):
+        ret = await self.queue.get()
+        tick_timestamp()
+        return ret
+
+    def put_nowait(self, value):
+        self.queue.put_nowait(value)
+
+    def get_nowait(self):
+        return self.queue.get_nowait()
+
+async def sleep(delay: float):
+    await asyncio.sleep(delay)
+    tick_timestamp()
+
+
+# XPin
 
 class XPin:
     def __init__(self, xdata, event):
