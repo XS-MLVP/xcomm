@@ -1,6 +1,13 @@
 
 from .pyxspcomm import *
 import sys
+import traceback
+
+# handle exception when callback
+def cb_exception_handler(func):
+    print(f"\033[31mCallback Error in \033[0m{func.__qualname__}: ", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+    print("", file=sys.stderr)
 
 # PinBind
 PinBind__old__setattr__ = PinBind.__setattr__
@@ -83,8 +90,12 @@ class xclock_cb_step(cb_int_bool):
         cb_int_bool.__init__(self)
         self.func = func
     def call(self, dump: bool):
-        return self.func(dump)
-
+        try:
+            return self.func(dump)
+        except Exception as e:
+            cb_exception_handler(self.func)
+            assert(0)
+            
 class xclock_cb_step_rf(cb_void_u64_voidp):
     """XClock step Ris/Fal call back"""
     def __init__(self, func, args, kwargs):
@@ -93,7 +104,11 @@ class xclock_cb_step_rf(cb_void_u64_voidp):
         self.args = args
         self.kwargs = kwargs
     def call(self, cycle: int, args=None):
-        return self.func(cycle, *self.args, **self.kwargs)
+        try:
+            return self.func(cycle, *self.args, **self.kwargs)
+        except Exception as e:
+            cb_exception_handler(self.func)
+            assert(0)
 
 # Async
 import asyncio
