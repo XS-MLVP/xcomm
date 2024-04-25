@@ -75,8 +75,7 @@ def XPort__getitem__(self: XPort, key):
     return self.Get(key)
 
 def XPort__setitem__(self: XPort, key, value):
-    self.At(key).Set(value)
-
+    self.Get(key).value = value
 
 XPort.__init__ = XPort__init__
 XPort.__str__ = XPort__str__

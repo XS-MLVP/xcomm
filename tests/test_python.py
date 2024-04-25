@@ -28,6 +28,11 @@ def test_xdata():
     port.SetZero()
     print(port["a"])
 
+    port["a"] = 1
+    print(f"expected 1, actual {port['a'].value}")
+    port["a"].value = 2
+    print(f"expected 2, actual {port['a'].value}")
+    
     clk = XClock(lambda a: 1 if print("lambda stp: ", a) else 0)
     clk.StepRis(lambda c, x, y: print("lambda ris: ", c, x, y), (1, 2))
     clk.StepRis(lambda c, x, y: print("lambda fal: ", c, x, y), (3, 4))
