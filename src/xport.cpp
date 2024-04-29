@@ -54,7 +54,7 @@ bool XPort::Connect(XPort &target)
             continue;
             ;
         }
-        this->port_list[e.first]->Connect(*target.port_list[e.first]);
+        this->port_list[e.first]->Connect(*target.port_list[target.name_port[e.second]]);
     }
     return true;
 }

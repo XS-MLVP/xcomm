@@ -225,6 +225,19 @@ int test_xdata()
     *x1_0 = 0;
     test_assert("fc4040404040404040808083fffffffc" == full.String() && full.DataValid(), "data(0x%s) need be: fc4040404040404040808083fffffffc", full.String().c_str());
 
+    // test XPort
+    XPort p1("A_");
+    XPort p2("B_");
+    XData d1(32, IOType::InOut, "d1");
+    XData d2(32, IOType::InOut, "d2");
+    p1.Add("x", d1);
+    p2.Add("x", d2);
+    p1.Connect(p2);
+    d1 = 1;
+    test_assert(d1 == d2, "connect fail, d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
+    d1 = 2;
+    test_assert(d1 == d2, "connect fail, d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
