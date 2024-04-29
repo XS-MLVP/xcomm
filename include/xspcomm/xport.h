@@ -11,6 +11,7 @@ class XPort
 private:
     std::string asKey(std::string name);
     std::map<std::string, std::string> port_name;
+    std::map<std::string, std::string> name_port;
 public:
     std::string prefix;
     std::map<std::string, xspcomm::XData *> port_list;

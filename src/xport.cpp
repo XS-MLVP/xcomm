@@ -27,6 +27,7 @@ bool XPort::Add(std::string pin, xspcomm::XData &pin_data)
     }
     this->port_list[pin_name] = &pin_data;
     this->port_name[pin_name] = pin;
+    this->name_port[pin] = pin_name;
     return true;
 }
 
@@ -39,6 +40,7 @@ bool XPort::Del(std::string pin)
     }
     this->port_list.erase(pin_name);
     this->port_name.erase(pin_name);
+    this->name_port.erase(pin);
     return true;
 }
 
@@ -46,7 +48,7 @@ bool XPort::Connect(XPort &target)
 {
     for (auto &e : this->port_name) {
         // Connect: xxx_A with yyy_A
-        if (target.port_name.count(e.second) == 0) {
+        if (target.name_port.count(e.second) == 0) {
             Warn("canot find PIN (name=%s%s)", target.prefix.c_str(),
                  e.second.c_str());
             continue;
@@ -64,6 +66,7 @@ XPort &XPort::NewSubPort(std::string subprefix)
         if (sWith(e.first, port->prefix)) {
             port->port_list[e.first] = e.second;
             port->port_name[e.first] = e.first.substr(port->prefix.length());
+            port->name_port[port->port_name[e.first]] = e.first;
         }
     }
     return *port;
