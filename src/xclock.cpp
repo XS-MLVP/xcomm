@@ -189,6 +189,11 @@ void XClock::eval()
     this->_step(false);
 }
 
+void XClock::eval_t()
+{
+    this->_step(true);
+}
+
 void XClock::Reset()
 {
     this->clk = 0;

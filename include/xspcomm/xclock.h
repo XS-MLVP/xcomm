@@ -76,6 +76,7 @@ public:
 
     // Propagate Combinational Logic
     void eval();
+    void eval_t();
     /**
      * @brief Step the clock, and call all the callback functions. After every
      * step, it stop on a rise edge (clock = 1).
