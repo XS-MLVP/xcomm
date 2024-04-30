@@ -3,8 +3,8 @@
 xspcomm 为 picker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xspcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xspcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
 
 **编译：**
-通过make命令进行编译， 参数 BUILD_XSPCOMM_SWIG=python 可开启SWIG-Python支持 (目前swig接口支持python, javascript, java)，编译完成后生成文件位于 build/lib：
-```
+通过make命令进行编译， 参数 BUILD_XSPCOMM_SWIG=python 可开启SWIG-Python支持 (目前swig接口支持python, javascript, java。同时开启多种语言：BUILD_XSPCOMM_SWIG=python,java,javascript)，编译完成后生成文件位于 build/lib：
+```bash
 lib/
 ├── include/xspcomm                # xspcomm 头文件
 ├── libxspcomm.so                    # xspcomm 动态连接库
@@ -17,14 +17,14 @@ lib/
 
 **测试：**
 make命令默认编译执行 tests/test_xdata.cpp。 若要运行 tests/tests_python.py 执行如下命令：
-```
+```bash
 $make BUILD_XSPCOMM_SWIG=python
 $make test_python
 ```
 
 **打包与安装：（python wheel）**
 默认打包so动态库和头文件，打包PYTHON需要开启 BUILD_XSPCOMM_SWIG=python
-```
+```bash
 $pip install pipx
 $cd xcomm
 $BUILD_XSPCOMM_SWIG=python pipx run build      // 打包
@@ -32,7 +32,7 @@ $BUILD_XSPCOMM_SWIG=python pipx run build      // 打包
 打包完成后，会在dist目录生成 whl 安装包
 
 安装测试
-```
+```bash
 $pip install dist/pyxspcomm-0.0.1-cp310-cp310-manylinux_2_35_x86_64.whl
 $python -m xspcomm.info --help      # 仅在开启 BUILD_XSPCOMM_SWIG=python 后才有该命令
 Usage: python -m xspcomm.info [option]
@@ -49,12 +49,12 @@ Usage: python -m xspcomm.info [option]
 
 xspcomm 包含操作DUT（Design Under Test）的基本数据类型：**XData、XPort、XClock**三种数据定义。
 
-1. **XData** 电路的IO接口数据（与电路引脚绑定），通过 DPI 读写电路的IO接口。支持 0，1，Z，X 四种状态写入与读取。定义位于xspcomm/xdaya.h
+1. **XData** 是对电路的IO接口的表示（即与电路引脚绑定），通过 DPI 读写电路的IO接口。支持 0，1，Z，X 四种状态写入与读取。定义位于xspcomm/xdaya.h
 
 **XData 主要接口与成员变量：**
 
 初始化
-```
+```c++
 // 默认构造函数
 XData();
 
@@ -68,15 +68,20 @@ XData(uint32_t width, IOType itype, std::string name = "");
 ```
 
 绑定DPI
-```
+```c++
 void BindDPIRW(xfunction<void, void *> read, 
                xfunction<void, void *> write);
 void BindDPIRW(xfunction<void, void *> read,
                xfunction<void, unsigned char> write);
 ```
 
-赋值运算
+设置引脚模式: WriteMode::Imme 立即写入, WriteMode::Rise 上升沿写入, WriteMode::Fall 下降沿写入。XData默认情况下为上升沿写入。
+```c++
+bool SetWriteMode(WriteMode mode);
 ```
+
+赋值运算
+```c++
 XData a(128, IOType::Input);
 
 a = 0x1234     // 直接赋值 int, unsigned int 等
@@ -107,50 +112,51 @@ a = b                  // 同类型赋值
 ```
 
 成员变量
-```
+```c++
 std::string mName;   // XData 名字
 IOType mIOType;      // 输入输出类型
 uint32_t mWidth;     // 位宽（bit）
 ```
 
-2. **XPort** XData的封装，可对多个XData进行操作
+2. **XPort** 是对XData的封装，可对多个XData进行操作
 
 **XPort 主要接口与成员变量：**
 
 初始化
-```
+```c++
 XPort(std::string prefix = "");
 ```
 
 主要方法
-```
-int PortCount();                                            // 引脚个数
-bool Add(std::string pin, xspcomm::XData &pin_data);        // 添加引脚
-bool Del(std::string pin);                                  // 删除引脚
-bool Connect(XPort &target);                                // 和另外一个port进行连接
-XPort &NewSubPort(std::string subprefix);                   // 创建子port
-xspcomm::XData &operator[](std::string key);                // 按key获取引脚
-xspcomm::XData &Get(std::string key, bool raw_key = false); // 同上
-XPort &Flip();                                              // port中所有引脚值进行反转
-XPort &AsBiIO();                                            // 把port中所有引脚设置为 BiIO （能输入能能输出）
-XPort &WriteOnRise();                                       // 通过DPI刷入所有上升沿引脚的值
-XPort &WriteOnFall();                                       // 通过DPI刷入所有下降沿引脚的值
-XPort &ReadFresh(xspcomm::WriteMode m);                     // 刷新引脚读书（通过DPI）
-XPort &SetZero();                                           // 设置所有引脚的值为 0
+```c++
+int PortCount();                                      // 引脚个数
+bool Add(std::string pin, xspcomm::XData &pin_data);  // 添加引脚
+bool Del(std::string pin);                            // 删除引脚
+bool Connect(XPort &target);                          // 和另外一个port进行连接
+XPort &NewSubPort(std::string subprefix);             // 创建子port
+xspcomm::XData &operator[](std::string key);          // 按key获取引脚
+xspcomm::XData &Get(std::string key, 
+                    bool raw_key = false); // 同上
+XPort &Flip();                             // port中所有引脚值进行反转
+XPort &AsBiIO();                           // 把port中所有引脚设置为BiIO模式
+XPort &WriteOnRise();                      // 通过DPI写入所有引脚的值（在clock的上升沿被调用）
+XPort &WriteOnFall();                      // 通过DPI写入所有引脚的值（在clock的下降沿被调用）
+XPort &ReadFresh(xspcomm::WriteMode m);    // 刷新引脚读书（通过DPI）
+XPort &SetZero();                          // 设置所有引脚的值为 0
 ```
 
 成员变量
-```
+```c++
 std::string prefix;                                   // 引脚（XData）名称前缀
 std::map<std::string, xspcomm::XData *> port_list;    // 引脚列表
 ```
 
-3. **XClock** 基于XPort，对电路的时钟封装，用于驱动电路
+3. **XClock** 是对电路的时钟的封装，用于驱动电路的clock，并在时钟的上升或者下降沿提供对应的回调入口
 
 XClock 主要接口与成员变量：
 
 初始化
-```
+```c++
 // stepfunc 为 DUT后端提供的电路推进方法，例如 verilaor 的 step_eval 等
 // xfunction<ret, Args...> 功能等价于 std::function<ret(Args...)>，主用于SWIG导出
 XClock();
@@ -164,7 +170,7 @@ void ReInit(xfunction<int, bool> stepfunc,
 ```
 
 主要方法
-```
+```c++
 void Add(xspcomm::XData &d);          // 添加 clk 引脚
 void Add(xspcomm::XPort &d);          // 添加 port
 void Step(int s = 1);                 // 推进时钟
@@ -187,7 +193,7 @@ XNext ANext(int n = 1);                                          // 等待 i 个
 
 xspcomm在clock类中提供AStep(int i = 1)、ACondition(std::function<bool(void)> checker)、ANext(int n = 1) 三个协程方法，可用于异步编程，示例伪代码如下：
 
-```
+```c++
 #include "xspcomm/xclock"
 #include "xspcomm/xcoroutine.h"
 
@@ -226,7 +232,7 @@ int main(){
 
 SWIG生成的python模块名称为 xspcomm，包含XData、XPort、XClock等基础类。同C++一样支持的异步方法有：XClock.AStep，XClock.ACondition，XClock.ANext。新增加异步方法 XClock.RunStep 用于驱动xclock，功能同同步模式下的 XClock.Step。
 
-```
+```python
 from xspcomm import *
 from asyncio import run, create_task
 
@@ -253,7 +259,7 @@ if __name__ == "__main__":
 
 以VCS为例，DUT示例编译骤如下：
 
-```
+```bash
 ...
 # 1 通过swig生成python wrapper
 $swig -D'MODULE_NAME="tlm_pbsb"' -python -c++ -DUSE_VCS -I${XSP_COMM_INCLUDE} \
@@ -278,7 +284,7 @@ $mv simv.daidir _tlm_pbsb.so.daidir
 ##### 五、其他可用接口
 
 头文件 xspcomm/xutil.h 提供以下基本功能
-```
+```c++
 LogLevel get_log_level()          // 获取当前日志 level
 void set_log_level(LogLevel val)  // 设置当前日志 level
 Info(fmt, ...)                    // 日志 Info
