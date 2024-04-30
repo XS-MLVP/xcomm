@@ -184,9 +184,11 @@ void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
 void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
              std::string desc = "");
 // 异步方法
-XStep AStep(int i = 1);                                          // 等待 i 个 step
-XCondition ACondition(std::function<bool(void)> checker);        // 条件等待
-XNext ANext(int n = 1);                                          // 等待 i 个调度
+XStep AStep(int i = 1);                                   // 等待 i 个 step
+XCondition ACondition(std::function<bool(void)> checker); // 条件等待
+XNext ANext(int n = 1);                                   // 等待 i 个调度
+void eval();                   // 推动电路执行，不更新波形（仅用于组合逻辑，慎用）
+void eval_t();                 // 推动电路执行，更新波形（不建议使用）
 ```
 
 ##### 二、异步（协程）编程
