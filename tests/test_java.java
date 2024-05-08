@@ -1,11 +1,9 @@
+import com.xspcomm.*;
+
 public class test_java {
-  static {
-    System.loadLibrary("javaxspcomm");
-  }
 
-  // example example = new example();
   public static void main(String argv[]) {
-
+    xspcomm.init();
     XData a = new XData(32, XData.In);
     XData b = new XData(32, XData.In);
     XData c = new XData(128, XData.In);
@@ -40,12 +38,12 @@ public class test_java {
     System.out.println("XData: " + a + "  :  port get a: " + port.Get("a"));
     System.out.println("XData: " + b + "  :  port get b: " + port.Get("b"));
     
-    XClockCbStep cb = new XClockCbStep();
-    cb.set_force_callable();
-    cb.call(false);
+    CbXClockEval cb = new CbXClockEval();
     XClock clock = new XClock(cb);
-    clock.Step();
+    clock.StepRis(new CbXClockStep());
+
+    clock.Step(5);
     System.out.println("XClock: "+clock);
-    
+    System.out.println("Test complete!");
   }
 }

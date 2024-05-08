@@ -1,4 +1,4 @@
-%module(directors="1") javaxspcomm
+%module(directors="1") Util
 
 /* 兼容std::vector<unsigned char> */
 %include <std_vector.i>
