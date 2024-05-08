@@ -52,6 +52,9 @@ add_custom_command(
 add_custom_target(
     _DummyTarget_create_javaxspcomm_so_link ALL
     COMMAND ${Java_JAR_EXECUTABLE} cfm xspcomm.jar MANIFEST.MF -C xspcomm .
+    COMMAND ${CMAKE_COMMAND} -E copy
+            xspcomm.jar
+            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}/..
     DEPENDS javaxspcomm_so_lnk
 )
