@@ -4,8 +4,11 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/xutil.h"
+
+#if ENABLE_XCOROUTINE
 #include "xspcomm/xcoroutine.h"
 #include "xspcomm/xcallback.h"
+#endif
 
 namespace xspcomm {
 class XClock;
