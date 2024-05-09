@@ -6,6 +6,8 @@ dist/
 *.pyc
 .pyodide-xbuildenv/
 node_modules/
+.bsp/
+.scala-build/
 # Compiled Object files
 *.slo
 *.lo
