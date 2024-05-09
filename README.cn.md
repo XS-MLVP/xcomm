@@ -1,9 +1,11 @@
-#### xspcomm 介绍
+## 介绍
+
+[English Readme](/README.en.md)
 
 xspcomm 为 picker 的公用数据定义与操作接口，包括接口读/写、时钟、协程、SWIG回调函数定义等。xspcomm以基础组件的方式被 DUT、MLVP、OVIP等上层应用或者库使用。xspcomm需要用到C++20的特征，建议使用g++ 11 以上版本， cmake 版本大于等于3.11。当通过SWIG导出Python接口时，需要 swig 版本大于等于 4.2.0。
 
 **编译：**
-通过make命令进行编译， 参数 BUILD_XSPCOMM_SWIG=python 可开启SWIG-Python支持 (目前swig接口支持python, javascript, java。同时开启多种语言：BUILD_XSPCOMM_SWIG=python,java,javascript)，编译完成后生成文件位于 build/lib：
+通过make命令进行编译， 参数 BUILD_XSPCOMM_SWIG=python 可开启SWIG-Python支持 (目前swig接口支持python, javascript, java, golang。同时开启多种语言：BUILD_XSPCOMM_SWIG=python,java)，编译完成后生成文件位于 build/lib：
 ```bash
 lib/
 ├── include/xspcomm                # xspcomm 头文件
@@ -45,7 +47,8 @@ Usage: python -m xspcomm.info [option]
 --path:    print xcomm all path [default]
 ```
 
-##### 一、基本数据操作
+## xspcomm的使用
+### 一、基本数据操作
 
 xspcomm 包含操作DUT（Design Under Test）的基本数据类型：**XData、XPort、XClock**三种数据定义。
 
@@ -191,7 +194,7 @@ void eval();                   // 推动电路执行，不更新波形（仅用�
 void eval_t();                 // 推动电路执行，更新波形（不建议使用）
 ```
 
-##### 二、异步（协程）编程
+### 二、异步（协程）编程
 
 xspcomm在clock类中提供AStep(int i = 1)、ACondition(std::function<bool(void)> checker)、ANext(int n = 1) 三个协程方法，可用于异步编程，示例伪代码如下：
 
@@ -206,7 +209,7 @@ xcoroutine<bool> send(XClock &clk, XPort &port){
     // 等待port中的 a_valid 信号拉高
     co_await clck.ACondition([&port](){return port["a_valid"]==1;});
     // 返回结果
-    co_return port["data] == 0xffff;
+    co_return port["data"] == 0xffff;
 }
 
 // 循环接收，打印结果
@@ -230,7 +233,7 @@ int main(){
 
 ```
 
-##### 三、python 编程
+### 三、python 编程
 
 SWIG生成的python模块名称为 xspcomm，包含XData、XPort、XClock等基础类。同C++一样支持的异步方法有：XClock.AStep，XClock.ACondition，XClock.ANext。新增加异步方法 XClock.RunStep 用于驱动xclock，功能同同步模式下的 XClock.Step。
 
@@ -255,7 +258,7 @@ if __name__ == "__main__":
 
 ```
 
-##### 四、通过 TLM 连通 UVM 与 Python
+### 四、通过 TLM 连通 UVM 与 Python
 
 本项目提供基于 UVMC 的方式进行 UVM 和 Python（C++）的通信
 
@@ -283,7 +286,7 @@ $mv simv.daidir _tlm_pbsb.so.daidir
 
 编译完成后，可以通过 import 加载dut，具体例子请参考：tests/tlm
 
-##### 五、其他可用接口
+### 五、其他可用接口
 
 头文件 xspcomm/xutil.h 提供以下基本功能
 ```c++
