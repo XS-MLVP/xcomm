@@ -36,6 +36,8 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.MF
             ${XCOMM_LIB_DIR}/../
+    COMMAND ${CMAKE_COMMAND} -E echo 'Version: ${PROJECT_VERSION}' >> ${XCOMM_LIB_DIR}/../MANIFEST.MF
+    COMMAND ${CMAKE_COMMAND} -E echo '' >> ${XCOMM_LIB_DIR}/../MANIFEST.MF
     COMMAND ${Java_JAVAC_EXECUTABLE} -d ${XCOMM_LIB_DIR} ${XCOMM_LIB_DIR}/*.java
     DEPENDS javaxspcomm
 )
@@ -54,7 +56,7 @@ add_custom_target(
     COMMAND ${Java_JAR_EXECUTABLE} cfm xspcomm.jar MANIFEST.MF -C xspcomm .
     COMMAND ${CMAKE_COMMAND} -E copy
             xspcomm.jar
-            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/
+            ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm.${PROJECT_VERSION}.jar
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}/..
     DEPENDS javaxspcomm_so_lnk
 )
