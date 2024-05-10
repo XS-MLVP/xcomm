@@ -6,16 +6,29 @@
 xspcomm is the common data definition and operation interface for picker, including interface read/write, clock, coroutine, SWIG callback function definition, etc. xspcomm is used as a basic component by upper-level applications or libraries such as DUT, MLVP, OVIP. xspcomm requires features of C++20, it is recommended to use g++ version 11 or above, and cmake version greater than or equal to 3.11. When exporting Python interface through SWIG, swig version greater than or equal to 4.2.0 is required.
 
 **Compile:**
-Compilation is done through the make command, the parameter BUILD_XSPCOMM_SWIG=python can enable SWIG-Python support (currently swig interface supports **python, javascript, java, golang**. Multiple languages can be enabled at the same time: BUILD_XSPCOMM_SWIG=python,java). After compilation, the generated files are located in build/lib:
+Compile using the make command. Enable support for Python and other languages by specifying the BUILD_XSPCOMM_SWIG parameter (currently, the SWIG interface supports Python, JavaScript, Java, Scala, and Go). Upon completion of compilation, the generated files will be located in the build directory:
 ```bash
-lib/
-├── include/xspcomm                # xspcomm header files
-├── libxspcomm.so                  # xspcomm dynamic link library
-└── python                       
-    └── xspcomm                    # python module (requires make BUILD_XSPCOMM_SWIG=python)
-        ├── __init__.py            # module entry file
-        ├── _pyxspcomm.so          # binary python library
-        └── pyxspcomm.py           # SWIG generated python wrapper
+
+make BUILD_XSPCOMM_SWIG=python,scala,java,golang
+
+# results 
+build/python/
+└── xspcomm             # python module
+    ├── __init__.py
+    ├── _pyxspcomm.so -> _pyxspcomm.so.0.0.1
+    ├── _pyxspcomm.so.0.0.1
+    ├── info.py
+    └── pyxspcomm.py
+build/scala/
+└── xspcomm-scala.jar   # scala package
+build/java/
+└── xspcomm-java.jar    # java package
+build/golang/
+└── src                 # golang module
+    └── xspcomm
+        ├── golangxspcomm.so -> golangxspcomm.so.0.0.1
+        ├── golangxspcomm.so.0.0.1
+        └── xspcomm.go
 ```
 
 **Testing:**
