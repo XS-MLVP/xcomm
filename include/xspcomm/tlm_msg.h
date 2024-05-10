@@ -37,8 +37,10 @@ public:
         this->resp_status = TLM_OK_RESPONSE;
         this->option = TLM_MIN_PAYLOAD;
     }
-    tlm_msg(uint8_t *addr_start, uint8_t *addr_end) : data(addr_start, addr_end)
+    tlm_msg(uint8_t *addr_start, uint8_t *addr_end)
     {
+        std::vector<uint8_t> tmp(addr_start, addr_end);
+        this->data.assign(tmp.begin(), tmp.end());
         tlm_msg();
     }
     // For swig-python
