@@ -32,9 +32,8 @@ def test_msg():
     u.tlm_vcs_init("_tlm_pbsb.so", "-no_save")
 
     for i in range(20):
-        # step uvm + systemc
-        u.tlm_pbsb_run(1)
-        u.tlm_vcs_step(1)
+        # step uvm + systemc + python
+        u.step(1.0)
         # send message
         msg.from_bytes(bytes(str(i).encode()))
         pub.SendMsg(msg)
