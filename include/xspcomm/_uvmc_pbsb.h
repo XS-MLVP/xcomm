@@ -125,11 +125,13 @@ public:
             auto dtime = sc_core::sc_time(0, sc_core::SC_NS);
             out->b_transport(gp, dtime);
             ap.write(gp);
+            delete data;
         }
     }
     virtual void SendMsg(tlm_msg &msg)
     {
-        this->data_to_send.push_back(&msg);
+        auto m = msg.clone();
+        this->data_to_send.push_back(m);
         this->not_empty.notify();
     }
 

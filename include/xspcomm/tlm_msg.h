@@ -37,6 +37,12 @@ public:
         this->resp_status = TLM_OK_RESPONSE;
         this->option = TLM_MIN_PAYLOAD;
     }
+    tlm_msg(const tlm_msg &msg) {
+        this->cmd = msg.cmd;
+        this->resp_status = msg.resp_status;
+        this->option = msg.option;
+        this->data.assign(msg.data.begin(), msg.data.end());
+    }
     tlm_msg(uint8_t *addr_start, uint8_t *addr_end)
     {
         std::vector<uint8_t> tmp(addr_start, addr_end);
@@ -49,6 +55,7 @@ public:
     }
     void from_bytes(std::vector<unsigned char> &data) { this->data = data; }
     std::vector<unsigned char> as_bytes() { return this->data; }
+    tlm_msg *clone() { return new tlm_msg(*this); }
 };
 
 } // namespace xspcomm
