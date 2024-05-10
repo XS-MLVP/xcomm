@@ -9,10 +9,11 @@ std::map<std::string, UVMCSub*> subs;
 std::map<std::string, UVMCPub*> pubs;
 
 TLMSub::TLMSub(std::string channel){
-    if(!subs.count(channel)){
-        subs[channel] = new UVMCSub(channel);
+    auto ch = this->MakeChannel(channel);
+    if(!subs.count(ch)){
+        subs[ch] = new UVMCSub(ch);
     }
-    this->ptr_sub = subs[channel];
+    this->ptr_sub = subs[ch];
 }
 
 TLMSub::~TLMSub(){
@@ -37,14 +38,15 @@ void TLMSub::Connect()
 
 std::string TLMSub::GetChannel()
 {
-    ((UVMCSub*)this->ptr_sub)->channel;
+    return this->UMakeChannel(((UVMCSub*)this->ptr_sub)->channel);
 }
 
 TLMPub::TLMPub(std::string channel){
-    if(!pubs.count(channel)){
-        pubs[channel] = new UVMCPub(channel);
+    auto ch = this->MakeChannel(channel);
+    if(!pubs.count(ch)){
+        pubs[ch] = new UVMCPub(ch);
     }
-    this->ptr_pub = pubs[channel];
+    this->ptr_pub = pubs[ch];
 }
 
 TLMPub::~TLMPub(){
@@ -68,7 +70,7 @@ void TLMPub::Connect()
 
 std::string TLMPub::GetChannel()
 {
-    return ((UVMCPub*)this->ptr_pub)->channel;
+    return this->UMakeChannel(((UVMCPub*)this->ptr_pub)->channel);
 }
 
 void step(double time, double scale){

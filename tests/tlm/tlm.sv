@@ -62,8 +62,8 @@ module sv_main(
   consumer cons = new("cons");
 
   initial begin
-    uvmc_tlm #()::connect(prod.out, "foo");
-    uvmc_tlm #()::connect(cons.in, "bar");
+    uvmc_tlm #()::connect(prod.out, "foo.sub");
+    uvmc_tlm #()::connect(cons.in, "bar.pub");
     run_test();
   end
 

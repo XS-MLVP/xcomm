@@ -21,6 +21,12 @@ class TLMSub
 public:
     TLMSub(std::string channel);
     ~TLMSub();
+    std::string MakeChannel(std::string channel){
+        return channel + ".sub";
+    }
+    std::string UMakeChannel(std::string channel){
+        return removeSuffix(channel, ".sub");
+    }
     void SetHandler(xfunction<void, const tlm_msg &> handler);
     void Connect();
     std::string GetChannel();
@@ -32,6 +38,12 @@ class TLMPub
 public:
     TLMPub(std::string channel);
     ~TLMPub();
+    std::string MakeChannel(std::string channel){
+        return channel + ".pub";
+    }
+    std::string UMakeChannel(std::string channel){
+        return removeSuffix(channel, ".pub");
+    }
     void SendMsg(tlm_msg &msg);
     void Connect();
     std::string GetChannel();
