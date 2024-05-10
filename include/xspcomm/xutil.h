@@ -248,6 +248,14 @@ inline bool checkVersion()
          XSPCOMM_VERSION) return false;
 }
 
+std::string inline removeSuffix(const std::string& str, const std::string& suffix)
+{
+    if (str.rfind(suffix) == (str.size() - suffix.size())) {
+        return str.substr(0, str.size() - suffix.size());
+    }
+    return str;
+}
+
 #define FOR_COUNT(n)                                                           \
     auto __n = n;                                                              \
     for (int __i = 0; __i < __n; __i++)
