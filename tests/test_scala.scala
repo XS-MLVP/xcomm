@@ -1,8 +1,9 @@
 
-import xspcomm._
+import com.xspcomm._
 
 object LoadXSP {
   def main(args: Array[String]): Unit = {
-    Main.main(args)
+    xspcomm.init()
+    println("Hello World! xpscomm version:" + Util.version())
   }
 }

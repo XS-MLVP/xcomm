@@ -1,4 +1,4 @@
-package com.xspcomm;
+package _com.xspcomm;
 
 import java.io.File;
 import java.io.InputStream;
