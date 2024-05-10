@@ -47,9 +47,9 @@ public:
         msg.cmd         = (tlm_command)gp.get_command();
         msg.resp_status = (tlm_response_status)gp.get_response_status();
         msg.option      = (tlm_gp_option)gp.get_gp_option();
-        this->Handler(msg);
         sc_core::wait(t);
         ap.write(gp);
+        this->Handler(msg);
     }
     virtual void Handler(const tlm_msg &msg)
     {
