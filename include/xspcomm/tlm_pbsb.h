@@ -15,6 +15,14 @@ void VcsSimUntil(uint64_t *);
 
 namespace xspcomm {
 
+std::string inline removeSuffix(const std::string& str, const std::string& suffix)
+{
+    if (str.rfind(suffix) == (str.size() - suffix.size())) {
+        return str.substr(0, str.size() - suffix.size());
+    }
+    return str;
+}
+
 class TLMSub
 {
     void *ptr_sub = nullptr;
