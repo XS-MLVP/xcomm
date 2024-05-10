@@ -1,6 +1,6 @@
 ## Introduction
 
-[中文文档](/README.en.md)
+[中文文档](/README.cn.md)
 
 
 xspcomm is the common data definition and operation interface for picker, including interface read/write, clock, coroutine, SWIG callback function definition, etc. xspcomm is used as a basic component by upper-level applications or libraries such as DUT, MLVP, OVIP. xspcomm requires features of C++20, it is recommended to use g++ version 11 or above, and cmake version greater than or equal to 3.11. When exporting Python interface through SWIG, swig version greater than or equal to 4.2.0 is required.
@@ -50,7 +50,8 @@ After packaging, a whl installation package will be generated in the dist direct
 Install and test
 ```bash
 $pip install dist/pyxspcomm-0.0.1-cp310-cp310-manylinux_2_35_x86_64.whl
-$python -m xspcomm.info --help      # This command is only available when BUILD_XSPCOMM_SWIG=python is enabled
+$python -m xspcomm.info --help # This command is only available when
+                               #  BUILD_XSPCOMM_SWIG=python is enabled
 Usage: python -m xspcomm.info [option]
 --help:    print this help
 --export:  print export cmd of XSPCOMM_ROOT, XSPCOMM_INCLUDE, XSPCOMM_LIB
