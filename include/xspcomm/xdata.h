@@ -207,6 +207,16 @@ public:
     XData &Set(long long data);
     XData &Set(unsigned long long data);
 
+    bool IsInIO(){ return this->mIOType == IOType::Input; }
+    bool IsOutIO(){ return this->mIOType == IOType::Output; }
+    bool IsBiIO(){ return this->mIOType == IOType::InOut; }
+    bool IsImmWrite(){ return this->write_mode == WriteMode::Imme && this->mIOType != IOType::Output; }
+    bool IsRiseWrite(){ return this->write_mode == WriteMode::Rise && this->mIOType != IOType::Output; }
+    bool IsFallWrite(){ return this->write_mode == WriteMode::Fall && this->mIOType != IOType::Output; }
+    XData &AsImmWrite(){ this->SetWriteMode(WriteMode::Imme); return *this; }
+    XData &AsRiseWrite(){ this->SetWriteMode(WriteMode::Rise); return *this; }
+    XData &AsFallWrite(){ this->SetWriteMode(WriteMode::Fall); return *this; }
+    
     XData &AsBiIO();
     XData &AsInIO();
     XData &AsOutIO();
