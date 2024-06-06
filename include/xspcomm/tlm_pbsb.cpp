@@ -73,17 +73,17 @@ std::string TLMPub::GetChannel()
     return this->UMakeChannel(((UVMCPub*)this->ptr_pub)->channel);
 }
 
-void step(double time, double scale){
-    sc_run(time);
+void step(double time, double scale, std::string unit){
+    sc_run(time, unit);
 #ifdef USE_VCS
     tlm_vcs_step((uint64_t)(time * scale));
 #endif
 }
 
 #ifdef USE_VCS
-void tlm_pbsb_run(double time)
+void tlm_pbsb_run(double time, std::string unit)
 {
-    sc_run(time);
+    sc_run(time, unit);
 }
 
 void tlm_vcs_init(int argc, char **argv){

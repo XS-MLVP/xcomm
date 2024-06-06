@@ -57,9 +57,9 @@ public:
     std::string GetChannel();
 };
 
-void tlm_pbsb_run(double time);
+void tlm_pbsb_run(double time, std::string unit = "ns");
 
-void step(double time, double scale = 1.0f);
+void step(double time, double scale = 1.0f, std::string unit = "ns");
 
 #ifdef USE_VCS
 void tlm_vcs_init(int argc, char **argv);

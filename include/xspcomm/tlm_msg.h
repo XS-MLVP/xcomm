@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <string>
 
 namespace xspcomm {
 
@@ -31,6 +32,8 @@ public:
     tlm_command cmd;
     tlm_response_status resp_status;
     tlm_gp_option option;
+    double delay = 0.0;
+    std::string time_unit = "ns";
     std::vector<uint8_t> data;
     tlm_msg() {
         this->cmd = TLM_IGNORE_COMMAND;
@@ -41,6 +44,8 @@ public:
         this->cmd = msg.cmd;
         this->resp_status = msg.resp_status;
         this->option = msg.option;
+        this->delay = msg.delay;
+        this->time_unit = msg.time_unit;
         this->data.assign(msg.data.begin(), msg.data.end());
     }
     tlm_msg(uint8_t *addr_start, uint8_t *addr_end)

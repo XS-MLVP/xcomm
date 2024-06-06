@@ -70,6 +70,28 @@ public:
     }
 };
 
+
+sc_core::sc_time_unit inline str2timeunit(std::string unit, std::string where){
+    sc_core::sc_time_unit u = sc_core::SC_NS;
+    if(unit == "fs"){
+        u = sc_core::SC_FS;
+    }else if(unit == "ps"){
+        u = sc_core::SC_PS;
+    }else if(unit == "ns"){
+        u = sc_core::SC_NS;
+    }else if(unit == "us"){
+        u = sc_core::SC_US;
+    else if(unit == "ms"){
+        u = sc_core::SC_MS;
+    }else if(unit == "s"){
+        u = sc_core::SC_SEC;
+    }else{
+        printf("[warn] %s find unknown time unit: %s, use SC_NS as default\n", where.c_str(), unit.c_str());
+    }
+    return u;
+}
+
+
 class UVMCPub: public sc_core::sc_module
 {
     tlm_utils::simple_initiator_socket<UVMCPub> out;
@@ -122,7 +144,7 @@ public:
             gp.set_command(cmd);
             gp.set_response_status(resp_status);
             gp.set_gp_option(option);
-            auto dtime = sc_core::sc_time(0, sc_core::SC_NS);
+            auto dtime = sc_core::sc_time(data->delay, str2timeunit(data->time_unit, "UVMCPub::__run__ loop"));
             out->b_transport(gp, dtime);
             ap.write(gp);
             delete data;
@@ -143,9 +165,9 @@ public:
     }
 };
 
-void inline sc_run(double time)
+void inline sc_run(double time, std::string unit = "ns")
 {
-    sc_core::sc_start(time, sc_core::SC_NS);
+    sc_core::sc_start(time, str2timeunit(unit, "sc_run"));
 }
 
 } // namespace xspcomm
