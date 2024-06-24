@@ -7,9 +7,18 @@ public class test_java {
     XData a = new XData(32, XData.In);
     XData b = new XData(32, XData.In);
     XData c = new XData(128, XData.In);
+    XData e = new XData(0, XData.In);
     long l_value = 0xfdfdfd56;
     a.Set(l_value);
+    Util.TEST_DPI_LW((short)0);
+    System.out.println("----------------------------");
+    b.SetWriteMode(b.Imme);
+    e.SetWriteMode(e.Imme);
+    b.BindDPIRW(UtilConstants.DPI_TEST_VR, UtilConstants.DPI_TEST_VW);
+    e.BindDPIRW(UtilConstants.DPI_TEST_LR, UtilConstants.DPI_TEST_LW);
     b.Set(0x12345678);
+    e.Set(1);
+    e.Set(0);
 
     byte[] byttest = a.GetVU8();
     System.out.println("a(hex) = " + a.U().toString(16));

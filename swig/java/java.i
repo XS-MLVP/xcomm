@@ -36,3 +36,8 @@
 
 %include ../xcomm.i
 
+
+%constant void (*DPI_TEST_LR)(void *v) = xspcomm::TEST_DPI_LR;
+%constant void (*DPI_TEST_LW)(const unsigned char v) = xspcomm::TEST_DPI_LW;
+%constant void (*DPI_TEST_VR)(void *v) = xspcomm::TEST_DPI_VR;
+%constant void (*DPI_TEST_VW)(const void *v) = xspcomm::TEST_DPI_VW;

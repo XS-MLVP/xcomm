@@ -7,9 +7,20 @@ def test_xdata():
     a: XData = XData(32, XData.In)
     b: XData = XData(32, XData.In)
     c: XData = XData(128, XData.In)
+    e: XData = XData(0, XData.In)
+    TEST_DPI_LR(DPI_TEST_VR)
+    TEST_DPI_LW(0)
+    TEST_DPI_VR(DPI_TEST_VR)
+    TEST_DPI_VW(DPI_TEST_VR)
+    print("------------")
+    a.SetWriteMode(a.Imme)
+    e.SetWriteMode(e.Imme)
+    a.BindDPIRW(DPI_TEST_VR, DPI_TEST_VW)
+    a.value = 1
+    e.value = 0
 
     l_value = 0xffffffffffffffffff123456
-    print("size: ", l_value.bit_length())
+    print("size: ", l_value.bit_length(), "a:", a.value)
 
     c.value = l_value
 
