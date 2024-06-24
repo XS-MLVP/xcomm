@@ -51,8 +51,8 @@ add_custom_command(
     DEPENDS ${XCOMM_LIB_DIR}/javaxspcomm.java
 )
 
-add_custom_target(
-    _DummyTarget_create_javaxspcomm_so_link ALL
+add_custom_command(
+    OUTPUT javaxspcomm_jar_lnk
     COMMAND ${Java_JAR_EXECUTABLE} cfm xspcomm-java.jar MANIFEST.MF -C xspcomm .
     COMMAND ${CMAKE_COMMAND} -E copy
             xspcomm-java.jar
@@ -60,5 +60,13 @@ add_custom_target(
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}/..
     DEPENDS javaxspcomm_so_lnk
 )
+
+add_custom_target(
+    _DummyTarget_create_javaxspcomm_so_link ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink xspcomm-java.${PROJECT_VERSION}.jar xspcomm-java.jar
+    WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    DEPENDS javaxspcomm_jar_lnk
+)
 # Install
-install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/picker/java USE_SOURCE_PERMISSIONS)
+install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.${PROJECT_VERSION}.jar ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.jar
+        DESTINATION share/picker/java)
