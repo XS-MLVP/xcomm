@@ -64,8 +64,8 @@ add_custom_command(
     DEPENDS ${XCOMM_LIB_DIR}/scalaxspcomm.java
 )
 
-add_custom_target(
-    _DummyTarget_create_scalaxspcomm_so_link ALL
+add_custom_command(
+    OUTPUT  scalaxspcomm_so_jar_create
     COMMAND ${Java_JAR_EXECUTABLE} cfm xspcomm-scala.jar MANIFEST.MF -C xspcomm .
     COMMAND ${CMAKE_COMMAND} -E copy
             xspcomm-scala.jar
@@ -73,5 +73,14 @@ add_custom_target(
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}/..
     DEPENDS scalaxspcomm_so_lnk
 )
+
+add_custom_target(
+    _DummyTarget_create_scalaxspcomm_so_link ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink xspcomm-scala.${PROJECT_VERSION}.jar xspcomm-scala.jar
+    WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    DEPENDS scalaxspcomm_so_jar_create
+)
+
 # Install
-install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/picker/scala USE_SOURCE_PERMISSIONS)
+install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-scala.${PROJECT_VERSION}.jar ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-scala.jar
+        DESTINATION share/picker/scala)
