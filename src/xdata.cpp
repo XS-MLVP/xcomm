@@ -1052,17 +1052,17 @@ XData &XData::Set(int data)
     return this->operator=(data);
 }
 
-XData &XData::Set(long data)
+XData &XData::Set(unsigned int data)
 {
     return this->operator=(data);
 }
 
-XData &XData::Set(long long data)
+XData &XData::Set(int64_t data)
 {
     return this->operator=(data);
 }
 
-XData &XData::Set(unsigned long long data)
+XData &XData::Set(uint64_t data)
 {
     return this->operator=(data);
 }
@@ -1106,9 +1106,9 @@ std::string XData::AsBinaryString()
     return ret;
 }
 
-long long XData::AsInt64()
+int64_t XData::AsInt64()
 {
-    return (long long)*this;
+    return (int64_t)*this;
 }
 
 int XData::AsInt32()

@@ -193,9 +193,9 @@ public:
     XData &Set(const char *data);
     XData &Set(std::string &data);
     XData &Set(int data);
-    XData &Set(long data);
-    XData &Set(long long data);
-    XData &Set(unsigned long long data);
+    XData &Set(unsigned int data);
+    XData &Set(int64_t data);
+    XData &Set(uint64_t data);
     bool IsInIO(){ return this->mIOType == IOType::Input; }
     bool IsOutIO(){ return this->mIOType == IOType::Output; }
     bool IsBiIO(){ return this->mIOType == IOType::InOut; }
@@ -212,7 +212,7 @@ public:
     XData &Invert();
     PinBind &At(int index);
     std::string AsBinaryString();
-    long long AsInt64();
+    int64_t AsInt64();
     int AsInt32();
     /*************************************************************** */
     //                  End of Stable public user APIs
