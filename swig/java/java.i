@@ -27,12 +27,38 @@
   jenv->SetByteArrayRegion($result, 0, sz, reinterpret_cast<signed char *>($1.data()));
 }
 
+%typemap(javaimports)xspcomm::XData %{
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+%}
+
+%typemap(javacode) xspcomm::XData %{
+  private static byte[] reverseEndian(byte[] bigEndianBytes) {
+    byte[] littleEndianBytes = new byte[bigEndianBytes.length];
+    for (int i = 0; i < bigEndianBytes.length; i++) {
+      littleEndianBytes[i] = bigEndianBytes[bigEndianBytes.length - 1 - i];
+    }
+    return littleEndianBytes;
+  }
+
+  public BigInteger Get() {
+    byte[] byteArray = reverseEndian(this.GetVU8());
+    return new BigInteger(1, byteArray);
+  }
+
+  public void Set(BigInteger v) {
+    UCharVector uCharVector = new UCharVector(reverseEndian(v.toByteArray()));
+    this.SetVU8(uCharVector);
+  }
+%}
+
 %apply std::vector<unsigned char> { const std::vector<unsigned char> & };
 
 %template(UCharVector) std::vector<unsigned char>;
 
-/* 增加char**argv与java数组映射规则*/
-%apply char **STRING_ARRAY { char ** };
+%ignore xspcomm::XData::Set(int64_t);
+%ignore xspcomm::XData::Set(uint64_t);
 
 %include ../xcomm.i
 

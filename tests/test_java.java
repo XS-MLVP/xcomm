@@ -1,5 +1,8 @@
 import com.xspcomm.*;
 
+
+import java.math.BigInteger;
+
 public class test_java {
 
   public static void main(String argv[]) {
@@ -19,6 +22,10 @@ public class test_java {
     b.Set(0x12345678);
     e.Set(1);
     e.Set(0);
+    BigInteger bi = new BigInteger("481237234234234234");
+    c.Set(bi);
+    System.out.println("Bigint input data  = " + bi.toString());
+    System.out.println("Bigint output data = " + c.Get().toString());
 
     byte[] byttest = a.GetVU8();
     System.out.println("a(hex) = " + a.U().toString(16));
