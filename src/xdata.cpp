@@ -81,6 +81,22 @@ PinBind &PinBind::operator=(const u_int8_t &v)
     return *this;
 }
 
+std::string PinBind::AsString(){
+    int v = this->AsInt32();
+    switch (v)
+    {
+    case 0:
+        return "0";
+    case 1:
+        return "1";
+    case 2:
+        return "z";
+    case 3:
+        return "x";
+    }
+    Assert(false, "Error! PinBind::AsString() return invalid value[%d], need in [0,1,2,3]", v);
+}
+
 PinBind &PinBind::operator=(const std::string &v)
 {
     if (sLower(v) == "z") { return this->operator=(2); }
@@ -1055,9 +1071,39 @@ PinBind &XData::At(int index)
 {
     return this->operator[](index);
 }
-std::string XData::AsString()
+
+std::string XData::AsBinaryString()
 {
-    return this->operator std::string();
+    this->update_read();
+    std::string ret;
+    if (this->mWidth == 0) {
+        switch (this->mLogicData) {
+        case 0: return "0"; break;
+        case 1: return "1"; break;
+        case 2: return "z"; break;
+        case 3: return "x"; break;
+        default:;
+        }
+        Assert(false, "Logic Data value error(%d), need range (0 -> 3)",
+               this->mLogicData);
+    }
+    for (int i = this->vecSize - 1; i >= 0; i--) {
+        for (int j = 31; j >= 0; j--) {
+            if(i*32 + j >= this->mWidth)continue;
+            auto b = (this->pVecData[i].bval & (1 << j)) >> j;
+            auto a = (this->pVecData[i].aval & (1 << j)) >> j;
+            auto v = b * 2 + a;
+            switch (v)
+            {
+            case 0: if(!ret.empty())ret += "0"; break;
+            case 1: ret += "1"; break;
+            case 2: ret += "z"; break;
+            case 3: ret += "x"; break;
+            default: Assert(false, "Logic Data value error(%d), need range (0 -> 3)", v);
+            }
+        }
+    }
+    return ret;
 }
 
 long long XData::AsInt64()

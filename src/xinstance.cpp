@@ -154,6 +154,12 @@ int test_xdata()
         "504f4e4d4c4b4a494847464544434241" == z.String() && z.DataValid(),
         "xdata[%d] = 0x%s, (from txt str)", z.mWidth, z.String().c_str());
 
+    z = "0b1111_1111_0000_1111";
+    z[5] = "x";
+    z[8] = "z";
+    test_assert("1111000Z11X11111" == z.AsBinaryString() && !z.DataValid(),
+                "xdata[%d] = 0x%s, (from bin str)", z.mWidth, z.String().c_str());
+
     // test callback
     int count;
     z.OnChange(
