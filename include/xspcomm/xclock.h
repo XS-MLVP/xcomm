@@ -62,13 +62,14 @@ public:
     std::vector<xspcomm::XPort *> ports;
     u_int64_t clk     = 0;
     bool stop_on_rise = true;
-
     void default_stop_on_rise(bool rise);
+    /*************************************************************** */
+    //                  Start of Stable public user APIs
+    /*************************************************************** */
     XClock();
     XClock(xfunction<int, bool> stepfunc,
            std::initializer_list<xspcomm::XData *> clock_pins  = {},
            std::initializer_list<xspcomm::XPort *> ports = {});
-
     void ReInit(xfunction<int, bool> stepfunc,
                 std::initializer_list<xspcomm::XData *> clock_pins  = {},
                 std::initializer_list<xspcomm::XPort *> ports = {});
@@ -76,7 +77,22 @@ public:
     void Add(xspcomm::XData &d);
     void Add(xspcomm::XPort *d);
     void Add(xspcomm::XPort &d);
-
+    void Eval(){this->eval();}
+    void EvalT(){this->eval_t();}
+    void Step(int s = 1);
+    void Reset();
+    void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
+                 std::string desc = "");
+    void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
+                 std::string desc = "");
+    /*************************************************************** */
+    //                  End of Stable public user APIs
+    /*************************************************************** */
+#if ENABLE_XCOROUTINE
+    XStep AStep(int i = 1);
+    XCondition ACondition(std::function<bool(void)> checker);
+    XNext ANext(int n = 1);
+#endif
     // Propagate Combinational Logic
     void eval();
     void eval_t();
@@ -84,21 +100,9 @@ public:
      * @brief Step the clock, and call all the callback functions. After every
      * step, it stop on a rise edge (clock = 1).
      */
-    void Step(int s = 1);
-    void RunStep(int s = 1);
     virtual void _step_fal();
     virtual void _step_ris();
-
-    void Reset();
-    void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
-                 std::string desc = "");
-    void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
-                 std::string desc = "");
-#if ENABLE_XCOROUTINE
-    XStep AStep(int i = 1);
-    XCondition ACondition(std::function<bool(void)> checker);
-    XNext ANext(int n = 1);
-#endif
+    void RunStep(int s = 1);
 };
 
 } // namespace xspcomm

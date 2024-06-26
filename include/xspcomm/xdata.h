@@ -60,10 +60,23 @@ public:
     PinBind &operator=(const std::string &v);
     PinBind &operator=(std::string &v);
     operator u_int8_t();
+    /*************************************************************** */
+    //                  Start of Stable public user APIs
+    /*************************************************************** */
     PinBind &Set(int v);
+    PinBind &Set(std::string &v){ return this->operator=(v); }
+    int Get() {return this->AsInt32();}
     int AsInt32();
+    std::string AsString();
+    /*************************************************************** */
+    //                  End of Stable public user APIs
+    /*************************************************************** */
 
     // template functions
+    PinBind &operator=(const char *v)
+    {
+        return this->operator=(std::string(v));
+    }
     template <typename T>
     bool operator==(const T data)
     {
@@ -150,43 +163,78 @@ public:
     xsvLogicVecVal *pVecData = nullptr; // 01ZX  -> 00,01,10,11
     xsvLogic mLogicData      = 0;       // 01ZX  -> 00,01,10,11
 public:
+    /*************************************************************** */
+    //                  Start of Stable public user APIs
+    /*************************************************************** */
     XData();
-    void ReInit(uint32_t width, IOType itype, std::string name = "");
     XData(uint32_t width, IOType itype, std::string name = "");
     XData(XData &t);
     ~XData();
+    void ReInit(uint32_t width, IOType itype, std::string name = "");
     XData *SubDataRef(std::string name, uint32_t start, uint32_t width);
     WriteMode GetWriteMode();
     bool SetWriteMode(WriteMode mode);
-    void WriteOnRise();
-    void WriteOnFall();
-    void WriteDirect();
-    void SetIgnoreSameDataWrite(bool w) { this->ignore_same_write = w; }
     bool DataValid();
     void BindDPIRW(xfunction<void, void *> read, xfunction<void, void *> write);
     void BindDPIRW(xfunction<void, void *> read,
                    xfunction<void, unsigned char> write);
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
-    void _TestBindDPIL();
-    void _TestBindDPIV();
-    void SetBits(u_int8_t *buffer, int count, u_int8_t *mask = nullptr,
-                 int start = 0);
-    void SetBits(u_int32_t *buffer, u_int32_t count, u_int32_t *mask = nullptr,
-                 u_int32_t start = 0);
     void SetVU8(std::vector<unsigned char> &buffer);
     std::vector<unsigned char> GetVU8();
-    bool GetBits(u_int32_t *buffer, u_int32_t count);
-    bool GetBits(u_int8_t *buffer, u_int32_t count);
-    void OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
-                  void *args = nullptr, std::string desc = "");
-    void ReadFresh(WriteMode m);
     uint32_t W();
     uint64_t U();
     int64_t S();
     bool B();
     std::string String();
     bool Connect(XData &xdata);
+    bool Equal(XData &xdata) { return this->operator==(xdata); }
+    XData &Set(XData &data);
+    XData &Set(const char *data);
+    XData &Set(std::string &data);
+    XData &Set(int data);
+    XData &Set(long data);
+    XData &Set(long long data);
+    XData &Set(unsigned long long data);
+    bool IsInIO(){ return this->mIOType == IOType::Input; }
+    bool IsOutIO(){ return this->mIOType == IOType::Output; }
+    bool IsBiIO(){ return this->mIOType == IOType::InOut; }
+    bool IsImmWrite(){ return this->write_mode == WriteMode::Imme && this->mIOType != IOType::Output; }
+    bool IsRiseWrite(){ return this->write_mode == WriteMode::Rise && this->mIOType != IOType::Output; }
+    bool IsFallWrite(){ return this->write_mode == WriteMode::Fall && this->mIOType != IOType::Output; }
+    XData &AsImmWrite(){ this->SetWriteMode(WriteMode::Imme); return *this; }
+    XData &AsRiseWrite(){ this->SetWriteMode(WriteMode::Rise); return *this; }
+    XData &AsFallWrite(){ this->SetWriteMode(WriteMode::Fall); return *this; }
+    XData &AsBiIO();
+    XData &AsInIO();
+    XData &AsOutIO();
+    XData &Flip();
+    XData &Invert();
+    PinBind &At(int index);
+    std::string AsBinaryString();
+    long long AsInt64();
+    int AsInt32();
+    /*************************************************************** */
+    //                  End of Stable public user APIs
+    /*************************************************************** */
+
+    // C++ dependent APIs
+    void WriteOnRise();
+    void WriteOnFall();
+    void WriteDirect();
+    void SetIgnoreSameDataWrite(bool w) { this->ignore_same_write = w; }
+    void _TestBindDPIL();
+    void _TestBindDPIV();
+    void SetBits(u_int8_t *buffer, int count, u_int8_t *mask = nullptr,
+                 int start = 0);
+    void SetBits(u_int32_t *buffer, u_int32_t count, u_int32_t *mask = nullptr,
+                 u_int32_t start = 0);
+    bool GetBits(u_int32_t *buffer, u_int32_t count);
+    bool GetBits(u_int8_t *buffer, u_int32_t count);
+    void OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
+                  void *args = nullptr, std::string desc = "");
+    void ReadFresh(WriteMode m);
+    PinBind &operator[](u_int32_t index);
     bool operator==(XData &data);
     bool operator==(u_int64_t data);
     bool operator==(std::string &str);
@@ -197,41 +245,8 @@ public:
     XData &operator=(const char *str);
     XData &operator=(std::string &data);
     XData &operator=(u_int64_t data);
-
-    // used for SWIG Call
-    XData &Set(XData &data);
-    XData &Set(const char *data);
-    XData &Set(std::string &data);
-    XData &Set(int data);
-    XData &Set(long data);
-    XData &Set(long long data);
-    XData &Set(unsigned long long data);
-
-    bool IsInIO(){ return this->mIOType == IOType::Input; }
-    bool IsOutIO(){ return this->mIOType == IOType::Output; }
-    bool IsBiIO(){ return this->mIOType == IOType::InOut; }
-    bool IsImmWrite(){ return this->write_mode == WriteMode::Imme && this->mIOType != IOType::Output; }
-    bool IsRiseWrite(){ return this->write_mode == WriteMode::Rise && this->mIOType != IOType::Output; }
-    bool IsFallWrite(){ return this->write_mode == WriteMode::Fall && this->mIOType != IOType::Output; }
-    XData &AsImmWrite(){ this->SetWriteMode(WriteMode::Imme); return *this; }
-    XData &AsRiseWrite(){ this->SetWriteMode(WriteMode::Rise); return *this; }
-    XData &AsFallWrite(){ this->SetWriteMode(WriteMode::Fall); return *this; }
-    
-    XData &AsBiIO();
-    XData &AsInIO();
-    XData &AsOutIO();
-    XData &Flip();
-    XData &Invert();
-    PinBind &operator[](u_int32_t index);
-    PinBind &At(int index);
-
     operator std::string();
     operator u_int64_t();
-
-    std::string AsString();
-    long long AsInt64();
-    int AsInt32();
-
     // template functions
     template <typename T>
     XData(T value) : XData(sizeof(T) * 8, IOType::Input)
