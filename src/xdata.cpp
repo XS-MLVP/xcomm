@@ -700,6 +700,9 @@ uint64_t XData::U()
 int64_t XData::S()
 {
     this->update_read();
+    if (this->mWidth == 0) {
+        return static_cast<int64_t>(this->udata);
+    }
     auto mask = (1 << this->mWidth) - 1;
     auto value = this->udata & mask;
     auto sign_bit = 1 << (this->mWidth - 1);

@@ -35,6 +35,11 @@ int test_xdata()
     XData w4(4, XData::In);
     w4 = -1;
     test_assert(w4.S() == -1, "w4 need be -1 (%ld)", w4.S());
+    XData w0(0, XData::In);
+    XData w1(1, XData::In);
+    w0 =  1;
+    w1 = -1;
+    test_assert(w0.S() == 1 && w1.S() == -1, "w0 need be 1(%ld) and w1 need be -1(%ld)", w0.S(), w1.S());
 
     XData zx_z;
     XData zx_x(32, XData::In);
