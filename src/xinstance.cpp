@@ -32,7 +32,10 @@ int test_xdata()
                 "check u_int32  fail");
     test_assert(x4 == 0xf4 && x4.mWidth == 64 && x4.DataValid(),
                 "check u_int64  fail");
-    
+    XData w4(4, XData::In);
+    w4 = -1;
+    test_assert(w4.S() == -1, "w4 need be -1 (%ld)", w4.S());
+
     XData zx_z;
     XData zx_x(32, XData::In);
     zx_z = "z";
