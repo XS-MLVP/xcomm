@@ -43,14 +43,51 @@ import java.util.List;
   }
 
   public BigInteger Get() {
-    byte[] byteArray = reverseEndian(this.GetVU8());
-    return new BigInteger(1, byteArray);
+    int bitLength = (int)this.W();
+    if(bitLength == 0){
+      return this.U();
+    }
+    byte[] byteArray = this.GetVU8();
+    int sign_index = (bitLength - 1) / 8;
+    int sign_offst = (bitLength - 1) % 8;
+    if((byteArray[sign_index] & ((byte)1 << sign_offst)) != (byte)0){
+      // Negative value, assign sign
+      byteArray[sign_index] |= ~(((byte)1 << (sign_offst + 1)) - 1);
+    }
+    return new BigInteger(reverseEndian(byteArray));
   }
 
   public void Set(BigInteger v) {
-    UCharVector uCharVector = new UCharVector(reverseEndian(v.toByteArray()));
+    int byteLength = ((int)this.W() + 7 )/8;
+    byte[] byteArray = reverseEndian(v.toByteArray());
+    if(v.compareTo(BigInteger.ZERO) < 0){
+      byte[] newArray = new byte[byteLength];
+      for(int i = 0; i < newArray.length; i++) {
+        newArray[i] = (byte)0xff;
+      }
+      System.arraycopy(byteArray, 0, newArray, 0, byteArray.length);
+      byteArray = newArray;
+    }
+    UCharVector uCharVector = new UCharVector(byteArray);
     this.SetVU8(uCharVector);
   }
+
+  public void Set(int data) {
+    if(data < 0){
+      this.Set(BigInteger.valueOf(data));
+    }else{
+      this.Seti(data);
+    }
+  }
+
+  public void Set(long data) {
+    if(data < 0){
+      this.Set(BigInteger.valueOf(data));
+    }else{
+      this.Setl(data);
+    }
+  }
+
 %}
 
 %apply std::vector<unsigned char> { const std::vector<unsigned char> & };
@@ -59,6 +96,8 @@ import java.util.List;
 
 %ignore xspcomm::XData::Set(int64_t);
 %ignore xspcomm::XData::Set(uint64_t);
+%rename(Seti) xspcomm::XData::Set(int);
+%rename(Setl) xspcomm::XData::Set(unsigned int);
 
 %include ../xcomm.i
 

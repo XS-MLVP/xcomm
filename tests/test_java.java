@@ -26,6 +26,14 @@ public class test_java {
     c.Set(bi);
     System.out.println("Bigint input data  = " + bi.toString());
     System.out.println("Bigint output data = " + c.Get().toString());
+    XData x4  = new XData(4, XData.In);
+    XData x128  = new XData(128, XData.In);
+    x4.Set(-1);
+    x128.Set(new BigInteger("-1"));
+    System.out.printf("test negative assigen x4   = %d\n", x4.S());
+    System.out.printf("test negative assigen x128 = %d\n", x128.Get());
+    x128.Set(-1);
+    System.out.printf("test negative assigen x128 = %d\n", x128.Get());
 
     byte[] byttest = a.GetVU8();
     System.out.println("a(hex) = " + a.U().toString(16));
