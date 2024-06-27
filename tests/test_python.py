@@ -8,6 +8,8 @@ def test_xdata():
     b: XData = XData(32, XData.In)
     c: XData = XData(128, XData.In)
     e: XData = XData(0, XData.In)
+    f: XData = XData(4, XData.In)
+
     TEST_DPI_LR(DPI_TEST_VR)
     TEST_DPI_LW(0)
     TEST_DPI_VR(DPI_TEST_VR)
@@ -38,6 +40,10 @@ def test_xdata():
     print(port["a"])
     port.SetZero()
     print(port["a"])
+    c.value = -2
+    f.value = -1
+    assert c.value == -2
+    assert f.value == -1
 
     port["a"] = 1
     print(f"expected 1, actual {port['a'].value}")

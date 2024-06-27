@@ -35,10 +35,11 @@ def XData__setattr__(self: XData, name, value):
         return XData_old__setattr__(self, name, value)
     if type(value) is bool:
         return self.Set(1 if value else 0)
+    bit_length = self.W()
     if type(value) is int:
-        if value.bit_length() <= 64:
+        if bit_length <= 64:
             return self.Set(value)
-        self.SetVU8(value.to_bytes((value.bit_length() + 7) // 8, byteorder='little'))
+        self.SetVU8(value.to_bytes((self.W() + 7) // 8, byteorder='little', signed=True))
     else:
         return self.Set(value)
 
@@ -46,9 +47,18 @@ XData_old__getattribute__ = XData.__getattribute__
 def XData__getattribute__(self: XData, name):
     if name != "value":
         return XData_old__getattribute__(self, name)
-    if self.W() <= 64:
-        return self.U()
-    return int.from_bytes(self.GetVU8(), 'little')
+    bit_length = self.W()
+    if bit_length <= 64:
+        data = self.U()
+    else:
+        data = int.from_bytes(self.GetVU8(), byteorder='little', signed=False)
+    # handle negtive value
+    mask = (1 << bit_length) - 1
+    data &= mask
+    sign_bit = 1 << (bit_length - 1)
+    if data & sign_bit:
+        data -= (1 << bit_length)
+    return data
 
 def XData__getitem__(self: XData, key):
     return self.At(key).AsInt32()
