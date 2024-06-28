@@ -162,4 +162,37 @@ func EchoBytes(bytes []byte) {
     }
     fmt.Println()
 }
+
+type StepFunc struct{
+    Cb_int_bool
+    call_back func(bool) int
+}
+
+type StepCb struct{
+    Cb_void_u64_voidp
+    call_back func(uint64)
+}
+
+func (self *StepCb) Call(cycle uint64, parg uintptr) {
+    self.call_back(cycle)
+}
+
+func (self *StepFunc) Call(dump bool) int {
+    return self.call_back(dump)
+}
+
+func NewStepCb(f func(uint64)) Cb_void_u64_voidp {
+  ret := StepCb{call_back: f}
+  cb := NewDirectorCb_void_u64_voidp(&ret)
+  cb.Set_force_callable()
+  return cb
+}
+
+func NewStepFunc(f func(bool) int) Cb_int_bool {
+  ret := StepFunc{call_back: f}
+  cb := NewDirectorCb_int_bool(&ret)
+  cb.Set_force_callable()
+  return cb
+}
+
 %}
