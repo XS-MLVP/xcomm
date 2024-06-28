@@ -1112,6 +1112,9 @@ std::string XData::AsBinaryString()
             }
         }
     }
+    if(ret.empty()){
+        ret = "0";
+    }
     return ret;
 }
 
