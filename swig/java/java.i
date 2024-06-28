@@ -53,6 +53,9 @@ import java.util.List;
     if((byteArray[sign_index] & ((byte)1 << sign_offst)) != (byte)0){
       // Negative value, assign sign
       byteArray[sign_index] |= ~(((byte)1 << (sign_offst + 1)) - 1);
+      for(int i = sign_index; i < byteArray.length; i++){
+        byteArray[i] = (byte)0xff;
+      }
     }
     return new BigInteger(reverseEndian(byteArray));
   }

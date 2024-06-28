@@ -60,15 +60,19 @@ def XData_S(self: XData):
     if bit_length <= 64:
         data = XData_old_S(self)
     else:
-        data = int.from_bytes(self.GetVU8(), byteorder='little', signed=False)
-    if bit_length < 1:
-        return data
-    # handle negtive value
-    mask = (1 << bit_length) - 1
-    data &= mask
-    sign_bit = 1 << (bit_length - 1)
-    if data & sign_bit:
-        data -= (1 << bit_length)
+        bytes_list = bytearray(self.GetVU8())
+        bit_length = len(bytes_list)
+        sign_pos = (bit_length - 1) // 8
+        sign_off = (bit_length - 1) %  8
+        sing_val = 1 << sign_off
+        if (bytes_list[sign_pos] & sing_val != 0):
+            # Negative
+            bytes_list[sign_pos] |= (~(sing_val | (sing_val - 1))) & 0xff
+            sign_pos += 1
+            while sign_pos < bit_length:
+                bytes_list[sign_pos] = 0xff
+                sign_pos +=1
+        data = int.from_bytes(bytes(bytes_list), byteorder='little', signed=True)
     return data
 
 def XData__getitem__(self: XData, key):

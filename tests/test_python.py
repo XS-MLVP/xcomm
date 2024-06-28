@@ -6,7 +6,7 @@ from asyncio import run, create_task, sleep
 def test_xdata():
     a: XData = XData(32, XData.In)
     b: XData = XData(32, XData.In)
-    c: XData = XData(128, XData.In)
+    c: XData = XData(129, XData.In)
     e: XData = XData(0, XData.In)
     f: XData = XData(4, XData.In)
 

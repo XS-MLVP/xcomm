@@ -27,7 +27,7 @@ public class test_java {
     System.out.println("Bigint input data  = " + bi.toString());
     System.out.println("Bigint output data = " + c.Get().toString());
     XData x4  = new XData(4, XData.In);
-    XData x128  = new XData(128, XData.In);
+    XData x128  = new XData(129, XData.In);
     x4.Set(-1);
     x128.Set(new BigInteger("-1"));
     System.out.printf("test negative assigen x4   = %d\n", x4.S());
