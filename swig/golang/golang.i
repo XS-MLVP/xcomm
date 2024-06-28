@@ -11,9 +11,9 @@
 %include <std_vector.i>
 
 %typemap(gotype) (FreePtr) "[]byte"
-%typemap(in) (FreePtr) {
+%typemap(in) (FreePtr) %{
     $1.array = $input.array;
-}
+%}
 
 %inline %{
 #include <vector>
@@ -25,30 +25,59 @@ void FreeSCVector(FreePtr p){
 }
 %}
 
-%typemap(gotype) std::vector<unsigned char> "big.Int"
+%typemap(gotype) std::vector<unsigned char>  "*big.Int"
 %typemap(gotype) std::vector<unsigned char>& "*big.Int"
-%typemap(imtype) std::vector<unsigned char> "[]byte"
+%typemap(imtype) std::vector<unsigned char>  "[]byte"
 %typemap(imtype) std::vector<unsigned char>& "[]byte"
-%typemap(goin) (std::vector<unsigned char>&) {
-    $result = $input.Bytes()
-}
-%typemap(in) (std::vector<unsigned char>&) {
+%typemap(goin) (std::vector<unsigned char>&) %{
+    bytes := ReverseBytes($input.Bytes())
+    if $input.Sign() == -1 {
+        // In bigInt.BitLen do not include sign
+        index := $input.BitLen() % 8
+        if (index == 0) {
+            bytes = append(bytes, byte(0xff))
+        }else{
+            mask := (byte(1) << index) - 1
+            bytes[len(bytes) - 1] |= ^mask
+        }
+        // Copy to XData array
+        xdata := make([]byte, arg1.W())
+        for j := range xdata {
+            xdata[j] = byte(0xff)
+        }
+        // Find min length to copy
+        len_b := len(bytes)
+        len_x := len(xdata)
+        copy_len := len_b
+        if copy_len > len_x {
+            copy_len = len_x
+        }
+        // Copy
+        for j := 0; j < copy_len; j++ {
+            xdata[j] = bytes[j]
+        }
+        $result = xdata
+    } else{
+        $result = bytes
+    }
+%}
+%typemap(in) (std::vector<unsigned char>&) %{
     // convert slice to std::vector<unsigned char>
     std::vector<unsigned char> vec((unsigned char*)$input.array,
                                    (unsigned char*)$input.array + (size_t)$input.len);
     $1 = &vec;
-}
-%typemap(out) std::vector<unsigned char> {
+%}
+%typemap(out) std::vector<unsigned char> %{
     // convett std::vector to slice
     auto ret = new std::vector<unsigned char>($1);
     $result.array = ret->data();
     $result.len = ret->size();
     $result.cap = ret->size();
-}
-%typemap(goout) std::vector<unsigned char> {
-    $result.SetBytes($1)
-    FreeSCVector($1);
-}
+%}
+%typemap(goout) std::vector<unsigned char> %{
+    // Get()(big.int) 只返回正数
+    $result = new(big.Int).SetBytes(ReverseBytes($1))
+%}
 
 %include ../xcomm.i
 
@@ -66,3 +95,13 @@ void FreeSCVector(FreePtr p){
         return self->GetVU8();
     }
 }
+
+%insert(go_wrapper) %{
+func ReverseBytes(data []byte) []byte {
+    result := make([]byte, len(data))
+    for i, b := range data {
+        result[len(data)-1-i] = b
+    }
+    return result
+}
+%}

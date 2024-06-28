@@ -8,10 +8,10 @@ import (
 
 func main() {
 	fmt.Println("xpscomm version:", xspcomm.Version())
-	x1 := xspcomm.NewXData(32, xspcomm.IOType_Input)
+	x1 := xspcomm.NewXData(128, xspcomm.IOType_Input)
 	x1.Set(123)
-	v := new(big.Int).SetInt64(213)
-	fmt.Println("x1 = ", x1.AsBinaryString())
+	fmt.Println("x1 = ", x1.S())
+	v := new(big.Int).SetInt64(1234567)
 	x1.Set(v)
-	fmt.Println("x1 = ", x1.AsBinaryString(), " [big.Int] ", v)
+	fmt.Println("x1 = ", x1.AsBinaryString(), " [big.Int] ", v, " S:", x1.Get())
 }
