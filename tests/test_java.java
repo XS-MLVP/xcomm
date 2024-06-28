@@ -33,10 +33,10 @@ public class test_java {
     System.out.printf("test negative assigen x4   = %d\n", x4.S());
     System.out.printf("test negative assigen x128 = %d\n", x128.Get());
     x128.Set(-1);
-    System.out.printf("test negative assigen x128 = %d\n", x128.Get());
+    System.out.printf("test negative assigen x128 = %d (%d)\n", x128.Get(), x128.S());
 
     byte[] byttest = a.GetVU8();
-    System.out.println("a(hex) = " + a.U().toString(16));
+    System.out.println("a(hex) = " + a.U64().toString(16));
 
     StringBuilder sb = new StringBuilder();
     for (byte xb : byttest) {
@@ -45,15 +45,15 @@ public class test_java {
     System.out.println("a byte = " + sb.toString());
 
     System.out.println("b = " + b.GetVU8());
-    System.out.println("b = " + b.U());
-    System.out.println("b = " + b.U().toString(16));
+    System.out.println("b = " + b.U64());
+    System.out.println("b = " + b.U64().toString(16));
 
     byte[] byttest2 = { 0x01, 0x02, 0x03, 0x04 };
     UCharVector ucv = new UCharVector(byttest2);
     c.SetVU8(ucv);
     System.out.println("c = " + c.GetVU8());
-    System.out.println("c = " + c.U());
-    System.out.println("c = " + c.U().toString(16));
+    System.out.println("c = " + c.U64());
+    System.out.println("c = " + c.U64().toString(16));
 
     XPort port = new XPort("x_");
     port.Add("a", a);

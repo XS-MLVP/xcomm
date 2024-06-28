@@ -22,7 +22,7 @@ def test_xdata():
     e.value = 0
 
     l_value = 0xffffffffffffffffff123456
-    print("size: ", l_value.bit_length(), "a:", a.value)
+    print("size: ", l_value.bit_length(), "a:", a.value, "e: ", e.value)
 
     c.value = l_value
 
@@ -42,8 +42,8 @@ def test_xdata():
     print(port["a"])
     c.value = -2
     f.value = -1
-    assert c.value == -2
-    assert f.value == -1
+    assert c.S() == -2
+    assert f.S() == -1
 
     port["a"] = 1
     print(f"expected 1, actual {port['a'].value}")

@@ -52,6 +52,17 @@ def XData__getattribute__(self: XData, name):
         data = self.U()
     else:
         data = int.from_bytes(self.GetVU8(), byteorder='little', signed=False)
+    return data
+
+XData_old_S = XData.S
+def XData_S(self: XData):
+    bit_length = self.W()
+    if bit_length <= 64:
+        data = XData_old_S(self)
+    else:
+        data = int.from_bytes(self.GetVU8(), byteorder='little', signed=False)
+    if bit_length < 1:
+        return data
     # handle negtive value
     mask = (1 << bit_length) - 1
     data &= mask
@@ -72,6 +83,7 @@ XData.__setattr__ = XData__setattr__
 XData.__getattribute__ = XData__getattribute__
 XData.__getitem__ = XData__getitem__
 XData.__setitem__ = XData__setitem__
+XData.S = XData_S
 
 # XPort
 XPort_old__init__ = XPort.__init__

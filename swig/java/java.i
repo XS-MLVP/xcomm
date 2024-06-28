@@ -42,10 +42,10 @@ import java.util.List;
     return littleEndianBytes;
   }
 
-  public BigInteger Get() {
+  public BigInteger S() {
     int bitLength = (int)this.W();
-    if(bitLength == 0){
-      return this.U();
+    if(bitLength <= 64){
+      return BigInteger.valueOf(this.S64());
     }
     byte[] byteArray = this.GetVU8();
     int sign_index = (bitLength - 1) / 8;
@@ -55,6 +55,16 @@ import java.util.List;
       byteArray[sign_index] |= ~(((byte)1 << (sign_offst + 1)) - 1);
     }
     return new BigInteger(reverseEndian(byteArray));
+  }
+
+  // Get must return positive value
+  public BigInteger Get() {
+    int bitLength = (int)this.W();
+    if(bitLength <= 64){
+      return this.U64();
+    }
+    byte[] byteArray = this.GetVU8();
+    return new BigInteger(1, reverseEndian(byteArray));
   }
 
   public void Set(BigInteger v) {
@@ -98,6 +108,8 @@ import java.util.List;
 %ignore xspcomm::XData::Set(uint64_t);
 %rename(Seti) xspcomm::XData::Set(int);
 %rename(Setl) xspcomm::XData::Set(unsigned int);
+%rename(S64) xspcomm::XData::S;
+%rename(U64) xspcomm::XData::U;
 
 %include ../xcomm.i
 
