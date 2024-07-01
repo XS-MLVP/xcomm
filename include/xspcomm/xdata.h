@@ -195,6 +195,7 @@ public:
     XData &Set(int64_t data);
     XData &Set(uint64_t data);
     XData &Set(std::vector<unsigned char> &buffer){this->SetVU8(buffer); return *this;}
+    std::vector<unsigned char> GetBytes(){return this->GetVU8();}
     bool IsInIO(){ return this->mIOType == IOType::Input; }
     bool IsOutIO(){ return this->mIOType == IOType::Output; }
     bool IsBiIO(){ return this->mIOType == IOType::InOut; }
@@ -211,13 +212,13 @@ public:
     XData &Invert();
     PinBind &At(int index);
     std::string AsBinaryString();
-    int64_t AsInt64();
-    int AsInt32();
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */
 
     // C++ dependent APIs
+    int64_t AsInt64();
+    int AsInt32();
     void SetVU8(std::vector<unsigned char> &buffer);
     std::vector<unsigned char> GetVU8();
     void WriteOnRise();
