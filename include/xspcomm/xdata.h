@@ -196,6 +196,7 @@ public:
     XData &Set(uint64_t data);
     XData &Set(std::vector<unsigned char> &buffer){this->SetVU8(buffer); return *this;}
     std::vector<unsigned char> GetBytes(){return this->GetVU8();}
+    void SetBytes(std::vector<unsigned char> &buffer){return this->SetVU8(buffer);}
     bool IsInIO(){ return this->mIOType == IOType::Input; }
     bool IsOutIO(){ return this->mIOType == IOType::Output; }
     bool IsBiIO(){ return this->mIOType == IOType::InOut; }
