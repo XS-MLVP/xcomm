@@ -47,7 +47,7 @@ import java.util.List;
     if(bitLength <= 64){
       return BigInteger.valueOf(this.S64());
     }
-    byte[] byteArray = this.GetVU8();
+    byte[] byteArray = this.GetBytes();
     int sign_index = (bitLength - 1) / 8;
     int sign_offst = (bitLength - 1) % 8;
     if((byteArray[sign_index] & ((byte)1 << sign_offst)) != (byte)0){
@@ -66,13 +66,17 @@ import java.util.List;
     if(bitLength <= 64){
       return this.U64();
     }
-    byte[] byteArray = this.GetVU8();
+    byte[] byteArray = this.GetBytes();
     return new BigInteger(1, reverseEndian(byteArray));
   }
 
-  public void Set(byte[] v) {
+  public void Set(byte[] v) {    
+    this.SetBytes(v);
+  }
+
+  void SetBytes(byte[] v){
     UCharVector uCharVector = new UCharVector(v);
-    this.SetVU8(uCharVector);
+    this.SetBytesV(uCharVector);
   }
 
   public void Set(BigInteger v) {
@@ -117,6 +121,7 @@ import java.util.List;
 %rename(Setl) xspcomm::XData::Set(unsigned int);
 %rename(S64) xspcomm::XData::S;
 %rename(U64) xspcomm::XData::U;
+%rename(SetBytesV) xspcomm::XData::SetBytes;
 
 %include ../xcomm.i
 

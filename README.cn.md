@@ -114,8 +114,8 @@ a.SetBits(buffer, sizeof(buffer));
 
 // 读取数据到buffer 或者 vector
 std::vector<unsigned char> vector(buffer)
-auto ret = a.GetVU8()
-a.SetVU8(vector);
+auto ret = a.GetBytes()
+a.SetBytes(vector);
 
 uint32_t x = a.W();    // 转 uint32
 uint64_t x =a.U();     // 转 uint64
