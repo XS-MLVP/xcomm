@@ -1123,12 +1123,12 @@ std::string XData::AsBinaryString()
 
 int64_t XData::AsInt64()
 {
-    return (int64_t)*this;
+    return this->S();
 }
 
 int XData::AsInt32()
 {
-    return (int)*this;
+    return (int)this->S();
 }
 
 bool XData::Connect(XData &xdata)

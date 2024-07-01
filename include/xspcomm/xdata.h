@@ -180,8 +180,6 @@ public:
                    xfunction<void, unsigned char> write);
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
-    void SetVU8(std::vector<unsigned char> &buffer);
-    std::vector<unsigned char> GetVU8();
     uint32_t W();
     uint64_t U();
     int64_t S();
@@ -196,6 +194,7 @@ public:
     XData &Set(unsigned int data);
     XData &Set(int64_t data);
     XData &Set(uint64_t data);
+    XData &Set(std::vector<unsigned char> &buffer){this->SetVU8(buffer); return *this;}
     bool IsInIO(){ return this->mIOType == IOType::Input; }
     bool IsOutIO(){ return this->mIOType == IOType::Output; }
     bool IsBiIO(){ return this->mIOType == IOType::InOut; }
@@ -219,6 +218,8 @@ public:
     /*************************************************************** */
 
     // C++ dependent APIs
+    void SetVU8(std::vector<unsigned char> &buffer);
+    std::vector<unsigned char> GetVU8();
     void WriteOnRise();
     void WriteOnFall();
     void WriteDirect();
@@ -242,6 +243,7 @@ public:
     bool operator==(const char *str);
     bool operator==(char *str);
     XData &operator=(XData &data);
+    XData &operator=(std::vector<unsigned char> &buffer){this->SetVU8(buffer); return *this;}
     XData &operator=(const char *str);
     XData &operator=(std::string &data);
     XData &operator=(u_int64_t data);
