@@ -70,6 +70,11 @@ import java.util.List;
     return new BigInteger(1, reverseEndian(byteArray));
   }
 
+  public void Set(byte[] v) {
+    UCharVector uCharVector = new UCharVector(v);
+    this.SetVU8(uCharVector);
+  }
+
   public void Set(BigInteger v) {
     int byteLength = ((int)this.W() + 7 )/8;
     byte[] byteArray = reverseEndian(v.toByteArray());
@@ -81,8 +86,7 @@ import java.util.List;
       System.arraycopy(byteArray, 0, newArray, 0, byteArray.length);
       byteArray = newArray;
     }
-    UCharVector uCharVector = new UCharVector(byteArray);
-    this.SetVU8(uCharVector);
+    this.Set(byteArray);
   }
 
   public void Set(int data) {
