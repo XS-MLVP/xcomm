@@ -25,46 +25,8 @@ void FreeSCVector(FreePtr p){
 }
 %}
 
-%typemap(gotype) std::vector<unsigned char>  "*big.Int"
-%typemap(gotype) std::vector<unsigned char>& "*big.Int"
-%typemap(imtype) std::vector<unsigned char>  "[]byte"
-%typemap(imtype) std::vector<unsigned char>& "[]byte"
-%typemap(goin) (std::vector<unsigned char>&) %{
-    if $input.Sign() == -1 {
-        // Invert
-        bytes := $input.Bytes()
-        for i := range bytes {
-		    bytes[i] = ^bytes[i]
-	    }
-        // Plus 1
-        for i := len(bytes) - 1; i >= 0; i-- {
-			bytes[i]++
-			if bytes[i] != 0 {
-				break
-			}
-		}
-        bytes = ReverseBytes(bytes)
-        // Copy to XData array
-        xdata := make([]byte, arg1.W())
-        for j := range xdata {
-            xdata[j] = byte(0xff)
-        }
-        // Find min length to copy
-        len_b := len(bytes)
-        len_x := len(xdata)
-        copy_len := len_b
-        if copy_len > len_x {
-            copy_len = len_x
-        }
-        // Copy
-        for j := 0; j < copy_len; j++ {
-            xdata[j] = bytes[j]
-        }
-        $result = xdata
-    } else{
-        $result = ReverseBytes($input.Bytes())
-    }
-%}
+%typemap(gotype) std::vector<unsigned char>  "[]byte"
+%typemap(gotype) std::vector<unsigned char>& "[]byte"
 %typemap(in) (std::vector<unsigned char>&) %{
     // convert slice to std::vector<unsigned char>
     std::vector<unsigned char> vec((unsigned char*)$input.array,
@@ -78,76 +40,193 @@ void FreeSCVector(FreePtr p){
     $result.len = ret->size();
     $result.cap = ret->size();
 %}
-%typemap(goout) std::vector<unsigned char> %{
-    // Get()(big.int) 只返回正数
-    $result = new(big.Int).SetBytes(ReverseBytes($1))
-%}
-
-// For VU8
-%typemap(gotype) VU8 "*big.Int"
-%typemap(imtype) VU8 "[]byte"
-%typemap(out) VU8 %{
-    // convett std::vector to slice
-    auto ret = new std::vector<unsigned char>($1.array);
-    $result.array = ret->data();
-    $result.len = ret->size();
-    $result.cap = ret->size();
-%}
-%typemap(goout) VU8 %{
-    signPos := arg1.W() - 1
-    index := signPos / 8
-    offst := signPos % 8
-    if ($1[index] & (byte(1) << offst)) != 0 {
-        // Negative
-        $1[index] |= ^((byte(1) << (offst + 1)) - 1)
-        array_size := uint(len($1))
-        for i := index + 1; i < array_size; i ++ {
-            $1[i] = byte(0xff)
-        }
-        // value = ^value
-        for i := range $1 {
-		    $1[i] = ^$1[i]
-	    }
-        // result = - (value + 1)
-        $result = new(big.Int).Neg(new(big.Int).Add(new(big.Int).SetBytes(ReverseBytes($1)), big.NewInt(1)))
-    }else{
-        // Positive
-        $result = new(big.Int).SetBytes(ReverseBytes($1))
-    }
-%}
-%inline %{
-typedef struct
-{
-    std::vector<unsigned char> array;
-} VU8;
-%}
 
 %rename(S64) xspcomm::XData::S;   //FIXME: orgin S => S64
 %rename(U64) xspcomm::XData::U;
+%rename(AsImmWriteGo) xspcomm::XData::AsImmWrite;
+%rename(AsRiseWriteGo) xspcomm::XData::AsRiseWrite;
+%rename(AsFallWriteGo) xspcomm::XData::AsFallWrite;
+%rename(AsBiIOGo) xspcomm::XData::AsBiIO;
+%rename(AsInIOGo) xspcomm::XData::AsInIO;
+%rename(AsOutIOGo) xspcomm::XData::AsOutIO;
+%rename(FlipGo) xspcomm::XData::Flip;
+%rename(InvertGo) xspcomm::XData::Invert;
+%rename(SubDataRefGo) xspcomm::XData::SubDataRef;
+
+%rename(SetGo) xspcomm::XData::Set;
+%rename(XClockGo) xspcomm::XClock;
+%rename(XDataGo) xspcomm::XData;
 
 %include ../xcomm.i
 
-%extend xspcomm::XData {
-    XData(int32_t width, IOType itype, std::string name = ""){
-        return new xspcomm::XData((uint32_t)width, itype, name);
+
+%insert(go_wrapper) %{
+
+type XData interface {
+    XDataGo
+    Set(a ...interface{}) XData
+    Get() *big.Int
+    S() *big.Int
+    AsImmWrite() XData
+    AsRiseWrite() XData
+    AsFallWrite() XData
+    AsBiIO() XData
+    AsInIO() XData
+    AsOutIO() XData
+    Flip() XData
+    Invert() XData
+}
+
+type SwigcptrXData struct {
+    XDataGo
+}
+
+func (p SwigcptrXData) SubDataRef(arg2 string, arg3 uint, arg4 uint) XData {
+    ret := SwigcptrXData{}
+    ret.XDataGo = p.XDataGo.SubDataRefGo(arg2, arg3, arg4)
+    return ret
+}
+
+func (p SwigcptrXData) AsImmWrite() XData {
+    p.XDataGo.AsImmWriteGo()
+    return p
+}
+
+func (p SwigcptrXData) AsRiseWrite() XData {
+    p.XDataGo.AsRiseWriteGo()
+    return p
+}
+
+func (p SwigcptrXData) AsFallWrite() XData {
+    p.XDataGo.AsFallWriteGo()
+    return p
+}
+
+func (p SwigcptrXData) AsBiIO() XData {
+    p.XDataGo.AsBiIOGo()
+    return p
+}
+
+func (p SwigcptrXData) AsInIO() XData {
+    p.XDataGo.AsInIOGo()
+    return p
+}
+
+func (p SwigcptrXData) AsOutIO() XData {
+    p.XDataGo.AsOutIOGo()
+    return p
+}
+
+func (p SwigcptrXData) Flip() XData {
+    p.XDataGo.FlipGo()
+    return p
+}
+
+func (p SwigcptrXData) Invert() XData {
+    p.XDataGo.InvertGo()
+    return p
+}
+
+func NewXData(a ...interface{}) XData {
+    ret := SwigcptrXData{}
+    argc := len(a)
+    if argc == 2 {
+        ret.XDataGo = NewXDataGo(uint(a[0].(int)), a[1])
+    } else if argc == 3 {
+        ret.XDataGo = NewXDataGo(uint(a[0].(int)), a[1], a[2])
+    }else{
+        ret.XDataGo = NewXDataGo(a...)
     }
-    void ReInit(int32_t width, IOType itype, std::string name = ""){
-        return self->ReInit((uint32_t)width, itype, name);
+    return ret
+}
+
+func (p SwigcptrXData) Get() *big.Int {
+    if p.XDataGo.W() <= 64 {
+        data := big.NewInt(1)
+        data.SetUint64(p.XDataGo.U64())
+        return data
     }
-    void Set(std::vector<unsigned char>& data){
-        self->SetVU8(data);
+    return new(big.Int).SetBytes(ReverseBytes(p.XDataGo.GetBytes()))
+}
+
+func (p SwigcptrXData) U() *big.Int {
+    return p.Get()
+}
+
+func (p SwigcptrXData) S() *big.Int {
+    if p.XDataGo.W() <= 64 {
+        return big.NewInt(p.XDataGo.S64())
     }
-    std::vector<unsigned char> Get(){
-        return self->GetVU8();
-    }
-    VU8 Signed(){
-        VU8 ret;
-        ret.array = self->GetVU8();
-        return ret;
+    bytes := p.XDataGo.GetBytes()
+    signPos := p.XDataGo.W() - 1
+    index := signPos / 8
+    offst := signPos % 8
+    if (bytes[index] & (byte(1) << offst)) != 0 {
+        // Negative
+        bytes[index] |= ^((byte(1) << (offst + 1)) - 1)
+        array_size := uint(len(bytes))
+        for i := index + 1; i < array_size; i ++ {
+            bytes[i] = byte(0xff)
+        }
+        // value = ^value
+        for i := range bytes {
+            bytes[i] = ^bytes[i]
+        }
+        // result = - (value + 1)
+        return new(big.Int).Neg(new(big.Int).Add(new(big.Int).SetBytes(ReverseBytes(bytes)), big.NewInt(1)))
+    }else{
+        // Positive
+        return new(big.Int).SetBytes(ReverseBytes(bytes))
     }
 }
 
-%insert(go_wrapper) %{
+func (p SwigcptrXData) Set(a ...interface{}) XData {
+    argc := len(a)
+    if argc > 0{
+        big_value, ok := a[0].(*big.Int)
+        if ok {
+            // big to bytes
+            if big_value.Sign() == -1 {
+                // Invert
+                bytes := big_value.Bytes()
+                for i := range bytes {
+                        bytes[i] = ^bytes[i]
+                }
+                // Plus 1
+                for i := len(bytes) - 1; i >= 0; i-- {
+                        bytes[i]++
+                        if bytes[i] != 0 {
+                            break
+                        }
+                    }
+                bytes = ReverseBytes(bytes)
+                // Copy to XData array
+                xdata := make([]byte, p.XDataGo.W())
+                for j := range xdata {
+                    xdata[j] = byte(0xff)
+                }
+                // Find min length to copy
+                len_b := len(bytes)
+                len_x := len(xdata)
+                copy_len := len_b
+                if copy_len > len_x {
+                    copy_len = len_x
+                }
+                // Copy
+                for j := 0; j < copy_len; j++ {
+                    xdata[j] = bytes[j]
+                }
+               p.XDataGo.SetBytes(xdata)
+            } else{
+               p.XDataGo.SetBytes(ReverseBytes(big_value.Bytes()))
+            }
+            return p
+        }
+    }
+    p.XDataGo.SetGo(a...)
+    return p
+}
+
 func ReverseBytes(data []byte) []byte {
     result := make([]byte, len(data))
     for i, b := range data {
@@ -193,6 +272,84 @@ func NewStepFunc(f func(bool) int) Cb_int_bool {
   cb := NewDirectorCb_int_bool(&ret)
   cb.Set_force_callable()
   return cb
+}
+
+type XClock interface {
+    XClockGo
+}
+
+type SwigcptrXClock struct{
+    XClockGo
+}
+
+func NewXClock(a ...interface{}) XClock {
+    ret := SwigcptrXClock {}
+    var p XClockGo
+    argc := len(a)
+    if argc == 1 {
+        p = NewXClockGo(NewStepFunc(a[0].(func(bool) int)))
+    }else if argc == 2 {
+        p = NewXClockGo(NewStepFunc(a[0].(func(bool) int)), a[1])
+    }else if argc == 3 {
+        p = NewXClockGo(NewStepFunc(a[0].(func(bool) int)), a[1], a[2])
+    }else{
+        p = NewXClockGo(a...)
+    }
+    ret.XClockGo = p
+    return ret
+}
+
+
+func (p SwigcptrXClock) ReInit(a ...interface{}) {
+    argc := len(a)
+    if argc == 1 {
+        p.XClockGo.ReInit(NewStepFunc(a[0].(func(bool) int)))
+        return
+    }
+    if argc == 2 {
+        p.XClockGo.ReInit(NewStepFunc(a[0].(func(bool) int)), a[1])
+        return
+    }
+    if argc == 3 {
+        p.XClockGo.ReInit(NewStepFunc(a[0].(func(bool) int)), a[1], a[2])
+        return
+    }
+    panic("No match for overloaded function call")
+}
+
+
+func (p SwigcptrXClock) StepRis(a ...interface{}) {
+    argc := len(a)
+    if argc == 1 {
+        p.XClockGo.StepRis(NewStepCb(a[0].(func(uint64))))
+        return
+    }
+    if argc == 2 {
+        p.XClockGo.StepRis(NewStepCb(a[0].(func(uint64))), a[1])
+        return
+    }
+    if argc == 3 {
+        p.XClockGo.StepRis(NewStepCb(a[0].(func(uint64))), a[1], a[2])
+        return
+    }
+    p.XClockGo.StepRis(a...)
+}
+
+func (p SwigcptrXClock) StepFal(a ...interface{}) {
+    argc := len(a)
+    if argc == 1 {
+        p.XClockGo.StepFal(NewStepCb(a[0].(func(uint64))))
+        return
+    }
+    if argc == 2 {
+        p.XClockGo.StepFal(NewStepCb(a[0].(func(uint64))), a[1])
+        return
+    }
+    if argc == 3 {
+        p.XClockGo.StepFal(NewStepCb(a[0].(func(uint64))), a[1], a[2])
+        return
+    }
+    p.XClockGo.StepFal(a...)
 }
 
 %}

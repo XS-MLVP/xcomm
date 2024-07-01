@@ -6,8 +6,13 @@ import (
 	"xspcomm"
 )
 
-func step_fc(b bool) int {
-	fmt.Println("step:", b)
+func step_fc1(b bool) int {
+	fmt.Println("step1:", b)
+	return 0
+}
+
+func step_fc2(b bool) int {
+	fmt.Println("step2:", b)
 	return 0
 }
 
@@ -23,9 +28,11 @@ func main() {
 	fmt.Println("x1 = ", x1.S64(), " u=", x1.U64())
 	v := new(big.Int).SetInt64(-1236)
 	x1.Set(v)
-	fmt.Println("x1 = ", x1.Get(), " [big.Int] ", v, " S:", x1.Signed(), " S64:", x1.S64())
+	fmt.Println("x1 = ", x1.Get(), " [big.Int] ", v, " S:", x1.S(), " S64:", x1.S64())
 	// test XClock
-	xclock := xspcomm.NewXClock(xspcomm.NewStepFunc(step_fc))
-	xclock.StepRis(xspcomm.NewStepCb(step_cb))
+	xclock := xspcomm.NewXClock(step_fc1)
+	xclock.StepRis(step_cb)
 	xclock.Step(3)
+	xclock.ReInit(step_fc2)
+	xclock.Step(2)
 }
