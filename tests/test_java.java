@@ -35,7 +35,7 @@ public class test_java {
     x128.Set(-1);
     System.out.printf("test negative assigen x128 = %d (%d)\n", x128.Get(), x128.S());
 
-    byte[] byttest = a.GetVU8();
+    byte[] byttest = a.GetBytes();
     System.out.println("a(hex) = " + a.U64().toString(16));
 
     StringBuilder sb = new StringBuilder();
@@ -44,14 +44,14 @@ public class test_java {
     }
     System.out.println("a byte = " + sb.toString());
 
-    System.out.println("b = " + b.GetVU8());
+    System.out.println("b = " + b.GetBytes());
     System.out.println("b = " + b.U64());
     System.out.println("b = " + b.U64().toString(16));
 
     byte[] byttest2 = { 0x01, 0x02, 0x03, 0x04 };
     UCharVector ucv = new UCharVector(byttest2);
     c.SetVU8(ucv);
-    System.out.println("c = " + c.GetVU8());
+    System.out.println("c = " + c.GetBytes());
     System.out.println("c = " + c.U64());
     System.out.println("c = " + c.U64().toString(16));
 
@@ -62,9 +62,8 @@ public class test_java {
     System.out.println("XData: " + a + "  :  port get a: " + port.Get("a"));
     System.out.println("XData: " + b + "  :  port get b: " + port.Get("b"));
     
-    CbXClockEval cb = new CbXClockEval();
-    XClock clock = new XClock(cb);
-    clock.StepRis(new CbXClockStep());
+    XClock clock = new XClock((dump)->{System.out.println("dump: "+dump);});
+    clock.StepRis((cycle)->{System.out.println("Rising edge: "+cycle);});
 
     clock.Step(5);
     System.out.println("XClock: "+clock);

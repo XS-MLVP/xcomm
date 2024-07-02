@@ -115,6 +115,27 @@ import java.util.List;
 
 %}
 
+
+%typemap(javaimports)xspcomm::XClock %{
+import java.util.function.Consumer;
+%}
+
+%typemap(javacode) xspcomm::XClock %{
+
+  public XClock(Consumer<Boolean> callback){
+    this(new CbXClockEval(callback));
+  }
+
+  public void StepRis(Consumer<Long> callback){
+    this.StepRis(new CbXClockStep(callback));
+  }
+
+  public void StepFal(Consumer<Long> callback){
+    this.StepFal(new CbXClockStep(callback));
+  }
+
+%}
+
 %apply std::vector<unsigned char> { const std::vector<unsigned char> & };
 
 %template(UCharVector) std::vector<unsigned char>;
