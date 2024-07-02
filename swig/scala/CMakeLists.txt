@@ -16,9 +16,9 @@ endif()
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_scalaswig)
 
 # Add swig module
-set_property(SOURCE java.i PROPERTY CPLUSPLUS ON)
+set_property(SOURCE scala.i PROPERTY CPLUSPLUS ON)
 
-swig_add_library(scalaxspcomm LANGUAGE java SOURCES java.i)
+swig_add_library(scalaxspcomm LANGUAGE java SOURCES scala.i)
 target_link_options(scalaxspcomm PRIVATE
  -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
  -Wl,-rpath,~/.local/lib
