@@ -70,6 +70,10 @@ import java.util.List;
     return new BigInteger(1, reverseEndian(byteArray));
   }
 
+  public BigInteger U() {
+    return this.Get();
+  }
+
   public void Set(byte[] v) {    
     this.SetBytes(v);
   }

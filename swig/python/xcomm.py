@@ -44,12 +44,13 @@ def XData__setattr__(self: XData, name, value):
         return self.Set(value)
 
 XData_old__getattribute__ = XData.__getattribute__
+XData_old_U = XData.U
 def XData__getattribute__(self: XData, name):
     if name != "value":
         return XData_old__getattribute__(self, name)
     bit_length = self.W()
     if bit_length <= 64:
-        data = self.U()
+        data = XData_old_U(self)
     else:
         data = int.from_bytes(self.GetBytes(), byteorder='little', signed=False)
     return data
@@ -75,6 +76,9 @@ def XData_S(self: XData):
         data = int.from_bytes(bytes(bytes_list), byteorder='little', signed=True)
     return data
 
+def XData_U(self: XData):
+    return self.value
+
 XData_old_Set = XData.Set
 def XData_Set(self:XData, value):
     if isinstance(value, bytes):
@@ -95,6 +99,7 @@ XData.__getattribute__ = XData__getattribute__
 XData.__getitem__ = XData__getitem__
 XData.__setitem__ = XData__setitem__
 XData.S = XData_S
+XData.U = XData_U
 XData.Set = XData_Set
 
 # XPort
