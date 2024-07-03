@@ -92,6 +92,10 @@ def XData__getitem__(self: XData, key):
 def XData__setitem__(self: XData, key, value):
     self.At(key).Set(value)
 
+def XDataBindDPIName(self: XData, dut, name):
+    self.mName = name
+    return self.BindDPIPtr(dut.get_dpi_handle(name,0), dut.get_dpi_handle(name,1))
+
 XData.__init__ = XData__init__
 XData.__str__ = XData__str__
 XData.__setattr__ = XData__setattr__
@@ -101,6 +105,7 @@ XData.__setitem__ = XData__setitem__
 XData.S = XData_S
 XData.U = XData_U
 XData.Set = XData_Set
+XData.BindDPIName = XDataBindDPIName
 
 # XPort
 XPort_old__init__ = XPort.__init__

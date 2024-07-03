@@ -545,6 +545,18 @@ void XData::_sub_data_fake_dpiw(void *data){
     return this->_sub_data_fake_dpirw(data, false);
 }
 
+void XData::BindDPIPtr(uint64_t read_ptr, uint64_t write_ptr)
+{
+    if (this->mWidth > 0) {
+        this->vecRead  = (void (*)(void *))read_ptr;
+        this->vecWrite = (void (*)(const void *))write_ptr;
+    } else {
+        this->bitRead  = (void (*)(void *))read_ptr;
+        this->bitWrite = (void (*)(const unsigned char))write_ptr;
+    }
+    this->update_read();
+}
+
 void XData::BindDPIRW(xfunction<void, void *> read,
                       xfunction<void, void *> write)
 {

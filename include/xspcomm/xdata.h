@@ -175,6 +175,7 @@ public:
     WriteMode GetWriteMode();
     bool SetWriteMode(WriteMode mode);
     bool DataValid();
+    void BindDPIPtr(uint64_t read_ptr, uint64_t write_ptr);
     void BindDPIRW(xfunction<void, void *> read, xfunction<void, void *> write);
     void BindDPIRW(xfunction<void, void *> read,
                    xfunction<void, unsigned char> write);
