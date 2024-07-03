@@ -1,5 +1,8 @@
 package com.xspcomm
 
+import java.math.BigInteger
+import scala.languageFeature.implicitConversions
+
 object Main{
     def main(args: Array[String]): Unit = {
         xspcomm.init()
@@ -10,6 +13,24 @@ object Main{
 implicit class XPortExtension(a: XPort){
     def apply(name: String): XData = {
         a.Get(name)
+    }
+}
+
+implicit class XDataExtension(a: XData){
+    def :=(value: Int): Unit = {
+        a.Set(value)
+    }
+    def :=(value: Long): Unit = {
+        a.Set(value)
+    }
+    def :=(value: String): Unit = {
+        a.Set(value)
+    }
+    def :=(value: Array[Byte]): Unit = {
+        a.Set(value)
+    }
+    def :=(value: BigInteger): Unit = {
+        a.Set(value)
     }
 }
 

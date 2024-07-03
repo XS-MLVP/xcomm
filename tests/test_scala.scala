@@ -11,6 +11,12 @@ object LoadXSP {
     x1.Set(0x123123)
     println(x1.AsBinaryString())
 
+    x1 := 0x123123
+    println(x1.AsBinaryString())
+
+    x1 := "0x2223334448899"
+    println(x1.AsBinaryString())
+
     var clock = new XClock((dump: Boolean) => {
       println("Clock callback: " + dump)
     })
