@@ -1,5 +1,4 @@
 package com.xspcomm;
-import _com.xspcomm._;
 
 class CbXClockEval(cb: (Boolean) => Unit) extends cb_int_bool {
   var callback: (Boolean) => Unit = cb

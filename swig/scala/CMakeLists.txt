@@ -27,7 +27,7 @@ target_link_options(scalaxspcomm PRIVATE
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../scala/xspcomm)
-set_property(TARGET scalaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package _com.xspcomm)
+set_property(TARGET scalaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspcomm)
 set_target_properties(scalaxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR})
 
 # copy file

@@ -1,5 +1,4 @@
 package com.xspcomm;
-import _com.xspcomm._;
 
 class CbXClockStep(cb: (Long) => Unit) extends cb_void_u64_voidp {
   var callback: (Long) => Unit = cb
