@@ -94,7 +94,7 @@ def XData__setitem__(self: XData, key, value):
 
 def XDataBindDPIName(self: XData, dut, name):
     self.mName = name
-    return self.BindDPIPtr(dut.get_dpi_handle(name,0), dut.get_dpi_handle(name,1))
+    return self.BindDPIPtr(dut.GetDPIHandle(name, 0), dut.GetDPIHandle(name, 1))
 
 XData.__init__ = XData__init__
 XData.__str__ = XData__str__
