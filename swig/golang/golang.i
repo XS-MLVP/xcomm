@@ -67,6 +67,7 @@ type XData interface {
     Set(a ...interface{}) XData
     Get() *big.Int
     S() *big.Int
+    U() *big.Int
     AsImmWrite() XData
     AsRiseWrite() XData
     AsFallWrite() XData
@@ -125,6 +126,10 @@ func (p SwigcptrXData) Flip() XData {
 func (p SwigcptrXData) Invert() XData {
     p.XDataGo.InvertGo()
     return p
+}
+
+func (p SwigcptrXData) BindDPIPtr(r uint64, w uint64){
+    p.XDataGo.BindDPIPtr(r, w)
 }
 
 func NewXData(a ...interface{}) XData {
