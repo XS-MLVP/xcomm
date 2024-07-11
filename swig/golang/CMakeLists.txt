@@ -24,6 +24,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/../xspcomm.go
             ${XCOMM_LIB_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/go.mod
+            ${XCOMM_LIB_DIR}/
     DEPENDS golangxspcomm
 )
 
