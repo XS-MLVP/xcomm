@@ -26,6 +26,7 @@ node_modules/
 
 # Fortran module files
 *.mod
+!swig/golang/go.mod
 *.smod
 
 # Compiled Static libraries
