@@ -6,6 +6,10 @@
 */
 %}
 
+%insert(cgo_comment) %{
+#cgo LDFLAGS: ${SRCDIR}/golangxspcomm.so
+%}
+
 %go_import("math/big", "fmt")
 %include <typemaps.i>
 %include <std_vector.i>
