@@ -20,7 +20,7 @@ test_java: build
 test_scala: build
 	scala -cp build/scala/xspcomm-scala.jar tests/test_scala.scala
 
-test_go: build
+test_golang: build
 	CGO_LDFLAGS="`pwd`/build/golang/src/xspcomm/golangxspcomm.so" GO111MODULE=off GOPATH="`pwd`/build/golang" go run tests/test_golang.go
 
 else
@@ -33,7 +33,7 @@ test_java: build
 test_scala: build
 	LD_PRELOAD=build/lib/libuvmps_vcs.so scala -cp build/scala/xspcomm-scala.jar tests/test_scala.scala
 
-test_go: build
+test_golang: build
 	LD_PRELOAD=build/lib/libuvmps_vcs.so CGO_LDFLAGS="`pwd`/build/golang/src/xspcomm/golangxspcomm.so" GO111MODULE=off GOPATH="`pwd`/build/golang" go run tests/test_golang.go
 
 endif
