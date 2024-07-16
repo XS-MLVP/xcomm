@@ -77,8 +77,8 @@ public:
     void Add(xspcomm::XData &d);
     void Add(xspcomm::XPort *d);
     void Add(xspcomm::XPort &d);
-    void Eval(){this->eval();}
-    void EvalT(){this->eval_t();}
+    void RefreshComb(){this->eval();}
+    void RefreshCombT(){this->eval_t();}
     void Step(int s = 1);
     void Reset();
     void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,

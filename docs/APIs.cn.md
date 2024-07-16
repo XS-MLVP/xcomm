@@ -64,8 +64,8 @@
 |-|-------------|----------|----------|----------|
 |1|void Add(XData &d)|将Clock和时钟进行绑定|d：被添加的XData|clock.Add(dut.clk)|
 |2|void Add(XPort &p)|将Clock和XData进行绑定|p：被添加的Port|clock.Add(dut.port)|
-|3|void Eval()|推进电路状态，不dump波形|-|-|
-|4|void EvalT()|推进电路状态，推进时间&dump波形|-|-|
+|3|void RefreshComb()|推进电路状态，不推进时间，不dump波形|-|-|
+|4|void RefreshCombT()|推进电路状态，推进时间，dump波形|-|-|
 |5|void Step(int s = 1)|推进电路s个时钟周期|-|-|
 |6<sup>*</sup>|void StepRis(xfunction<void, u_int64_t, void *> func,<br> void |-*args = nullptr)|设置上升沿回调函数|func为回调函数，args为自定义参数|-|
 |7<sup>*</sup>|void StepFal(xfunction<void, u_int64_t, void *> func,<br> void |-*args = nullptr)|设置下降沿回调函数|func为回调函数，args为自定义参数|-|
