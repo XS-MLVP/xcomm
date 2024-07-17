@@ -37,7 +37,7 @@
 |23|XData &AsBiIO()|更改XData为Bi类型|-|-|
 |24|XData &AsInIO()|更改XData为In类型|-|-|
 |25|XData &AsOutIO()|更改XData为Out类型|-|-|
-|26|XData &Flip()|将XData的IO类型进行取反，例如In变为Out|-|-|
+|26|XData &FlipIOType()|将XData的IO类型进行取反，例如In变为Out|-|-|
 |27|XData &Invert()|将XData中的数据进行取反|-|-|
 |28|PinBind &At(int index)|获取第i位，对第i位进行读写操作|目标位的index| a.At|2(2) = 1, a[2] = 1, uint8 bit = a.At(2)|
 |29<sup>*</sup>|std::string AsBinaryString()|将XData的数据变为二进制字符串|-|eg: "1001011"|
@@ -54,7 +54,7 @@
 |5|bool Connect(XPort &target)|链接2个Port，返回是否链接|1成功|-|-|
 |6|XPort &NewSubPort(std::string subprefix)|创建子Port||1以subprefix开头的所有Pin构成子Port|-|
 |7|xspcomm::XData &Get(std::string key, bool raw_key = |1false)|获取XData|key为Add时给的名称|-|
-|8|XPort &Flip()|让Port中所有XData的IO类型进行反转|-|--|
+|8|XPort &FlipIOType()|让Port中所有XData的IO类型进行反转|-|--|
 |9|XPort &AsBiIO()|让所有XData类IO类型为Bi|-|-|
 |10|XPort &SetZero()|设置Port中的所有XData为0|-|-|
 

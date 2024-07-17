@@ -210,7 +210,7 @@ public:
     XData &AsBiIO();
     XData &AsInIO();
     XData &AsOutIO();
-    XData &Flip();
+    XData &FlipIOType();
     XData &Invert();
     PinBind &At(int index);
     std::string AsBinaryString();

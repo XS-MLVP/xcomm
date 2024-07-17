@@ -985,7 +985,7 @@ void XData::ReadFresh(WriteMode m)
     this->_update_shadow();
 }
 
-XData &XData::Flip()
+XData &XData::FlipIOType()
 {
     if (this->mIOType == IOType::Input) {
         this->mIOType = IOType::Output;

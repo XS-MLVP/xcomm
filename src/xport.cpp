@@ -85,9 +85,9 @@ xspcomm::XData &XPort::Get(std::string key, bool raw_key)
     return *this->port_list[raw_key ? key : this->asKey(key)];
 }
 
-XPort &XPort::Flip()
+XPort &XPort::FlipIOType()
 {
-    for (auto &e : this->port_list) { e.second->Flip(); }
+    for (auto &e : this->port_list) { e.second->FlipIOType(); }
     return *this;
 }
 

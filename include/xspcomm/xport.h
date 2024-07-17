@@ -25,7 +25,7 @@ public:
     bool Connect(XPort &target);
     XPort &NewSubPort(std::string subprefix);
     xspcomm::XData &Get(std::string key, bool raw_key = false);
-    XPort &Flip();
+    XPort &FlipIOType();
     XPort &AsBiIO();
     XPort &WriteOnRise();
     XPort &WriteOnFall();
