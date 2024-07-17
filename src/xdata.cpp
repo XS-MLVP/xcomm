@@ -438,7 +438,7 @@ XData::~XData()
     }
 }
 
-XData *XData::SubDataRef(std::string name, uint32_t start, uint32_t width){
+XData *XData::SubDataRef(uint32_t start, uint32_t width, std::string name){
     Assert(this->mWidth > 0, "Only svVec support SubDataRef, need mWidth > 0");
     Assert(start + width <= this->mWidth, "SubDataRef out of range (start + witdth=%d > mWidth=%d)", start + width, this->mWidth);
     XData *sub = new XData(width, this->mIOType, name);

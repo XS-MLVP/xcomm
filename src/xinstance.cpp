@@ -221,8 +221,8 @@ int test_xdata()
     XData full(128, IOType::InOut, "full");
     full = "0xffffffffffffffffffffffffffffffff";
 
-    auto x30_64 = full.SubDataRef("x30_64", 30, 64);
-    auto x30_93 = full.SubDataRef("x30_93", 30, 93);
+    auto x30_64 = full.SubDataRef(30, 64);
+    auto x30_93 = full.SubDataRef(30, 93);
     *x30_64 = "0xababa12ba98babab";
 
     test_assert("ffffffffeaeae84aea62eaeaffffffff" == full.String() && full.DataValid(), "data(0x%s) need be: 0xffffffffeaeae84aea62eaeaffffffff", full.String().c_str());
@@ -233,8 +233,8 @@ int test_xdata()
     test_assert("fc4040404040404040808083ffffffff" == full.String() && full.DataValid(), "data(0x%s) need be: fc4040404040404040808083ffffffff", full.String().c_str());
     test_assert("11010101010101010202020f" == x30_93->String() && x30_93->DataValid(), "data(0x%s) need be: 11010101010101010202020f", x30_93->String().c_str());
 
-    auto x0_1 = full.SubDataRef("x0_1", 0, 1);
-    auto x1_0 = full.SubDataRef("x1_0", 1, 0);
+    auto x0_1 = full.SubDataRef(0, 1);
+    auto x1_0 = full.SubDataRef(1, 0, "x1_0");
     *x0_1 = 0;
     *x1_0 = 0;
     test_assert("fc4040404040404040808083fffffffc" == full.String() && full.DataValid(), "data(0x%s) need be: fc4040404040404040808083fffffffc", full.String().c_str());

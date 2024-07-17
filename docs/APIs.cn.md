@@ -12,7 +12,7 @@
 
 |编号|API名称|作用|参数说明|举例|
 |-|-------------|----------|----------|----------|
-|1|XData *SubDataRef(std::string name, <br>uint32_t start, uint32_t width)|拆分XData，例如把一个32位XData中的第7-10为<br>创建成为一个独立XData|name：名称，start：开始位，width：位宽|auto sub = a.SubDataRef("sub_pin", 0, 4)|
+|1|XData *SubDataRef(uint32_t start, uint32_t width, std::string name="")|拆分XData，例如把一个32位XData中的第7-10为<br>创建成为一个独立XData|name：名称，start：开始位，width：位宽|auto sub = a.SubDataRef(0, 4, "sub_pin")|
 |2|WriteMode GetWriteMode()|获取XData的写模式，写模式有三种：Imme立即写，|2<br>Rise上升沿写，Fall下降沿写|-|-|
 |3|bool SetWriteMode(WriteMode mode)|设置XData的写模式|写模式：Imme立即写，|2Rise上升沿写，<br>Fall下降沿写|a.SetWriteMode(WriteMode::Imme)|
 |4<sup>*</sup>|bool DataValid()|检测数据是否有效（Value中含有X或者Z态返回false，<br>否者true）|-|-|
