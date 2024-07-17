@@ -53,7 +53,7 @@ void FreeSCVector(FreePtr p){
 %rename(AsBiIOGo) xspcomm::XData::AsBiIO;
 %rename(AsInIOGo) xspcomm::XData::AsInIO;
 %rename(AsOutIOGo) xspcomm::XData::AsOutIO;
-%rename(FlipGo) xspcomm::XData::Flip;
+%rename(FlipIOTypeGo) xspcomm::XData::FlipIOType;
 %rename(InvertGo) xspcomm::XData::Invert;
 %rename(SubDataRefGo) xspcomm::XData::SubDataRef;
 
@@ -78,7 +78,7 @@ type XData interface {
     AsBiIO() XData
     AsInIO() XData
     AsOutIO() XData
-    Flip() XData
+    FlipIOType() XData
     Invert() XData
 }
 
@@ -86,9 +86,9 @@ type SwigcptrXData struct {
     XDataGo
 }
 
-func (p SwigcptrXData) SubDataRef(arg2 string, arg3 uint, arg4 uint) XData {
+func (p SwigcptrXData) SubDataRef(a ...interface{}) XData {
     ret := SwigcptrXData{}
-    ret.XDataGo = p.XDataGo.SubDataRefGo(arg2, arg3, arg4)
+    ret.XDataGo = p.XDataGo.SubDataRefGo(a...)
     return ret
 }
 
@@ -122,8 +122,8 @@ func (p SwigcptrXData) AsOutIO() XData {
     return p
 }
 
-func (p SwigcptrXData) Flip() XData {
-    p.XDataGo.FlipGo()
+func (p SwigcptrXData) FlipIOType() XData {
+    p.XDataGo.FlipIOTypeGo()
     return p
 }
 
