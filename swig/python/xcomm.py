@@ -39,7 +39,9 @@ def XData__setattr__(self: XData, name, value):
     if type(value) is int:
         if bit_length <= 64:
             return self.Set(value)
-        self.SetBytes(value.to_bytes((self.W() + 7) // 8, byteorder='little', signed=True))
+        # add extra byte for python `to_bytes` method to contain sign bit
+        # the extra bits will be truncated in `SetBytes` method
+        self.SetBytes(value.to_bytes((self.W() + 15) // 8, byteorder='little', signed=True))
     else:
         return self.Set(value)
 
