@@ -143,17 +143,17 @@ class xclock_cb_step(cb_int_bool):
             
 class xclock_cb_step_rf(cb_void_u64_voidp):
     """XClock step Ris/Fal call back"""
-    def __init__(self, func, args, kwargs):
+    def __init__(self, dut, func, args, kwargs):
         cb_void_u64_voidp.__init__(self)
         self.func = func
+        self.dut = dut
         self.args = args
         self.kwargs = kwargs
     def call(self, cycle: int, args=None):
         try:
             return self.func(cycle, *self.args, **self.kwargs)
         except Exception as e:
-            cb_exception_handler(self.func)
-            assert(0)
+            XClock_Add_Exception(self.dut, e)
 
 # Async
 import asyncio
@@ -197,14 +197,26 @@ XClock.getEvent = XClock__getEvent
 XClock_old_StepRis = XClock.StepRis
 XClock_old_StepFal = XClock.StepFal
 def XClock_StepRis(self, call_back, args=(), kwargs={}):
-    fc = xclock_cb_step_rf(call_back, args, kwargs)
+    fc = xclock_cb_step_rf(self, call_back, args, kwargs)
     fc.set_force_callable()
     return XClock_old_StepRis(self, fc.__disown__(), None, call_back.__name__)
 
 def XClock_StepFal(self, call_back, args=(), kwargs={}):
-    fc = xclock_cb_step_rf(call_back, args, kwargs)
+    fc = xclock_cb_step_rf(self, call_back, args, kwargs)
     fc.set_force_callable()
     return XClock_old_StepFal(self, fc.__disown__(), None, call_back.__name__)
+
+def XClock_Add_Exception(self, exception):
+    if getattr(self, "exceptions", None) is None:
+        self.exceptions = [exception]
+    else:
+        self.exceptions.append(exception)
+
+def XClock_Check_Exceptions(self):
+    if getattr(self, "exceptions", None) is None:
+        return
+    print("[Error] Find %d exceptions in cycle[%d], raise the first one" % (len(self.exceptions), self.clk), file=sys.stderr)
+    raise self.exceptions[0]
 
 XClock.StepRis = XClock_StepRis
 XClock.StepFal = XClock_StepFal
@@ -213,6 +225,7 @@ XClock__old_Step = XClock.Step
 def XClock_Step(self, cycle: int):
     for i in range(cycle):
         XClock__old_Step(self, 1)
+        XClock_Check_Exceptions(self)
         self._step_event.set()
         self._step_event.clear()
 
