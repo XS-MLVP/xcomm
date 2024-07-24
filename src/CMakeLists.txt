@@ -47,3 +47,17 @@ add_custom_target(
 )
 
 endif()
+
+add_custom_target(copy_xspcomm_include ALL
+VERBATIM
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+							"${CMAKE_CURRENT_SOURCE_DIR}/../include"
+							"${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"
+DEPENDS ${PROJECT_NAME}
+)
+
+# install C++ headers and libraries
+install( DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/ DESTINATION include )
+install( TARGETS ${PROJECT_NAME} DESTINATION lib )
+install( DIRECTORY ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/ DESTINATION share/picker/include )
+install( TARGETS ${PROJECT_NAME} DESTINATION share/picker/lib )

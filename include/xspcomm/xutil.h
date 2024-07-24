@@ -1,6 +1,7 @@
 #ifndef __xspcomm_xutil_h__
 #define __xspcomm_xutil_h__
 
+#include "xspcomm/xconfig.h"
 #include <stdio.h>
 #include <string>
 #include <memory>
