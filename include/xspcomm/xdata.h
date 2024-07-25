@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "xspcomm/xutil.h"
 #include "xspcomm/xcallback.h"
 
 namespace xspcomm {
