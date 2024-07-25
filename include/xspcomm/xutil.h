@@ -17,9 +17,6 @@
 #include <cstdlib>
 #include <climits>
 #include <cstdint>
-#ifdef __GNUC__
-#include <stdint-gcc.h>
-#endif
 
 #ifdef HAVE_EXECINFO_H
 #ifndef FORCE_NO_EXECINFO_H

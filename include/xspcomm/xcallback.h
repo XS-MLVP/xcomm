@@ -2,10 +2,10 @@
 #define __xspcomm_xcallback__
 
 //#include "xspcomm/xutil.h"
-#include <type_traits>
-#include "stdio.h"
 #include "xspcomm/_not_export.h"
+#include <cstdio>
 #include <cstddef>
+#include <type_traits>
 
 template <typename R, typename... Args>
 class xfunction : public _xfunction_ptr<R, Args...>{

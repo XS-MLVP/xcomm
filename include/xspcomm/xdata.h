@@ -1,12 +1,14 @@
 #ifndef __xspcomm_xdata__
 #define __xspcomm_xdata__
 
-#include <stdio.h>
+#include "xspcomm/xutil.h"
+#include "xspcomm/xcallback.h"
+
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <algorithm>
-#include "xspcomm/xutil.h"
-#include "xspcomm/xcallback.h"
+
 
 namespace xspcomm {
 
