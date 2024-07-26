@@ -32,19 +32,40 @@ include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
 if(COMPILER_SUPPORTS_CXX20)
     set(CMAKE_CXX_STANDARD 20 PARENT_SCOPE)
-	set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -std=c++20 -fcoroutines" PARENT_SCOPE)
-	add_definitions(-DENABLE_XCOROUTINE=true)
-	set(ENABLE_XCOROUTINE "true")
+    set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -std=c++20 -fcoroutines" PARENT_SCOPE)
+    add_definitions(-DENABLE_XCOROUTINE=true)
+    set(ENABLE_XCOROUTINE "true")
 else()
     message(WARNING "The compiler ${CMAKE_CXX_COMPILER} has no C++20 support. If you need coroutines, please use a different C++ compiler.")
-	set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -std=c++17" PARENT_SCOPE)
-	add_definitions(-DENABLE_XCOROUTINE=false)
-	set(ENABLE_XCOROUTINE "false")
+    set(CMAKE_CXX_STANDARD_REQUIRED ON PARENT_SCOPE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -std=c++17" PARENT_SCOPE)
+    add_definitions(-DENABLE_XCOROUTINE=false)
+    set(ENABLE_XCOROUTINE "false")
 endif()
 
+set(GIT_BRANCH "none")
+set(GIT_HASH "none")
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    message(WARNING "Git not found, the branch and hash in version will be empty.")
+endif()
+
+message(STATUS "GIT_BRANCH: ${GIT_BRANCH}")
+message(STATUS "GIT_HASH: ${GIT_HASH}")
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/xspcomm/xconfig.h.in
-			   ${CMAKE_CURRENT_BINARY_DIR}/include/xspcomm/xconfig.h)
+               ${CMAKE_CURRENT_BINARY_DIR}/include/xspcomm/xconfig.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 endfunction()
