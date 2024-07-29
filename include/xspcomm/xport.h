@@ -33,7 +33,7 @@ public:
     XPort &SetZero();
     std::string String(std::string prefix = "");
     std::string GetPrefix();
-    std::vector<std::string> GetKeys();
+    std::vector<std::string> GetKeys(bool raw_key = false);
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */

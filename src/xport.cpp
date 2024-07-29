@@ -139,11 +139,16 @@ std::string XPort::GetPrefix(){
     return this->prefix;
 }
 
-std::vector<std::string> XPort::GetKeys(){
+std::vector<std::string> XPort::GetKeys(bool raw_key){
     std::vector<std::string> ret;
     for(auto &i : this->port_list){
-        ret.push_back(i.first);
+        if (raw_key){
+            ret.push_back(i.first);
         }
+        else{
+            ret.push_back(i.first.substr(this->prefix.length()));
+        }
+    }
     return ret;
 }
 

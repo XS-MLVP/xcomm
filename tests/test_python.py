@@ -49,6 +49,9 @@ def test_xdata():
     print(f"expected 1, actual {port['a'].value}")
     port["a"].value = 2
     print(f"expected 2, actual {port['a'].value}")
+    print("prefix:", port.GetPrefix())
+    print(" raw pins:", port.GetKeys(True))
+    print("     pins:", port.GetKeys())
     
     clk = XClock(lambda a: 1 if print("lambda stp: ", a) else 0)
     clk.StepRis(lambda c, x, y: print("lambda ris: ", c, x, y), (1, 2))

@@ -32,6 +32,10 @@
 %include std_map.i
 %include std_vector.i
 
+namespace std {
+   %template(StringVector) vector<string>;
+}
+
 %include "xspcomm/xclock.h"
 %include "xspcomm/xdata.h"
 %include "xspcomm/xport.h"
