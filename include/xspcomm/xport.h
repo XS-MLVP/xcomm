@@ -32,6 +32,8 @@ public:
     XPort &ReadFresh(xspcomm::WriteMode m);
     XPort &SetZero();
     std::string String(std::string prefix = "");
+    std::string GetPrefix();
+    std::vector<std::string> GetKeys();
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */
