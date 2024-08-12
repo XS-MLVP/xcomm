@@ -20,7 +20,6 @@ set_property(SOURCE scala.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(scalaxspcomm LANGUAGE java SOURCES scala.i)
 target_link_options(scalaxspcomm PRIVATE
- -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
  -Wl,-rpath,~/.local/lib
  -Wl,-rpath,/usr/local/lib)
  target_link_libraries(scalaxspcomm PRIVATE xspcomm)
@@ -28,7 +27,12 @@ target_link_options(scalaxspcomm PRIVATE
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../scala/xspcomm)
 set_property(TARGET scalaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspcomm)
-set_target_properties(scalaxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR})
+set_target_properties(scalaxspcomm
+    PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      BUILD_WITH_INSTALL_RPATH true
+)
 
 # copy file
 add_custom_command(
@@ -83,4 +87,4 @@ add_custom_target(
 
 # Install
 install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-scala.${PROJECT_VERSION}.jar ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-scala.jar
-        DESTINATION share/picker/scala)
+        DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/scala)

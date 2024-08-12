@@ -6,14 +6,18 @@ set_property(SOURCE golang.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(golangxspcomm LANGUAGE go SOURCES golang.i)
 target_link_options(golangxspcomm PRIVATE
- -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
  -Wl,-rpath,~/.local/lib
  -Wl,-rpath,/usr/local/lib)
  target_link_libraries(golangxspcomm PRIVATE xspcomm)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../golang/src/xspcomm)
-set_target_properties(golangxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR})
+set_target_properties(golangxspcomm
+    PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      BUILD_WITH_INSTALL_RPATH true
+)
 
 # copy file
 add_custom_command(
@@ -45,4 +49,4 @@ add_custom_target(
 )
 
 # Install
-install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/picker/golang/src USE_SOURCE_PERMISSIONS)
+install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/golang/src USE_SOURCE_PERMISSIONS)

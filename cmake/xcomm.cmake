@@ -5,6 +5,7 @@
 # 4. set the xspcomm version
 # 5. set the c++ standard
 # 6. set the xconfig.h
+# 7. set install location prefix
 
 function(init_xspcomm)
 string(TOLOWER "$ENV{CMAKE_CXX_COMPILER}" cmake_cxx_compiler)
@@ -67,4 +68,10 @@ message(STATUS "GIT_HASH: ${GIT_HASH}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/xspcomm/xconfig.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/include/xspcomm/xconfig.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+
+if (NOT "$ENV{XSPCOMM_INSTALL_PREFIX}" STREQUAL "")
+  set(XSPCOMM_INSTALL_PREFIX "$ENV{XSPCOMM_INSTALL_PREFIX}" PARENT_SCOPE)
+else()
+  set(XSPCOMM_INSTALL_PREFIX "" PARENT_SCOPE)
+endif()
 endfunction()

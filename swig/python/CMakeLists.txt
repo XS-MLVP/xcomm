@@ -17,7 +17,6 @@ thirdcall.cpp
 )
 add_dependencies(pyxspcomm uvmps_vcs)
 target_link_options(pyxspcomm PRIVATE
-        -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
         -Wl,-rpath,~/.local/lib 
         -Wl,-rpath,/usr/local/lib
         -L./
@@ -33,15 +32,19 @@ python.i
 thirdcall.cpp
 )
 target_link_options(pyxspcomm PRIVATE
-        -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-        -Wl,-rpath,~/.local/lib 
+        -Wl,-rpath,~/.local/lib
         -Wl,-rpath,/usr/local/lib )
 target_link_libraries(pyxspcomm PRIVATE xspcomm)
 endif()
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)
-set_target_properties(pyxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR})
+set_target_properties(pyxspcomm
+    PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      BUILD_WITH_INSTALL_RPATH true
+)
 
 # copy file
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py PROPERTIES GENERATED TRUE)
@@ -76,4 +79,8 @@ add_custom_target(
   DEPENDS pyxspcomm_so_lnk
 )
 
-install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION share/picker/python USE_SOURCE_PERMISSIONS)
+install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/python USE_SOURCE_PERMISSIONS)
+
+if (NOT "$ENV{XSPCOMM_BUILD_WHEEL}" STREQUAL "")
+install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION "." USE_SOURCE_PERMISSIONS)
+endif()

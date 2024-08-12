@@ -11,7 +11,6 @@ set_property(SOURCE java.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(javaxspcomm LANGUAGE java SOURCES java.i)
 target_link_options(javaxspcomm PRIVATE
- -Wl,-rpath,${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
  -Wl,-rpath,~/.local/lib
  -Wl,-rpath,/usr/local/lib)
  target_link_libraries(javaxspcomm PRIVATE xspcomm)
@@ -19,7 +18,12 @@ target_link_options(javaxspcomm PRIVATE
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../java/xspcomm)
 set_property(TARGET javaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspcomm)
-set_target_properties(javaxspcomm PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR})
+set_target_properties(javaxspcomm
+    PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      BUILD_WITH_INSTALL_RPATH true
+)
 
 # copy file
 add_custom_command(
@@ -69,4 +73,4 @@ add_custom_target(
 )
 # Install
 install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.${PROJECT_VERSION}.jar ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.jar
-        DESTINATION share/picker/java)
+        DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/java)
