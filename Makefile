@@ -46,3 +46,6 @@ run: build
 	./build/tests/test_xdata
 
 rbuild: clean build run
+
+wheel: clean
+	XSPCOMM_INSTALL_PREFIX=picker/ XSPCOMM_BUILD_WHEEL=1 pipx run build
