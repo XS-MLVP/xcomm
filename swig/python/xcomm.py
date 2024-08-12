@@ -319,8 +319,4 @@ class XPin:
     def __setitem__(self, key, value):
         self.xdata[key] = value
 
-xcomm_version = "0.0.1"
-if xcomm_version != version():
-    print("Warn: python wrapper version(%s) conflict with _pyxcomm.so version(%s)", xcomm_version, version())
-
 __version__ = version()
