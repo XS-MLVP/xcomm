@@ -21,7 +21,7 @@ set_property(TARGET javaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspco
 set_target_properties(javaxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
       BUILD_WITH_INSTALL_RPATH true
 )
 
@@ -31,6 +31,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/libjavaxspcomm.so
             ${XCOMM_LIB_DIR}/libjavaxspcomm.so.${PROJECT_VERSION}
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${XCOMM_LIB_DIR}/../../lib/libxspcomm.so
+            ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.java
             ${XCOMM_LIB_DIR}/

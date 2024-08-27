@@ -15,7 +15,7 @@ set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../golang/src/xspcomm)
 set_target_properties(golangxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
       BUILD_WITH_INSTALL_RPATH true
 )
 
@@ -28,6 +28,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/../xspcomm.go
             ${XCOMM_LIB_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${SWIG_OUTFILE_DIR}/../../../lib/libxspcomm.so
+            ${XCOMM_LIB_DIR}/libxspcomm.so.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/go.mod
             ${XCOMM_LIB_DIR}/

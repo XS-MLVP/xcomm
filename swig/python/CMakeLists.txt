@@ -42,7 +42,7 @@ set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)
 set_target_properties(pyxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
       BUILD_WITH_INSTALL_RPATH true
 )
 
@@ -53,6 +53,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/_pyxspcomm.so
             ${XCOMM_LIB_DIR}/_pyxspcomm.so.${PROJECT_VERSION}
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${XCOMM_LIB_DIR}/../../lib/libxspcomm.so
+            ${XCOMM_LIB_DIR}/libxspcomm.so.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
             ${XCOMM_LIB_DIR}/pyxspcomm.py

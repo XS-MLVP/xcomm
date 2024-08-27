@@ -30,7 +30,7 @@ set_property(TARGET scalaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspc
 set_target_properties(scalaxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib"
+      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
       BUILD_WITH_INSTALL_RPATH true
 )
 
@@ -42,6 +42,9 @@ add_custom_command(
             ${XCOMM_LIB_DIR}/libscalaxspcomm.so.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.java
+            ${XCOMM_LIB_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${XCOMM_LIB_DIR}/../../lib/libxspcomm.so
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.scala

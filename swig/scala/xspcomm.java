@@ -4,29 +4,36 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 
 public class xspcomm {
   private static boolean LIB_LOADED = false;
+  public static void loadLibraryFromJar(String path) throws IOException {
+    InputStream inputStream = xspcomm.class.getResourceAsStream(path);
+    if (inputStream == null) {
+        throw new IOException("Could not find library: " + path);
+    }
+    File tempFile = File.createTempFile("lib", ".so");
+    tempFile.deleteOnExit();
+    try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+    }
+    System.load(tempFile.getAbsolutePath());
+  }
   static {
     try {
-      InputStream in = xspcomm.class.getResourceAsStream("/libscalaxspcomm.so");
-      File tempLib = File.createTempFile("libscalaxspcomm", ".so");
-      tempLib.deleteOnExit(); // The file is deleted when the JVM exits
-      OutputStream out = new FileOutputStream(tempLib);
-      byte[] buffer = new byte[1024];
-      int read;
-      while ((read = in.read(buffer)) != -1) {
-        out.write(buffer, 0, read);
-      }
-      out.close();
-      in.close();
-      System.load(tempLib.getAbsolutePath());
-      LIB_LOADED = true;
+        loadLibraryFromJar("/libxspcomm.so");
+        loadLibraryFromJar("/libscalaxspcomm.so");
+        LIB_LOADED = true;
     } catch (Exception e) {
-      System.err.println("Error loading libscalaxspcomm.so:");
-      e.printStackTrace();
-      LIB_LOADED = false;
+        System.err.println("Error load so fail:");
+        e.printStackTrace();
+        LIB_LOADED = false;
     }
   }
 
