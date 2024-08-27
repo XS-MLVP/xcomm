@@ -152,4 +152,11 @@ std::vector<std::string> XPort::GetKeys(bool raw_key){
     return ret;
 }
 
+XPort &XPort::operator=(XPort &data){
+    this->name_port = data.name_port;
+    this->port_list = data.port_list;
+    this->port_name = data.port_name;
+    this->prefix = data.prefix;
+    return *this;
+}
 } // namespace xspcomm

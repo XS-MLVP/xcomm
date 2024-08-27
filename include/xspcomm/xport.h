@@ -38,6 +38,7 @@ public:
     //                  End of Stable public user APIs
     /*************************************************************** */
     xspcomm::XData &operator[](std::string key);
+    XPort &operator=(XPort &data);
 };
 
 } // namespace xspcomm

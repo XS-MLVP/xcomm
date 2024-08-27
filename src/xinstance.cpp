@@ -244,6 +244,7 @@ int test_xdata()
     XPort p2("B_");
     XData d1(32, IOType::InOut, "d1");
     XData d2(32, IOType::InOut, "d2");
+    XPort p3("C_");
     p1.Add("x", d1);
     p2.Add("x", d2);
     p1.Connect(p2);
@@ -252,6 +253,8 @@ int test_xdata()
     d1 = 2;
     test_assert(d1 == d2, "connect fail, d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
 
+    p3 = p1;
+    test_assert(p1.String() == p3.String(), "copy fail, p1=%s, p3=%s", p1.String().c_str(), p3.String().c_str());
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
