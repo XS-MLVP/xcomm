@@ -81,7 +81,7 @@ sc_core::sc_time_unit inline str2timeunit(std::string unit, std::string where){
         u = sc_core::SC_NS;
     }else if(unit == "us"){
         u = sc_core::SC_US;
-    else if(unit == "ms"){
+    }else if(unit == "ms"){
         u = sc_core::SC_MS;
     }else if(unit == "s"){
         u = sc_core::SC_SEC;
