@@ -210,6 +210,9 @@ void XClock::StepFal(xfunction<void, u_int64_t, void *> func, void *args,
     return this->_add_cb(this->list_call_back_fal, func, args, desc);
 }
 
+int XClock::StepRisQueueSize(){ return (int)this->list_call_back_ris.size(); }
+int XClock::StepFalQueueSize(){ return (int)this->list_call_back_fal.size(); }
+
 #if ENABLE_XCOROUTINE
 XStep XClock::AStep(int i)
 {

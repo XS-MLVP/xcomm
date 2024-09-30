@@ -85,6 +85,8 @@ public:
                  std::string desc = "");
     void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
                  std::string desc = "");
+    int StepRisQueueSize();
+    int StepFalQueueSize();
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */
