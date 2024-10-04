@@ -140,7 +140,7 @@ class xclock_cb_step(cb_int_bool):
         except Exception as e:
             cb_exception_handler(self.func)
             assert(0)
-
+            
 class xclock_cb_step_rf(cb_void_u64_voidp):
     """XClock step Ris/Fal call back"""
     def __init__(self, dut, func, args, kwargs):
@@ -296,93 +296,22 @@ async def sleep(delay: float):
 # XPin
 
 class XPin:
-    def __init__(self, name, dut, xdata, event):
+    def __init__(self, xdata, event):
         self.xdata = xdata
         self.event = event
-        self.name = name
-
-        self.__dut__ = dut
-        self.__original_value__ = None
-
-        # XData attributes
-        self.AsBiIO = self.xdata.AsBiIO
-        self.AsBinaryString = self.xdata.AsBinaryString
-        self.AsFallWrite = self.xdata.AsFallWrite
-        self.AsImmWrite = self.xdata.AsImmWrite
-        self.AsInIO = self.xdata.AsInIO
-        self.AsInt32 = self.xdata.AsInt32
-        self.AsInt64 = self.xdata.AsInt64
-        self.AsOutIO = self.xdata.AsOutIO
-        self.AsRiseWrite = self.xdata.AsRiseWrite
-        self.At = self.xdata.At
-        self.B = self.xdata.B
-        self.BindDPIName = self.xdata.BindDPIName
-        self.BindDPIPtr = self.xdata.BindDPIPtr
-        self.BindDPIRW = self.xdata.BindDPIRW
-        self.Connect = self.xdata.Connect
-        self.DataValid = self.xdata.DataValid
-        self.Equal = self.xdata.Equal
-        self.Fall = self.xdata.Fall
-        self.FlipIOType = self.xdata.FlipIOType
-        self.GetBits = self.xdata.GetBits
-        self.GetBytes = self.xdata.GetBytes
-        self.GetVU8 = self.xdata.GetVU8
-        self.GetWriteMode = self.xdata.GetWriteMode
-        self.Imme = self.xdata.Imme
-        self.In = self.xdata.In
-        self.InOut = self.xdata.InOut
-        self.Invert = self.xdata.Invert
-        self.IsBiIO = self.xdata.IsBiIO
-        self.IsFallWrite = self.xdata.IsFallWrite
-        self.IsImmWrite = self.xdata.IsImmWrite
-        self.IsInIO = self.xdata.IsInIO
-        self.IsOutIO = self.xdata.IsOutIO
-        self.IsRiseWrite = self.xdata.IsRiseWrite
-        self.OnChange = self.xdata.OnChange
-        self.Out = self.xdata.Out
-        self.ReadFresh = self.xdata.ReadFresh
-        self.Rise = self.xdata.Rise
-        self.S = self.xdata.S
-        self.Set = self.xdata.Set
-        self.SetBits = self.xdata.SetBits
-        self.SetBytes = self.xdata.SetBytes
-        self.SetIgnoreSameDataWrite = self.xdata.SetIgnoreSameDataWrite
-        self.SetVU8 = self.xdata.SetVU8
-        self.SetWriteMode = self.xdata.SetWriteMode
-        self.String = self.xdata.String
-        self.SubDataRef = self.xdata.SubDataRef
-        self.U = self.xdata.U
-        self.W = self.xdata.W
-        self.WriteDirect = self.xdata.WriteDirect
-        self.WriteOnFall = self.xdata.WriteOnFall
-        self.WriteOnRise = self.xdata.WriteOnRise
-        self._TestBindDPIL = self.xdata._TestBindDPIL
-        self._TestBindDPIV = self.xdata._TestBindDPIV
-        self.mIOType = self.xdata.mIOType
-        self.mLogicData = self.xdata.mLogicData
-        self.mName = self.xdata.mName
-        self.mWidth = self.xdata.mWidth
-        self.pVecData = self.xdata.pVecData
-        self.this = self.xdata.this
-        self.thisown = self.xdata.thisown
 
     def __str__(self):
-        return f"XPin(name='{self.name}', width={self.mWidth}, value={hex(self.value)})"
+        return f"XPin({self.xdata})"
 
-    @property
-    def original_value(self):
-        return self.xdata.value if self.__original_value__ is None else self.__original_value__
+    def __getattribute__(self, name):
+        if name == "xdata" or name == "event":
+            return object.__getattribute__(self, name)
+        return self.xdata.__getattribute__(name)
 
-    @property
-    def value(self):
-        return self.xdata.value
-
-    @value.setter
-    def value(self, value):
-        if self.__original_value__ is None:
-            self.__original_value__ = self.xdata.value
-            self.__dut__.__xpins_to_clear_tag__.append(self)
-        self.xdata.value = value
+    def __setattr__(self, name, value):
+        if name == "xdata" or name == "event":
+            return object.__setattr__(self, name, value)
+        return self.xdata.__setattr__(name, value)
 
     def __getitem__(self, key):
         return self.xdata[key]
