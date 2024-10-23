@@ -33,6 +33,8 @@
 %include std_vector.i
 %include std_shared_ptr.i
 
+%shared_ptr(xspcomm::XData)
+
 namespace std {
    %template(StringVector) vector<string>;
 }
@@ -48,7 +50,6 @@ namespace std {
 %constant void (*_TEST_DPI_VW)(xspcomm::xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
 
 %ignore xspcomm::XData::value;
-%shared_ptr(XData)
 
 // callbacks constraints:
 // (1) use d_callback define cb before %include "xspcomm/xcallback.h"

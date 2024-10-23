@@ -9,6 +9,10 @@ def test_xdata():
     c: XData = XData(129, XData.In)
     e: XData = XData(0, XData.In)
     f: XData = XData(4, XData.In)
+    x = c.SubDataRef(1, 32)
+    y = c.SubDataRef(5, 32)
+    y.value = -1
+    print("x:", x.value, "y:", y.value)
 
     TEST_DPI_LR(DPI_TEST_VR)
     TEST_DPI_LW(0)
