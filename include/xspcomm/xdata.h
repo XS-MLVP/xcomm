@@ -174,7 +174,7 @@ public:
     XData(XData &t);
     ~XData();
     void ReInit(uint32_t width, IOType itype, std::string name = "");
-    XData *SubDataRef(uint32_t start, uint32_t width, std::string name = "");
+    std::shared_ptr<XData> SubDataRef(uint32_t start, uint32_t width, std::string name = "");
     WriteMode GetWriteMode();
     bool SetWriteMode(WriteMode mode);
     bool DataValid();

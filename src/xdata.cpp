@@ -438,10 +438,10 @@ XData::~XData()
     }
 }
 
-XData *XData::SubDataRef(uint32_t start, uint32_t width, std::string name){
+std::shared_ptr<XData> XData::SubDataRef(uint32_t start, uint32_t width, std::string name){
     Assert(this->mWidth > 0, "Only svVec support SubDataRef, need mWidth > 0");
     Assert(start + width <= this->mWidth, "SubDataRef out of range (start + witdth=%d > mWidth=%d)", start + width, this->mWidth);
-    XData *sub = new XData(width, this->mIOType, name);
+    std::shared_ptr<XData> sub(new XData(width, this->mIOType, name));
     if(sub->mIOType != IOType::Output)sub->SetWriteMode(WriteMode::Imme);
     sub->sub_offset = start;
     sub->sub_pVecRef = this->pVecData;

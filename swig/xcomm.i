@@ -47,6 +47,7 @@ namespace std {
 %constant void (*_TEST_DPI_VW)(xspcomm::xsvLogicVecVal *v) = xspcomm::TEST_DPI_VW;
 
 %ignore xspcomm::XData::value;
+%shared_ptr(XData)
 
 // callbacks constraints:
 // (1) use d_callback define cb before %include "xspcomm/xcallback.h"
