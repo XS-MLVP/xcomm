@@ -98,6 +98,11 @@ def XDataBindDPIName(self: XData, dut, name):
     self.mName = name
     return self.BindDPIPtr(dut.GetDPIHandle(name, 0), dut.GetDPIHandle(name, 1))
 
+XData_old__eq__ = XData.__eq__
+def XData__eq__(self: XData, other):
+    assert isinstance(other, XData), "XData Only support compare with XData. Do you missed `.value`?"
+    return XData_old__eq__(self, other)
+
 XData.__init__ = XData__init__
 XData.__str__ = XData__str__
 XData.__setattr__ = XData__setattr__
@@ -108,6 +113,7 @@ XData.S = XData_S
 XData.U = XData_U
 XData.Set = XData_Set
 XData.BindDPIName = XDataBindDPIName
+XData.__eq__ = XData__eq__
 
 # XPort
 XPort_old__init__ = XPort.__init__
@@ -318,5 +324,9 @@ class XPin:
 
     def __setitem__(self, key, value):
         self.xdata[key] = value
+
+    def __eq__(self, other):
+        assert isinstance(other, XPin), "XPin Only support compare with XPin. Do you missed `.value`?"
+        return self.xdata == other.xdata
 
 __version__ = version()

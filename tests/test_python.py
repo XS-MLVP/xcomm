@@ -13,6 +13,14 @@ def test_xdata():
     y = c.SubDataRef(5, 32)
     y.value = -1
     print("x:", x.value, "y:", y.value)
+    print("a == b", a == b)
+    a.value = 1
+    print("a == b", a == b)
+    try:
+        print("a == 2:", 2 == a)
+        raise Exception("AssertionError not raised")
+    except AssertionError as _:
+        print("test == assertion pass")
 
     TEST_DPI_LR(DPI_TEST_VR)
     TEST_DPI_LW(0)
@@ -60,6 +68,17 @@ def test_xdata():
     clk = XClock(lambda a: 1 if print("lambda stp: ", a) else 0)
     clk.StepRis(lambda c, x, y: print("lambda ris: ", c, x, y), (1, 2))
     clk.StepRis(lambda c, x, y: print("lambda fal: ", c, x, y), (3, 4))
+
+    p1 = XPin(a, clk.getEvent())
+    p2 = XPin(b, clk.getEvent())
+    p3 = XPin(a, clk.getEvent())
+    print("p1 == p3", p1 == p3)
+    print("p1 == p2", p1 == p2)
+    try:
+        print("p1 == 2:", 2 == p1)
+        raise Exception("AssertionError not raised")
+    except AssertionError as _:
+        print("test == assertion pass")
 
     clk.Step(3)
     print(clk)
