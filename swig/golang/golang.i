@@ -56,6 +56,7 @@ void FreeSCVector(FreePtr p){
 %rename(FlipIOTypeGo) xspcomm::XData::FlipIOType;
 %rename(InvertGo) xspcomm::XData::Invert;
 %rename(SubDataRefGo) xspcomm::XData::SubDataRef;
+%rename(SubDataRefRawGo) xspcomm::XData::SubDataRefRaw;
 
 %rename(SetGo) xspcomm::XData::Set;
 %rename(XClockGo) xspcomm::XClock;
@@ -88,7 +89,7 @@ type SwigcptrXData struct {
 
 func (p SwigcptrXData) SubDataRef(a ...interface{}) XData {
     ret := SwigcptrXData{}
-    ret.XDataGo = p.XDataGo.SubDataRefGo(a...)
+    ret.XDataGo = p.XDataGo.SubDataRefRawGo(a...)
     return ret
 }
 

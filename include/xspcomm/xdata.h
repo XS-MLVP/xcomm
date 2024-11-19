@@ -222,6 +222,7 @@ public:
     /*************************************************************** */
 
     // C++ dependent APIs
+    XData* SubDataRefRaw(uint32_t start, uint32_t width, std::string name = "");
     int64_t AsInt64();
     int AsInt32();
     void SetVU8(std::vector<unsigned char> &buffer);
