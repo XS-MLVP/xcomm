@@ -31,9 +31,11 @@
 %include std_string.i
 %include std_map.i
 %include std_vector.i
+#ifndef SWIGGO
 %include std_shared_ptr.i
-
 %shared_ptr(xspcomm::XData)
+#endif
+
 
 namespace std {
    %template(StringVector) vector<string>;
