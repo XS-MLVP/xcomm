@@ -10,6 +10,9 @@ install: clean build
 clean:
 	rm -rf build dist
 
+test_lua: build
+	LUA_PATH=build/lua/?.lua lua tests/test_lua.lua
+
 ifeq ($(BUILD_XSPCOMM_VCS_UVMPS),)
 test_python: build
 	PYTHONPATH=build/python python3 tests/test_python.py

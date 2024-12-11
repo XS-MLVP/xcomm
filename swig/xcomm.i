@@ -31,7 +31,7 @@
 %include std_string.i
 %include std_map.i
 %include std_vector.i
-#ifndef SWIGGO
+#if !defined(SWIGGO) && !defined(SWIGLUA)
 %include std_shared_ptr.i
 %shared_ptr(xspcomm::XData)
 #endif
