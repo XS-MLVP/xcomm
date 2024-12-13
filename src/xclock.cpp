@@ -98,46 +98,50 @@ void XClock::ReInit(xfunction<int, bool> stepfunc,
 }
 
 /// @brief add a clock pin which need set high/low
-void XClock::Add(xspcomm::XData *d)
+XClock* XClock::Add(xspcomm::XData *d)
 {
     if (contians(this->clock_pins, d)) {
         Warn("pin(%s) is already added", d->mName.c_str());
-        return;
+        return this;
     }
     d->SetWriteMode(d->Imme);
     this->clock_pins.push_back(d);
+    return this;
 }
 
 /// @brief add a clock pin which need set high/low
-void XClock::Add(xspcomm::XData &d)
+XClock* XClock::Add(xspcomm::XData &d)
 {
     if (contians(this->clock_pins, &d)) {
         Warn("pin(%s) is already added", d.mName.c_str());
-        return;
+        return this;
     }
     d.SetWriteMode(d.Imme);
     this->clock_pins.push_back(&d);
+    return this;
 }
 
 
 /// @brief add a port which need write/read on rise/fall
-void XClock::Add(xspcomm::XPort *d)
+XClock* XClock::Add(xspcomm::XPort *d)
 {
     if (contians(this->ports, d)) {
         Warn("port(%s*) is already added", d->prefix.c_str());
-        return;
+        return this;
     }
     this->ports.push_back(d);
+    return this;
 }
 
 /// @brief add a port which need write/read on rise/fall
-void XClock::Add(xspcomm::XPort &d)
+XClock* XClock::Add(xspcomm::XPort &d)
 {
     if (contians(this->ports, &d)) {
         Warn("port(%s*) is already added", d.prefix.c_str());
-        return;
+        return this;
     }
     this->ports.push_back(&d);
+    return this;
 }
 
 void XClock::Step(int s)
