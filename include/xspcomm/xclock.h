@@ -77,6 +77,8 @@ public:
     void Add(xspcomm::XData &d);
     void Add(xspcomm::XPort *d);
     void Add(xspcomm::XPort &d);
+    void AddPin(xspcomm::XData *d){return this->Add(d);}
+    void AddPin(xspcomm::XData &d){return this->Add(d);}
     void RefreshComb(){this->eval();}
     void RefreshCombT(){this->eval_t();}
     void Step(int s = 1);
