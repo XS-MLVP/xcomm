@@ -166,22 +166,36 @@ void XClock::RunStep(int s)
 
 void XClock::_step_fal()
 {
-    for (auto &v : this->clock_pins) { *v = 0; }
+    auto sub_clk_ris = this->_get_div_clk_ris(this->clk, false);
+    auto sub_clk_fal = this->_get_div_clk_fal(this->clk, false);
+    this->_fal_pins();
+    for(auto &c : sub_clk_fal){c->_fal_pins();}
+    for(auto &c : sub_clk_ris){c->_ris_pins();}
     this->_step(false);
-    for (auto &p : this->ports) { p->WriteOnFall(); }
+    this->_fal_ports();
+    for(auto &c : sub_clk_fal){c->_fal_ports();}
+    for(auto &c : sub_clk_ris){c->_ris_ports();}
     this->_step(true);
-    for (auto &p : this->ports) { p->ReadFresh(WriteMode::Fall); }
-    this->_call_back(this->list_call_back_fal);
+    this->_fal_refresh();
+    for(auto &c : sub_clk_fal){c->_fal_refresh();}
+    for(auto &c : sub_clk_ris){c->_ris_refresh();}
 }
 
 void XClock::_step_ris()
 {
-    for (auto &v : this->clock_pins) { *v = 1; }
+    auto sub_clk_ris = this->_get_div_clk_ris(this->clk, true);
+    auto sub_clk_fal = this->_get_div_clk_fal(this->clk, true);
+    this->_ris_pins();
+    for(auto &c : sub_clk_ris){c->_ris_pins();}
+    for(auto &c : sub_clk_fal){c->_fal_pins();}
     this->_step(false);
-    for (auto &p : this->ports) { p->WriteOnRise(); }
+    this->_ris_ports();
+    for(auto &c : sub_clk_ris){c->_ris_ports();}
+    for(auto &c : sub_clk_fal){c->_fal_ports();}
     this->_step(true);
-    for (auto &p : this->ports) { p->ReadFresh(WriteMode::Rise); }
-    this->_call_back(this->list_call_back_ris);
+    this->_ris_refresh();
+    for(auto &c : sub_clk_ris){c->_ris_refresh();}
+    for(auto &c : sub_clk_fal){c->_fal_refresh();}
 }
 
 void XClock::eval()
@@ -212,6 +226,74 @@ void XClock::StepFal(xfunction<void, u_int64_t, void *> func, void *args,
 
 int XClock::StepRisQueueSize(){ return (int)this->list_call_back_ris.size(); }
 int XClock::StepFalQueueSize(){ return (int)this->list_call_back_fal.size(); }
+
+void XClock::_fal_pins(){
+    for (auto &v : this->clock_pins) { *v = 0; }
+}
+
+void XClock::_fal_ports(){
+    for (auto &p : this->ports) { p->WriteOnFall();}
+}
+
+void XClock::_fal_refresh(){
+    for (auto &p : this->ports) { p->ReadFresh(WriteMode::Fall); }
+    this->_call_back(this->list_call_back_fal);
+}
+
+void XClock::_ris_pins(){
+    for (auto &v : this->clock_pins) { *v = 1; }
+}
+
+void XClock::_ris_ports(){
+    for (auto &p : this->ports) { p->WriteOnRise(); }
+}
+
+void XClock::_ris_refresh(){
+    for (auto &p : this->ports) { p->ReadFresh(WriteMode::Rise); }
+    this->_call_back(this->list_call_back_ris);
+}
+
+void XClock::FreqDivWith(int div, XClock *clk, int shift){
+    if (this->div_clk.count(clk) > 0){
+        Warn("Clock: %p already div with (div: %d, shift: %d), ignore", clk, this->div_clk[clk][0], this->div_clk[clk][1]);
+        return;
+    }
+    this->div_clk[clk] = {div, shift};
+}
+
+void XClock::FreqDivDelete(XClock *clk){
+    if (this->div_clk.count(clk) == 0){
+        Warn("Clock: %p not div with %p, ignore", clk, this);
+        return;
+    }
+    this->div_clk.erase(clk);
+}
+
+std::vector<XClock *> XClock::_get_div_clk_ris(u_int64_t cycle, bool rise){
+    std::vector<XClock *> ret;
+    auto tick = cycle * 2 - (rise ? 0 : 1);
+    for (auto &e : this->div_clk){
+        auto ptick = tick + e.second[1];
+        if (ptick % (2 * e.second[0]) == 0){
+            if (!e.first->stop_on_rise) e.first->clk += 1;
+            ret.push_back(e.first);
+        }
+    }
+    return ret;
+}
+
+std::vector<XClock *> XClock::_get_div_clk_fal(u_int64_t cycle, bool rise){
+    std::vector<XClock *> ret;
+    auto tick = cycle * 2 - (rise ? 0 : 1);
+    for (auto &e : this->div_clk){
+        auto ptick = tick + e.second[1];
+        if ((ptick + e.second[0]) % (2 * e.second[0]) == 0){
+            if (e.first->stop_on_rise) e.first->clk += 1;
+            ret.push_back(e.first);
+        }
+    }
+    return ret;
+}
 
 #if ENABLE_XCOROUTINE
 XStep XClock::AStep(int i)

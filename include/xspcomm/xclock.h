@@ -60,6 +60,7 @@ class XClock
 public:
     std::vector<xspcomm::XData *> clock_pins;
     std::vector<xspcomm::XPort *> ports;
+    std::map<XClock *, std::array<int, 2>> div_clk;
     u_int64_t clk     = 0;
     bool stop_on_rise = true;
     void default_stop_on_rise(bool rise);
@@ -89,9 +90,21 @@ public:
                  std::string desc = "");
     int StepRisQueueSize();
     int StepFalQueueSize();
+    void FreqDivWith(int div, XClock *clk, int shift=0);
+    void FreqDivWith(int div, XClock &clk, int shift=0){return this->FreqDivWith(div, &clk, shift);};
+    void FreqDivDelete(XClock *clk);
+    void FreqDivDelete(XClock &clk){return this->FreqDivDelete(&clk);};
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */
+    void _fal_pins();
+    void _fal_ports();
+    void _fal_refresh();
+    void _ris_pins();
+    void _ris_ports();
+    void _ris_refresh();
+    std::vector<XClock *> _get_div_clk_ris(u_int64_t cycle, bool rise);
+    std::vector<XClock *> _get_div_clk_fal(u_int64_t cycle, bool rise);
 #if ENABLE_XCOROUTINE
     XStep AStep(int i = 1);
     XCondition ACondition(std::function<bool(void)> checker);

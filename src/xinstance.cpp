@@ -258,6 +258,26 @@ int test_xdata()
     p1.Add("y", d2);
     test_assert(p1.SelectPins({"x", "y"})["y"] == p1.SelectPins({"y"})["y"], "select fail, p1=%s, p3=%s", p1.String().c_str(), p3.String().c_str());
 
+    // test XClock
+    XClock clk1([](bool x){ return 0; });
+    XClock clk2([](bool x){ return 0; });
+    clk1.StepFal([](u_int64_t clk, void *args){
+        //printf("------------------ %ld -F\n", 2*clk - 1);
+    }, nullptr);
+    clk1.StepRis([](u_int64_t clk, void *args){
+        //printf("------------------ %ld -R\n", 2*clk);
+    }, nullptr);
+
+    clk2.StepRis([&clk1](u_int64_t clk, void *args){
+        //printf("clk2-R: %ld\n",clk);
+    }, nullptr);
+    clk2.StepFal([&clk1](u_int64_t clk, void *args){
+        //printf("clk2-F: %ld\n",clk);
+    }, nullptr);
+    clk1.FreqDivWith(5, clk2);
+    clk1.Step(20);
+    test_assert(clk1.clk == 20, "clk1: %ld", clk1.clk);
+    test_assert(clk2.clk == 4, "clk2: %ld", clk2.clk);
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
