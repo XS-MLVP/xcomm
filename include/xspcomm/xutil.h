@@ -321,6 +321,12 @@ inline void big_mask(int *a, int size, int bit_start, int bit_end){
     }
 }
 
+inline void sync_data_to(int *input_data, int size, int *mask, int *output_data){
+    for (int i = 0; i < size; ++i) {
+        output_data[i] = (output_data[i] & ~mask[i]) | (input_data[i] & mask[i]);
+    }
+}
+
 } // namespace xspcomm
 
 #endif

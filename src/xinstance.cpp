@@ -280,6 +280,8 @@ int test_xdata()
     test_assert(clk2.clk == 4, "clk2: %ld", clk2.clk);
     // test big operations
     u_int64_t big = 0x123456789abcdef0;
+    u_int64_t big2 = 0xfedcba9876543210;
+    u_int64_t big3 = 0x123456789abcdef0;
     int int_size = sizeof(u_int64_t)/sizeof(int);
     big_mask((int*)&big, int_size, 23, 60);
     std::string big_s = big_binstr((int*)&big, int_size);
@@ -290,6 +292,10 @@ int test_xdata()
     big_shift((int*)&big, int_size, -33);
     big_s = big_binstr((int*)&big, int_size);
     test_assert(big_s == "0000111111111111111111111111111000000000000000000000000000000000", "big_shift fail: %s", big_s.c_str());
+    sync_data_to((int*)&big2, int_size, (int*)&(big), (int*)&big3);
+    big_s = big_binstr((int*)&big3, int_size).c_str();
+    test_assert(big_s == "0001111011011100101110101001100010011010101111001101111011110000", "sync_data_to fail: %s", big_s.c_str());
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
