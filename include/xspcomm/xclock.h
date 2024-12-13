@@ -74,12 +74,12 @@ public:
     void ReInit(xfunction<int, bool> stepfunc,
                 std::initializer_list<xspcomm::XData *> clock_pins  = {},
                 std::initializer_list<xspcomm::XPort *> ports = {});
-    XClock* Add(xspcomm::XData *d);
-    XClock* Add(xspcomm::XData &d);
-    XClock* Add(xspcomm::XPort *d);
-    XClock* Add(xspcomm::XPort &d);
-    XClock* AddPin(xspcomm::XData *d){return this->Add(d);}
-    XClock* AddPin(xspcomm::XData &d){return this->Add(d);}
+    XClock& Add(xspcomm::XData *d);
+    XClock& Add(xspcomm::XData &d);
+    XClock& Add(xspcomm::XPort *d);
+    XClock& Add(xspcomm::XPort &d);
+    XClock& AddPin(xspcomm::XData *d){return this->Add(d);}
+    XClock& AddPin(xspcomm::XData &d){return this->Add(d);}
     void RefreshComb(){this->eval();}
     void RefreshCombT(){this->eval_t();}
     void Step(int s = 1);

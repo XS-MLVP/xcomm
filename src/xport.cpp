@@ -59,7 +59,7 @@ bool XPort::Connect(XPort &target)
     return true;
 }
 
-XPort *XPort::NewSubPort(std::string subprefix)
+XPort &XPort::NewSubPort(std::string subprefix)
 {
     auto port = new XPort(this->prefix + subprefix);
     for (auto &e : this->port_list) {
@@ -69,10 +69,10 @@ XPort *XPort::NewSubPort(std::string subprefix)
             port->name_port[port->port_name[e.first]] = e.first;
         }
     }
-    return port;
+    return *port;
 }
 
-XPort *XPort::SelectPins(std::vector<std::string> pins){
+XPort &XPort::SelectPins(std::vector<std::string> pins){
     auto port = new XPort(this->prefix);
     for(auto &p : pins){
         if (this->port_list.count(this->asKey(p)) > 0){
@@ -83,10 +83,10 @@ XPort *XPort::SelectPins(std::vector<std::string> pins){
             Error("PIN: %s not exits", p.c_str());
         }
     }
-    return port;
+    return *port;
 }
 
-XPort *XPort::SelectPins(std::initializer_list<std::string> pins){
+XPort &XPort::SelectPins(std::initializer_list<std::string> pins){
     return this->SelectPins(std::vector<std::string>(pins));
 }
 
