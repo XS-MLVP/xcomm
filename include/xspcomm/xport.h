@@ -23,9 +23,9 @@ public:
     bool Add(std::string pin, xspcomm::XData &pin_data);
     bool Del(std::string pin);
     bool Connect(XPort &target);
-    XPort &NewSubPort(std::string subprefix);
-    XPort &SelectPins(std::vector<std::string> pins);
-    XPort &SelectPins(std::initializer_list<std::string> pins);
+    XPort *NewSubPort(std::string subprefix);
+    XPort *SelectPins(std::vector<std::string> pins);
+    XPort *SelectPins(std::initializer_list<std::string> pins);
     xspcomm::XData &Get(std::string key, bool raw_key = false);
     XPort &FlipIOType();
     XPort &AsBiIO();
