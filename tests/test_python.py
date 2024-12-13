@@ -83,6 +83,13 @@ def test_xdata():
     clk.Step(3)
     print(clk)
 
+    # test clock
+    port1 = XPort("x_")
+    port1.Add("a", a)
+    port1.Add("b", b)
+    port2 = port1.SelectPins(["a", "b"])
+    print(port2.String())
+
 
 async def test_async():
     clk = XClock(lambda a: 0)

@@ -36,6 +36,7 @@
 %shared_ptr(xspcomm::XData)
 #endif
 
+%ignore xspcomm::XPort::SelectPins(std::initializer_list<std::string>);
 
 namespace std {
    %template(StringVector) vector<string>;
