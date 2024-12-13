@@ -255,6 +255,9 @@ int test_xdata()
 
     p3 = p1;
     test_assert(p1.String() == p3.String(), "copy fail, p1=%s, p3=%s", p1.String().c_str(), p3.String().c_str());
+    p1.Add("y", d2);
+    test_assert(p1.SelectPins({"x", "y"})["y"] == p1.SelectPins({"y"})["y"], "select fail, p1=%s, p3=%s", p1.String().c_str(), p3.String().c_str());
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }

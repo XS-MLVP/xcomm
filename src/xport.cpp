@@ -72,6 +72,24 @@ XPort &XPort::NewSubPort(std::string subprefix)
     return *port;
 }
 
+XPort &XPort::SelectPins(std::vector<std::string> pins){
+    auto port = new XPort(this->prefix);
+    for(auto &p : pins){
+        if (this->port_list.count(this->asKey(p)) > 0){
+            port->port_list[this->asKey(p)] = this->port_list[this->asKey(p)];
+            port->port_name[this->asKey(p)] = p;
+            port->name_port[p] = this->asKey(p);
+        }else{
+            Error("PIN: %s not exits", p.c_str());
+        }
+    }
+    return *port;
+}
+
+XPort &XPort::SelectPins(std::initializer_list<std::string> pins){
+    return this->SelectPins(std::vector<std::string>(pins));
+}
+
 xspcomm::XData &XPort::operator[](std::string key)
 {
     return this->Get(key);
