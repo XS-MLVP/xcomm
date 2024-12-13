@@ -278,6 +278,18 @@ int test_xdata()
     clk1.Step(20);
     test_assert(clk1.clk == 20, "clk1: %ld", clk1.clk);
     test_assert(clk2.clk == 4, "clk2: %ld", clk2.clk);
+    // test big operations
+    u_int64_t big = 0x123456789abcdef0;
+    int int_size = sizeof(u_int64_t)/sizeof(int);
+    big_mask((int*)&big, int_size, 23, 60);
+    std::string big_s = big_binstr((int*)&big, int_size);
+    test_assert(big_s == "0000111111111111111111111111111111111111100000000000000000000000", "big_mask fail: %s", big_s.c_str());
+    big_shift((int*)&big, int_size, 33);
+    big_s = big_binstr((int*)&big, int_size);
+    test_assert(big_s == "0000000000000000000000000000000000000111111111111111111111111111", "big_shift fail: %s", big_s.c_str());
+    big_shift((int*)&big, int_size, -33);
+    big_s = big_binstr((int*)&big, int_size);
+    test_assert(big_s == "0000111111111111111111111111111000000000000000000000000000000000", "big_shift fail: %s", big_s.c_str());
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }

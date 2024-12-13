@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <climits>
 #include <cstdint>
+#include <cstring>
 
 #ifdef HAVE_EXECINFO_H
 #ifndef FORCE_NO_EXECINFO_H
@@ -257,6 +258,68 @@ std::string inline removeSuffix(const std::string& str, const std::string& suffi
 #define FOR_COUNT(n)                                                           \
     auto __n = n;                                                              \
     for (int __i = 0; __i < __n; __i++)
+
+
+inline void big_shift(int* a, int size, int shift) {
+    int intBits = sizeof(int) * 8;
+    int absShift = std::abs(shift);
+    int numInts = absShift / intBits;
+    int bitShift = absShift % intBits;
+    if (shift < 0) {
+        if (numInts > 0) {
+            std::memmove(a + numInts, a, (size - numInts) * sizeof(int));
+            std::memset(a, 0, numInts * sizeof(int));
+        }
+        if (bitShift > 0) {
+            int carry = 0;
+            for (int i = 0; i < size; ++i) {
+                int newCarry = a[i] >> (intBits - bitShift);
+                a[i] = (a[i] << bitShift) | carry;
+                carry = newCarry;
+            }
+        }
+    } else {
+        if (numInts > 0) {
+            std::memmove(a, a + numInts, (size - numInts) * sizeof(int));
+            std::memset(a + size - numInts, 0, numInts * sizeof(int));
+        }
+        if (bitShift > 0) {
+            int carry = 0;
+            for (int i = size - 1; i >= 0; --i) {
+                int newCarry = a[i] << (intBits - bitShift);
+                a[i] = (a[i] >> bitShift) | carry;
+                carry = newCarry;
+            }
+        }
+    }
+}
+
+inline std::string big_binstr(int *a, int size){
+    std::string str;
+    for (int i = size - 1; i >= 0; --i) {
+        for (int j = sizeof(int) * 8 - 1; j >= 0; --j) {
+            str += (a[i] & (1 << j)) ? '1' : '0';
+        }
+    }
+    return str;
+}
+
+inline void big_mask(int *a, int size, int bit_start, int bit_end){
+    memset(a, 0, size * sizeof(int));
+    int start_pos = bit_start / (sizeof(int) * 8);
+    int start_off = bit_start % (sizeof(int) * 8);
+    int end_pos = bit_end / (sizeof(int) * 8);
+    int end_off = bit_end % (sizeof(int) * 8);
+    if (start_pos == end_pos) {
+        a[start_pos] = ((1 << (end_off - start_off)) - 1) << start_off;
+    } else {
+        a[start_pos] = -1 << start_off;
+        a[end_pos] = (1 << end_off) - 1;
+        for (int i = start_pos + 1; i < end_pos; ++i) {
+            a[i] = -1;
+        }
+    }
+}
 
 } // namespace xspcomm
 
