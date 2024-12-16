@@ -273,7 +273,7 @@ inline void big_shift(int* a, int size, int shift) {
         if (bitShift > 0) {
             int carry = 0;
             for (int i = 0; i < size; ++i) {
-                int newCarry = a[i] >> (intBits - bitShift);
+                int newCarry = static_cast<unsigned int>(a[i]) >> (intBits - bitShift);
                 a[i] = (a[i] << bitShift) | carry;
                 carry = newCarry;
             }
@@ -286,8 +286,8 @@ inline void big_shift(int* a, int size, int shift) {
         if (bitShift > 0) {
             int carry = 0;
             for (int i = size - 1; i >= 0; --i) {
-                int newCarry = a[i] << (intBits - bitShift);
-                a[i] = (a[i] >> bitShift) | carry;
+                int newCarry = static_cast<unsigned int>(a[i]) << (intBits - bitShift);
+                a[i] = (static_cast<unsigned int>(a[i]) >> bitShift) | carry;
                 carry = newCarry;
             }
         }
