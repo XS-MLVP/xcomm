@@ -22,6 +22,19 @@ def test_xdata():
     except AssertionError as _:
         print("test == assertion pass")
 
+    data = XData(64, XData.InOut)
+    data.value = -1
+    data[0] = 0
+    print("org: %64s" % data.AsBinaryString())
+    data.value = 0
+    ref2 = data.SubDataRef(30, 6)
+    ref2.value = -1
+    print("af2: %64s" % data.AsBinaryString())
+    data.value = -1
+    print("org: %64s" % data.AsBinaryString())
+    ref2.value = 0
+    print("af2: %64s" % data.AsBinaryString())
+
     TEST_DPI_LR(DPI_TEST_VR)
     TEST_DPI_LW(0)
     TEST_DPI_VR(DPI_TEST_VR)

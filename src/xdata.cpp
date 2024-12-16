@@ -363,8 +363,8 @@ void XData::ReInit(uint32_t width, IOType itype, std::string name)
         this->vecSize = width / 32 + ((width % 32 != 0) ? 1 : 0);
         this->pVecData =
             (xsvLogicVecVal *)calloc(this->vecSize, sizeof(xsvLogicVecVal));
-        this->__pVecData =
-            (xsvLogicVecVal *)calloc(this->vecSize, sizeof(xsvLogicVecVal));
+        this->__pVecData =// [shadow data][3 * tmp data]
+            (xsvLogicVecVal *)calloc(this->vecSize*4, sizeof(xsvLogicVecVal));
         this->pinbind_vec = (PinBind **)calloc(this->mWidth, sizeof(PinBind *));
         for (int i = 0; i < this->mWidth; i++) {
             this->pinbind_vec[i]           = new PinBind(this->pVecData, i);
@@ -407,8 +407,8 @@ XData::XData(XData &t) :
     if (this->vecSize > 0) {
         this->pVecData =
             (xsvLogicVecVal *)calloc(this->vecSize, sizeof(xsvLogicVecVal));
-        this->__pVecData =
-            (xsvLogicVecVal *)calloc(this->vecSize, sizeof(xsvLogicVecVal));
+        this->__pVecData =    // [shadow data][3 * tmp data]
+            (xsvLogicVecVal *)calloc(this->vecSize*4, sizeof(xsvLogicVecVal));
         this->pinbind_vec = (PinBind **)calloc(this->mWidth, sizeof(PinBind *));
         for (int i = 0; i < this->mWidth; i++) {
             this->pinbind_vec[i]           = new PinBind(this->pVecData, i);
@@ -463,8 +463,6 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
     uint32_t start_f = this->sub_offset % 32;
     uint32_t end_p = (this->sub_offset + this->mWidth) / 32;
     uint32_t end_f = (this->sub_offset + this->mWidth) % 32;
-    uint32_t maskv = (((this->mWidth % 32) ? 1:0) << (this->mWidth % 32)) - 1;
-    uint32_t maska = (1 << start_f) - 1;
 
     if (this->vecSize == 0 && this->mWidth == 0) {
         if(is_read){
@@ -485,58 +483,49 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
     // from/dist:      |_|_|_|_|_|_|
     //                 /     /
     // to/from:        |_|_|_|
-    // FIXME: ugly implementation
-    for (int i = 0; i < this->vecSize; i++){
-        uint32_t a = start_p + i;
-        uint32_t b = (a + 1 >= end_p) ? end_p : (a + 1);
-        // short case: data in one section
-        if(start_p == end_p){
-            if(is_read){
-                this->pVecData[i].aval = (p[a].aval >> start_f ) & maskv;
-                this->pVecData[i].bval = (p[a].bval >> start_f ) & maskv;
+    // [shadow data][mask][aval][bval]
+    int secs = end_p - start_p + (end_f > 0 ? 1 : 0);
+    int * temp_mask = (int *)this->__pVecData + this->vecSize * 2;
+    int * temp_aval = temp_mask + secs;
+    int * temp_bval = temp_aval + secs;
+
+    Assert(secs > 0, "Error! SubDataRef: secs <= 0");
+    Assert(secs <= (this->vecSize + 1), "Error! SubDataRef: secs(%d) > vecSize(%d) + 1", secs, this->vecSize);
+
+    if(is_read){
+        for(int i = 0; i < secs; i++){
+            temp_aval[i] = p[start_p + i].aval;
+            temp_bval[i] = p[start_p + i].bval;
+        }
+        if(start_f > 0){
+            big_shift(temp_aval, secs, start_f);
+            big_shift(temp_bval, secs, start_f);
+        }
+        for(int i = 0; i < this->vecSize; i++){
+            this->pVecData[i].aval = temp_aval[i];
+            this->pVecData[i].bval = temp_bval[i];
+        }
+    }else{
+        for(int i = 0; i < this->vecSize; i++){
+            temp_aval[i] = this->pVecData[i].aval;
+            temp_bval[i] = this->pVecData[i].bval;
+        }
+        if(start_f > 0){
+            big_shift(temp_aval, secs, -start_f);
+            big_shift(temp_bval, secs, -start_f);
+        }
+        big_mask(temp_mask, secs, start_f, 32*(end_p - start_p) + end_f);
+        for(int i = 0; i < secs; i++){
+            if(i==0 || i == (secs - 1)){
+                p[start_p + i].aval = (~temp_mask[i] & p[start_p + i].aval) | (temp_aval[i] & temp_mask[i]);
+                p[start_p + i].bval = (~temp_mask[i] & p[start_p + i].bval) | (temp_bval[i] & temp_mask[i]);
             }else{
-                p[a].aval = ((~(maskv << start_f)) & p[a].aval) | ((this->pVecData[i].aval & maskv) << start_f);
-                p[a].bval = ((~(maskv << start_f)) & p[a].bval) | ((this->pVecData[i].bval & maskv) << start_f);
-            }
-        // normal case: data in one more sections
-        }else{
-            uint32_t maskt = -1;
-            uint32_t margin_shift = 32 - start_f;
-            uint32_t maskb = ~maska;
-            if(i == this->vecSize - 1){
-                maskt = maskv;
-            }
-            if(a != b){
-                if(is_read){
-                    this->pVecData[i].aval = (p[a].aval >> start_f);
-                    this->pVecData[i].bval = (p[a].bval >> start_f);
-                    if(start_f != 0){
-                        this->pVecData[i].aval = (this->pVecData[i].aval | (p[b].aval << margin_shift)) & maskt;
-                        this->pVecData[i].bval = (this->pVecData[i].bval | (p[b].bval << margin_shift)) & maskt;
-                    }
-                }else{
-                    p[a].aval = (maska & p[a].aval) | (this->pVecData[i].aval << start_f);
-                    p[a].bval = (maska & p[a].bval) | (this->pVecData[i].bval << start_f);
-                    if(start_f != 0){
-                        p[b].aval = (maskb & p[b].aval) | (this->pVecData[i].aval >> margin_shift);
-                        p[b].bval = (maskb & p[b].bval) | (this->pVecData[i].bval >> margin_shift);
-                    }
-                }
-            }else{
-                // to the last section
-                Assert(start_f <= end_f, "Error! Need start offset(%d) < end offset(%d)", start_f, end_f);
-                Assert(i == this->vecSize - 1, "Error! need at the last section [i(%d) != vsize(%d)]", i, this->vecSize);
-                uint32_t mask = ((1 << end_f) - 1) ^ maska;
-                if(is_read){
-                    this->pVecData[i].aval = (this->pVecData[i].aval & ~mask) | ((p[a].aval & mask) >> start_f);
-                    this->pVecData[i].bval = (this->pVecData[i].bval & ~mask) | ((p[a].bval & mask) >> start_f);
-                }else{
-                    p[a].aval = (p[a].aval & ~mask) | ((this->pVecData[i].aval << start_f) & mask);
-                    p[a].bval = (p[a].bval & ~mask) | ((this->pVecData[i].bval << start_f) & mask);
-                }
+                p[start_p + i].aval = temp_aval[i];
+                p[start_p + i].bval = temp_bval[i];
             }
         }
     }
+
     // update local
     this->_sv_to_local();
     this->_update_shadow();
