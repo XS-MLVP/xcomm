@@ -57,19 +57,21 @@
 |8|XPort &FlipIOType()|让Port中所有XData的IO类型进行反转|-|--|
 |9|XPort &AsBiIO()|让所有XData类IO类型为Bi|-|-|
 |10|XPort &SetZero()|设置Port中的所有XData为0|-|-|
+|11|&XPort &SelectPins(std::vector<std::string> pins);|创建子XPort|当前port中的引脚名称|-|
 
 #### XClock 类
 
 |编号|API名称|作用|参数说明|举例|
 |-|-------------|----------|----------|----------|
-|1|void Add(XData &d)|将Clock和时钟进行绑定|d：被添加的XData|clock.Add(dut.clk)|
-|2|void Add(XPort &p)|将Clock和XData进行绑定|p：被添加的Port|clock.Add(dut.port)|
+|1|XClock &Add(XData &d)|将Clock和时钟进行绑定，具有别名：AddPin(XData &d)|d：被添加的XData|clock.Add(dut.clk)|
+|2|XClock &Add(XPort &p)|将Clock和XData进行绑定|p：被添加的Port|clock.Add(dut.port)|
 |3|void RefreshComb()|推进电路状态，不推进时间，不dump波形|-|-|
 |4|void RefreshCombT()|推进电路状态，推进时间，dump波形|-|-|
 |5|void Step(int s = 1)|推进电路s个时钟周期|-|-|
 |6<sup>*</sup>|void StepRis(xfunction<void, u_int64_t, void *> func,<br> void |-*args = nullptr)|设置上升沿回调函数|func为回调函数，args为自定义参数|-|
 |7<sup>*</sup>|void StepFal(xfunction<void, u_int64_t, void *> func,<br> void |-*args = nullptr)|设置下降沿回调函数|func为回调函数，args为自定义参数|-|
-
+|8|void FreqDivWith(int div, XClock *clk, int shift=0)|对时钟进行分频|div: 分频数，目标clock频率将是本clock的div倍;<br>clk：目标Clock；<br>shift：频率偏移，偏移shift个半周期||
+|9|void FreqDivDelete(XClock *clk)|删除对应分频率|||
 
 ### 特有API或者操作
 
