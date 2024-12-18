@@ -2,6 +2,7 @@
 #define __xspcomm_xdata__
 
 #include "xspcomm/xutil.h"
+#include "xspcomm/xvpi.h"
 #include "xspcomm/xcallback.h"
 
 #include <cstdio>
