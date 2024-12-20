@@ -194,6 +194,9 @@ public:
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
     XData &BindVPI(vpiHandle obj, func_vpi_get get,
                    func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name="");
+    XData &BindVPI(uint64_t obj, uint64_t get, uint64_t get_value, uint64_t put_value, std::string name=""){
+        return this->BindVPI((vpiHandle)obj, (func_vpi_get)get, (func_vpi_get_value)get_value, (func_vpi_put_value)put_value, name);
+    }
     uint32_t W();
     uint64_t U();
     int64_t S();
