@@ -1200,4 +1200,67 @@ bool XData::Connect(XData &xdata)
                xdata.mName.c_str());
     }
 }
+
+XData &XData::BindVPI(vpiHandle obj, func_vpi_get get,
+               func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name){
+    if(this->vpi_obj_handle != nullptr){
+        Warn("BindVPI: already bind, ignore bind");
+        return *this;
+    }
+    if(obj == nullptr){
+        Warn("BindVPI: obj is nullptr, ignore bind");
+        return *this;
+    }
+    if(get == nullptr || get_value == nullptr || put_value == nullptr){
+        Warn("BindVPI: get/get_value/put_value is nullptr, ignore bind");
+        return *this;
+    }
+    PLI_INT32 type = get(vpiType, obj);
+    if(type != vpiNet && type != vpiReg){
+        Warn("BindVPI: obj type is not vpiNet or vpiReg, ignore bind");
+        return *this;
+    }
+    this->vpi_obj_handle = obj;
+    this->vpi_get = get;
+    this->vpi_get_value = get_value;
+    this->vpi_put_value = put_value;
+    // Get data width
+    PLI_INT32 bit_size = get(vpiSize, obj);
+    if(bit_size == 1){
+        bit_size = 0;
+    }
+    // Reinit self
+    this->ReInit(bit_size, IOType::InOut, name);
+    // Define and bind fake DPIRW
+    if(bit_size == 0){ // As logic
+        auto fake_dpir = [this](void *data){
+            t_vpi_value value;
+            value.format = vpiScalarVal;
+            this->vpi_get_value(this->vpi_obj_handle, &value);
+            *(xsvLogic *)data = (xsvLogic)value.value.scalar;
+        };
+        auto fake_dpiw = [this](unsigned char data){
+            t_vpi_value value;
+            value.format = vpiScalarVal;
+            value.value.scalar = data;
+            this->vpi_put_value(this->vpi_obj_handle, &value, nullptr, this->vpi_obj_wflage);
+        };
+        this->BindDPIRW(fake_dpir, fake_dpiw);
+    }else{ // As vec
+        auto fake_dpir = [this](void *data){
+            t_vpi_value value;
+            value.format = vpiVectorVal;
+            value.value.vector = (s_vpi_vecval *)data;
+            this->vpi_get_value(this->vpi_obj_handle, &value);
+        };
+        auto fake_dpiw = [this](void *data){
+            t_vpi_value value;
+            value.format = vpiVectorVal;
+            value.value.vector = (s_vpi_vecval *)data;
+            this->vpi_put_value(this->vpi_obj_handle, &value, nullptr, this->vpi_obj_wflage);
+        };
+        this->BindDPIRW(fake_dpir, fake_dpiw);
+    }
+    return *this;
+}
 } // namespace xspcomm

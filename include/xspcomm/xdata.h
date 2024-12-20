@@ -141,6 +141,13 @@ private:
     u_int32_t sub_offset          = 0;       // for sub data
     xsvLogicVecVal * sub_pVecRef  = nullptr; // for sub data
 
+    // For VPI
+    func_vpi_get vpi_get             = nullptr;
+    func_vpi_get_value vpi_get_value = nullptr;
+    func_vpi_put_value vpi_put_value = nullptr;
+    vpiHandle vpi_obj_handle         = nullptr;
+    PLI_INT32 vpi_obj_wflage         = vpiNoDelay;
+
 private:
     void update_read();
     void update_write();
@@ -185,6 +192,8 @@ public:
                    xfunction<void, unsigned char> write);
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
+    XData &BindVPI(vpiHandle obj, func_vpi_get get,
+                   func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name="");
     uint32_t W();
     uint64_t U();
     int64_t S();
@@ -211,6 +220,9 @@ public:
     XData &AsImmWrite(){ this->SetWriteMode(WriteMode::Imme); return *this; }
     XData &AsRiseWrite(){ this->SetWriteMode(WriteMode::Rise); return *this; }
     XData &AsFallWrite(){ this->SetWriteMode(WriteMode::Fall); return *this; }
+    XData &AsVPIWriteNoDelay(){this->vpi_obj_wflage = vpiNoDelay; return *this;}
+    XData &AsVPIWriteForce(){this->vpi_obj_wflage = vpiForceFlag; return *this;}
+    XData &AsVPIWriteRelease(){this->vpi_obj_wflage = vpiReleaseFlag; return *this;}
     XData &AsBiIO();
     XData &AsInIO();
     XData &AsOutIO();
