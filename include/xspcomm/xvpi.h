@@ -28,6 +28,24 @@ typedef PLI_UINT32 *vpiHandle;
 #define vpiForceFlag           5
 #define vpiReleaseFlag         6
 
+#define vpiBinStrVal           1
+#define vpiOctStrVal           2
+#define vpiDecStrVal           3
+#define vpiHexStrVal           4
+#define vpiScalarVal           5
+#define vpiIntVal              6
+#define vpiRealVal             7
+#define vpiStringVal           8
+#define vpiVectorVal           9
+#define vpiStrengthVal        10
+#define vpiTimeVal            11
+#define vpiObjTypeVal         12
+#define vpiSuppressVal        13
+#define vpiShortIntVal        14
+#define vpiLongIntVal         15
+#define vpiShortRealVal       16
+#define vpiRawTwoStateVal     17
+#define vpiRawFourStateVal    18
 
 typedef struct t_vpi_time
 {
