@@ -98,6 +98,11 @@ public:
     }
 };
 
+#define VPI_XDATA_AUTOCHECK 0
+#define VPI_XDATA_SCALAR    1
+#define VPI_XDATA_INTEGER   2
+#define VPI_XDATA_VECTOR    3
+
 class XData;
 struct XDataCallBack {
     std::string desc;
@@ -147,6 +152,7 @@ private:
     func_vpi_put_value vpi_put_value = nullptr;
     vpiHandle vpi_obj_handle         = nullptr;
     PLI_INT32 vpi_obj_wflage         = vpiNoDelay;
+    int vpi_data_type                = 0;  // 0: auto check, 1: scalar, 2: integer, 3: vector
 
 private:
     void update_read();
@@ -192,11 +198,18 @@ public:
                    xfunction<void, unsigned char> write);
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
-    XData &BindVPI(vpiHandle obj, func_vpi_get get,
+    bool BindVPI(vpiHandle obj, func_vpi_get get,
                    func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name="");
-    XData &BindVPI(uint64_t obj, uint64_t get, uint64_t get_value, uint64_t put_value, std::string name=""){
+    bool BindVPI(uint64_t obj, uint64_t get, uint64_t get_value, uint64_t put_value, std::string name=""){
         return this->BindVPI((vpiHandle)obj, (func_vpi_get)get, (func_vpi_get_value)get_value, (func_vpi_put_value)put_value, name);
     }
+    static XData *FromVPI(vpiHandle obj, func_vpi_get get,
+                   func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name="");
+    static XData *FromVPI(uint64_t obj, uint64_t get, uint64_t get_value, uint64_t put_value, std::string name="")
+    {
+        return FromVPI((vpiHandle)obj, (func_vpi_get)get, (func_vpi_get_value)get_value, (func_vpi_put_value)put_value, name);
+    }
+    bool IsVPIBinded(){return this->vpi_obj_handle != nullptr;}
     uint32_t W();
     uint64_t U();
     int64_t S();
@@ -238,6 +251,10 @@ public:
     /*************************************************************** */
 
     // C++ dependent APIs
+    XData &AsVPIAuto(){this->vpi_data_type = VPI_XDATA_AUTOCHECK; return *this;}
+    XData &AsVPIScale(){this->vpi_data_type = VPI_XDATA_SCALAR; return *this;}
+    XData &AsVPIInt(){this->vpi_data_type = VPI_XDATA_INTEGER; return *this;}
+    XData &AsVPIVector(){this->vpi_data_type = VPI_XDATA_VECTOR; return *this;}
     XData* SubDataRefRaw(uint32_t start, uint32_t width, std::string name = "");
     int64_t AsInt64();
     int AsInt32();
