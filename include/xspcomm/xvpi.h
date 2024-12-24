@@ -47,6 +47,17 @@ typedef PLI_UINT32 *vpiHandle;
 #define vpiRawTwoStateVal     17
 #define vpiRawFourStateVal    18
 
+#define vpiScalar             17   /* scalar (Boolean) */
+#define vpiVector             18   /* vector (Boolean) */
+#define vpiExplicitName       19   /* port is explicitly named */
+#define vpiDirection          20   /* direction of port: */
+#define vpiInput               1   /* input */
+#define vpiOutput              2   /* output */
+#define vpiInout               3   /* inout */
+#define vpiMixedIO             4   /* mixed input-output */
+#define vpiNoDirection         5   /* no direction */
+#define vpiConnByName         21   /* connected by name (Boolean) */
+
 typedef struct t_vpi_time
 {
   PLI_INT32  type;               /* [vpiScaledRealTime, vpiSimTime,
