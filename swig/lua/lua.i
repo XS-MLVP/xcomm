@@ -76,4 +76,9 @@
 
 %include "xspcomm/xcallback.h"
 
+%include <std_vector.i>
+namespace std {
+    %template(UCharVector) vector<unsigned char>;
+}
+
 %include ../xcomm.i
