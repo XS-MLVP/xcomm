@@ -251,6 +251,7 @@ public:
     /*************************************************************** */
 
     // C++ dependent APIs
+    XData &SetVPIWriteFlag(int flag){this->vpi_obj_wflage = flag; return *this;}
     XData &AsVPIAuto(){this->vpi_data_type = VPI_XDATA_AUTOCHECK; return *this;}
     XData &AsVPIScale(){this->vpi_data_type = VPI_XDATA_SCALAR; return *this;}
     XData &AsVPIInt(){this->vpi_data_type = VPI_XDATA_INTEGER; return *this;}
