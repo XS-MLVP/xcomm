@@ -87,6 +87,12 @@ type SwigcptrXData struct {
     XDataGo
 }
 
+func XDataFromVPI(a ...interface{}) XData {
+    ret := SwigcptrXData{}
+    ret.XDataGo = XDataGoFromVPI(a...)
+    return ret
+}
+
 func (p SwigcptrXData) SubDataRef(a ...interface{}) XData {
     ret := SwigcptrXData{}
     ret.XDataGo = p.XDataGo.SubDataRefRawGo(a...)
