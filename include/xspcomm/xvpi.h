@@ -60,6 +60,8 @@ typedef PLI_UINT32 *vpiHandle;
 #define vpiNoDirection         5   /* no direction */
 #define vpiConnByName         21   /* connected by name (Boolean) */
 
+#ifndef VPI_TIME
+#define VPI_TIME
 typedef struct t_vpi_time
 {
   PLI_INT32  type;               /* [vpiScaledRealTime, vpiSimTime,
@@ -67,13 +69,20 @@ typedef struct t_vpi_time
   PLI_UINT32 high, low;          /* for vpiSimTime */
   double     real;               /* for vpiScaledRealTime */
 } s_vpi_time, *p_vpi_time;
+#define vpiScaledRealTime 1
+#define vpiSimTime        2
+#define vpiSuppressTime   3
+#endif
 
 
+#ifndef VPI_VECVAL
+#define VPI_VECVAL
 typedef struct t_vpi_vecval
 {
   /* following fields are repeated enough times to contain vector */
   PLI_UINT32 aval, bval;          /* bit encoding: ab: 00=0, 10=1, 11=X, 01=Z */
 } s_vpi_vecval, *p_vpi_vecval;
+#endif
 
 
 typedef struct t_vpi_strengthval
