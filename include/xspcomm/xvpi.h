@@ -20,6 +20,8 @@ typedef PLI_UINT32 *vpiHandle;
 #define vpiSize                4   /* size of gate, net, port, etc. */
 #define vpiNet                36   /* scalar or vector net */
 #define vpiReg                48   /* scalar or vector reg */
+#define vpiForce              16   /* force statement */
+#define vpiRelease            50   /* release statement */
 
 #define vpiNoDelay             1
 #define vpiInertialDelay       2
