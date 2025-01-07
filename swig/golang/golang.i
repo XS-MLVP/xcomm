@@ -58,6 +58,11 @@ void FreeSCVector(FreePtr p){
 %rename(SubDataRefGo) xspcomm::XData::SubDataRef;
 %rename(SubDataRefRawGo) xspcomm::XData::SubDataRefRaw;
 
+%rename(StepRisC) xspcomm::XClock::StepRis(u_int64_t, u_int64_t, std::string);
+%rename(StepFalC) xspcomm::XClock::StepFal(u_int64_t, u_int64_t, std::string);
+%rename(StepRisX) xspcomm::XClock::StepRis(xfunction<void, u_int64_t, void *>, void *args, std::string);
+%rename(StepFalX) xspcomm::XClock::StepFal(xfunction<void, u_int64_t, void *>, void *args, std::string);
+
 %rename(SetGo) xspcomm::XData::Set;
 %rename(XClockGo) xspcomm::XClock;
 %rename(XDataGo) xspcomm::XData;
@@ -336,36 +341,44 @@ func (p SwigcptrXClock) ReInit(a ...interface{}) {
 
 func (p SwigcptrXClock) StepRis(a ...interface{}) {
     argc := len(a)
+    if f, ok := a[0].(func(uint64)); ok {
+        p.XClockGo.StepRisX(NewStepCb(f), 0, "")
+        return
+    }
     if argc == 1 {
-        p.XClockGo.StepRis(NewStepCb(a[0].(func(uint64))))
+        p.XClockGo.StepRisC(a[0].(uint64), 0, "")
         return
     }
     if argc == 2 {
-        p.XClockGo.StepRis(NewStepCb(a[0].(func(uint64))), a[1])
+        p.XClockGo.StepRisC(a[0].(uint64), a[1].(uint64), "")
         return
     }
     if argc == 3 {
-        p.XClockGo.StepRis(NewStepCb(a[0].(func(uint64))), a[1], a[2])
+        p.XClockGo.StepRisC(a[0].(uint64), a[1].(uint64), a[2].(string))
         return
     }
-    p.XClockGo.StepRis(a...)
+    panic("No match for overloaded function call")
 }
 
 func (p SwigcptrXClock) StepFal(a ...interface{}) {
     argc := len(a)
+    if f, ok := a[0].(func(uint64)); ok {
+        p.XClockGo.StepFalX(NewStepCb(f), 0, "")
+        return
+    }
     if argc == 1 {
-        p.XClockGo.StepFal(NewStepCb(a[0].(func(uint64))))
+        p.XClockGo.StepFalC(a[0].(uint64), 0, "")
         return
     }
     if argc == 2 {
-        p.XClockGo.StepFal(NewStepCb(a[0].(func(uint64))), a[1])
+        p.XClockGo.StepFalC(a[0].(uint64), a[1].(uint64), "")
         return
     }
     if argc == 3 {
-        p.XClockGo.StepFal(NewStepCb(a[0].(func(uint64))), a[1], a[2])
+        p.XClockGo.StepFalC(a[0].(uint64), a[1].(uint64), a[2].(string))
         return
     }
-    p.XClockGo.StepFal(a...)
+    panic("No match for overloaded function call")
 }
 
 %}
