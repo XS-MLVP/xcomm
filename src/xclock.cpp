@@ -243,6 +243,16 @@ void XClock::StepFal(xfunction<void, u_int64_t, void *> func, void *args,
     return this->_add_cb(this->list_call_back_fal, func, args, desc);
 }
 
+void XClock::StepRis(u_int64_t func, u_int64_t args, std::string desc){
+    return this->StepRis((void(*)(u_int64_t, void*))func, (void *)args, desc);
+}
+void XClock::StepFal(u_int64_t func, u_int64_t args, std::string desc){
+    return this->StepFal((void(*)(u_int64_t, void*))func, (void *)args, desc);
+}
+
+void XClock::ClearRisCallBacks(){this->list_call_back_ris.clear();}
+void XClock::ClearFalCallBacks(){this->list_call_back_fal.clear();}
+
 int XClock::StepRisQueueSize(){ return (int)this->list_call_back_ris.size(); }
 int XClock::StepFalQueueSize(){ return (int)this->list_call_back_fal.size(); }
 

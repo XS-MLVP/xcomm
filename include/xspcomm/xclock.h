@@ -94,12 +94,16 @@ public:
                  std::string desc = "");
     void StepFal(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
                  std::string desc = "");
+    void StepRis(u_int64_t func, u_int64_t args = 0, std::string desc = "");
+    void StepFal(u_int64_t func, u_int64_t args = 0, std::string desc = "");
     int StepRisQueueSize();
     int StepFalQueueSize();
     void FreqDivWith(int div, XClock *clk, int shift=0);
     void FreqDivWith(int div, XClock &clk, int shift=0){return this->FreqDivWith(div, &clk, shift);};
     void FreqDivDelete(XClock *clk);
     void FreqDivDelete(XClock &clk){return this->FreqDivDelete(&clk);};
+    void ClearRisCallBacks();
+    void ClearFalCallBacks();
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */
