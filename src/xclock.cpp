@@ -87,7 +87,22 @@ XClock::XClock(xfunction<int, bool> stepfunc,
 {
     this->ReInit(stepfunc, clock_pins, ports);
 }
-
+XClock::XClock(uint64_t stepfunc, uint64_t dut,
+               std::initializer_list<xspcomm::XData *> clock_pins,
+               std::initializer_list<xspcomm::XPort *> ports)
+{
+    this->ReInit(stepfunc, dut, clock_pins, ports);
+}
+void XClock::ReInit(uint64_t stepfunc, uint64_t dut,
+                    std::initializer_list<xspcomm::XData *> clock_pins,
+                    std::initializer_list<xspcomm::XPort *> ports)
+{
+    auto step_func = (int (*)(uint64_t, bool))stepfunc;
+    auto step = [step_func, dut](bool d) {
+        return step_func(dut, d);
+    };
+    this->ReInit(step, clock_pins, ports);
+}
 void XClock::ReInit(xfunction<int, bool> stepfunc,
                     std::initializer_list<xspcomm::XData *> clock_pins,
                     std::initializer_list<xspcomm::XPort *> ports)

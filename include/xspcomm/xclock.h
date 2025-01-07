@@ -74,6 +74,12 @@ public:
     void ReInit(xfunction<int, bool> stepfunc,
                 std::initializer_list<xspcomm::XData *> clock_pins  = {},
                 std::initializer_list<xspcomm::XPort *> ports = {});
+    XClock(uint64_t stepfunc, uint64_t dut,
+           std::initializer_list<xspcomm::XData *> clock_pins  = {},
+           std::initializer_list<xspcomm::XPort *> ports = {});
+    void ReInit(uint64_t stepfunc, uint64_t dut,
+                std::initializer_list<xspcomm::XData *> clock_pins  = {},
+                std::initializer_list<xspcomm::XPort *> ports = {});
     XClock& Add(xspcomm::XData *d);
     XClock& Add(xspcomm::XData &d);
     XClock& Add(xspcomm::XPort *d);
