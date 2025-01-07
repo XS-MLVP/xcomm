@@ -104,6 +104,7 @@ public:
     void FreqDivDelete(XClock &clk){return this->FreqDivDelete(&clk);};
     void ClearRisCallBacks();
     void ClearFalCallBacks();
+    uint64_t CSelf(){return (uint64_t)this;}
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */

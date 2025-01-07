@@ -246,6 +246,7 @@ public:
     XData &Invert();
     PinBind &At(int index);
     std::string AsBinaryString();
+    uint64_t CSelf(){return (uint64_t)this;}
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */

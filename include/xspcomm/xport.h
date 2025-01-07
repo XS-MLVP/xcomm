@@ -36,6 +36,7 @@ public:
     std::string String(std::string prefix = "");
     std::string GetPrefix();
     std::vector<std::string> GetKeys(bool raw_key = false);
+    uint64_t CSelf(){return (uint64_t)this;}
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */
