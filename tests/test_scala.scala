@@ -27,5 +27,11 @@ object LoadXSP {
     port.Add("pin1", x1)
     println("xdata = " + port("pin1").Get())
     clock.Step(5)
+
+    // test xclock u64 step/cbs
+    var clk = new XClock(Util.TEST_get_u64_step_func(), new java.math.BigInteger("123"))
+    clk.StepRis(Util.TEST_get_u64_ris_fal_cblback_func(), new java.math.BigInteger("456"))
+    clk.StepFal(Util.TEST_get_u64_ris_fal_cblback_func(), new java.math.BigInteger("987"))
+    clk.Step(3)
   }
 }

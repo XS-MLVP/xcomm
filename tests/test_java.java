@@ -68,5 +68,9 @@ public class test_java {
     clock.Step(5);
     System.out.println("XClock: "+clock);
     System.out.println("Test complete!");
+    XClock clk = new XClock(Util.TEST_get_u64_step_func(), new BigInteger("123"));
+    clk.StepRis(Util.TEST_get_u64_ris_fal_cblback_func(), new BigInteger("456"));
+    clk.StepFal(Util.TEST_get_u64_ris_fal_cblback_func(), new BigInteger("789"));
+    clk.Step(3);
   }
 }

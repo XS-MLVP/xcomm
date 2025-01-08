@@ -26,3 +26,9 @@ clock = x.XClock(function(c) end)
 clock:StepRis(function(c) print("callback: R cycle =>", c) end)
 clock:StepFal(function(c) print("callback: F cycle =>", c) end)
 clock:Step(10)
+
+-- test xclock u64 step/cbs
+clk = x.XClock(x.TEST_get_u64_step_func(), 0x123)
+clk:StepRis(x.TEST_get_u64_ris_fal_cblback_func(), 0x456)
+clk:StepFal(x.TEST_get_u64_ris_fal_cblback_func(), 0x987)
+clk:Step(3)

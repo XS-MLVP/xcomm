@@ -35,4 +35,8 @@ func main() {
 	xclock.Step(3)
 	xclock.ReInit(step_fc2)
 	xclock.Step(2)
+	clk := xspcomm.NewXClock(xspcomm.TEST_get_u64_step_func(), uint64(0x123))
+    clk.StepRis(xspcomm.TEST_get_u64_ris_fal_cblback_func(),   uint64(0x456))
+    clk.StepFal(xspcomm.TEST_get_u64_ris_fal_cblback_func(),   uint64(0x987))
+    clk.Step(3)
 }

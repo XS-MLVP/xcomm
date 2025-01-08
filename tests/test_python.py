@@ -102,7 +102,12 @@ def test_xdata():
     port1.Add("b", b)
     port2 = port1.SelectPins(["a", "b"])
     print(port2.String())
-
+    
+    # test xclock u64 step/cbs
+    clk = XClock(TEST_get_u64_step_func(), 0x123)
+    clk.StepRis(TEST_get_u64_ris_fal_cblback_func(), 0x456)
+    clk.StepFal(TEST_get_u64_ris_fal_cblback_func(), 0x987)
+    clk.Step(3)
 
 async def test_async():
     clk = XClock(lambda a: 0)
