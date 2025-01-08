@@ -97,9 +97,10 @@ void XClock::ReInit(uint64_t stepfunc, uint64_t dut,
                     std::initializer_list<xspcomm::XData *> clock_pins,
                     std::initializer_list<xspcomm::XPort *> ports)
 {
-    auto step_func = (int (*)(uint64_t, bool))stepfunc;
+    // call function like: int xcommStep(uint64_t base_ptr, uint64_t cycle, bool dump);
+    auto step_func = (int (*)(uint64_t, uint64_t, bool))stepfunc;
     auto step = [step_func, dut](bool d) {
-        return step_func(dut, d);
+        return step_func(dut, 1, d);
     };
     this->ReInit(step, clock_pins, ports);
 }
@@ -340,7 +341,7 @@ XNext XClock::ANext(int n)
 #endif
 
 extern "C" {
-    int test_step_fun(void* self, bool d){
+    int test_step_fun(void* self, uint64_t cycle, bool d){
         Info("[%p]test u64 step func called: %d", self, d);
         return 0;
     };
