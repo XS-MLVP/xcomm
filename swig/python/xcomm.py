@@ -186,12 +186,16 @@ async def tick_clock_ready():
 
 
 XClock_old_init__ = XClock.__init__
-def XClock__init__(self, step_func):
+def XClock__init__(self, step_func, dut=None):
     self._step_event = asyncio.Event()
     self._step_event.clear()
-    fc = xclock_cb_step(step_func)
-    fc.set_force_callable()
-    return XClock_old_init__(self, fc.__disown__())
+    if callable(step_func):
+        fc = xclock_cb_step(step_func)
+        fc.set_force_callable()
+        return XClock_old_init__(self, fc.__disown__())
+    assert isinstance(step_func, int), "step_func must be callable or int"
+    assert isinstance(dut, int), "dut must be int"
+    return XClock_old_init__(self, step_func, dut)
 
 XClock.__init__ = XClock__init__
 
@@ -203,14 +207,28 @@ XClock.getEvent = XClock__getEvent
 XClock_old_StepRis = XClock.StepRis
 XClock_old_StepFal = XClock.StepFal
 def XClock_StepRis(self, call_back, args=(), kwargs={}):
-    fc = xclock_cb_step_rf(self, call_back, args, kwargs)
-    fc.set_force_callable()
-    return XClock_old_StepRis(self, fc.__disown__(), None, call_back.__name__)
+    if callable(call_back):
+        fc = xclock_cb_step_rf(self, call_back, args, kwargs)
+        fc.set_force_callable()
+        return XClock_old_StepRis(self, fc.__disown__(), None, call_back.__name__)
+    assert isinstance(call_back, int), "call_back must be callable or int"
+    if args:
+        assert isinstance(args, int), "args must be int"
+    else:
+        args = 0
+    return XClock_old_StepRis(self, call_back, args, "C_RIS_%x_%x" % (call_back, args))
 
 def XClock_StepFal(self, call_back, args=(), kwargs={}):
-    fc = xclock_cb_step_rf(self, call_back, args, kwargs)
-    fc.set_force_callable()
-    return XClock_old_StepFal(self, fc.__disown__(), None, call_back.__name__)
+    if callable(call_back):
+        fc = xclock_cb_step_rf(self, call_back, args, kwargs)
+        fc.set_force_callable()
+        return XClock_old_StepFal(self, fc.__disown__(), None, call_back.__name__)
+    assert isinstance(call_back, int), "call_back must be callable or int"
+    if args:
+        assert isinstance(args, int), "args must be int"
+    else:
+        args = 0
+    return XClock_old_StepFal(self, call_back, args, "C_FAL_%x_%x" % (call_back, args))
 
 def XClock_Add_Exception(self, exception):
     if getattr(self, "exceptions", None) is None:

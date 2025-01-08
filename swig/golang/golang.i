@@ -307,7 +307,9 @@ func NewXClock(a ...interface{}) XClock {
     ret := SwigcptrXClock {}
     var p XClockGo
     argc := len(a)
-    if argc == 1 {
+    if f, ok := a[0].(uint64); ok {
+        p = NewXClockGo(f, a[1].(uint64))
+    }else if argc == 1 {
         p = NewXClockGo(NewStepFunc(a[0].(func(bool) int)))
     }else if argc == 2 {
         p = NewXClockGo(NewStepFunc(a[0].(func(bool) int)), a[1])
