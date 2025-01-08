@@ -339,4 +339,21 @@ XNext XClock::ANext(int n)
 }
 #endif
 
+extern "C" {
+    int test_step_fun(void* self, bool d){
+        Info("[%p]test u64 step func called: %d", self, d);
+        return 0;
+    };
+    void test_risfail_cb(u_int64_t cycle, void* args){
+        Info("[%ld]test ris/fal callback called: %p", cycle, args);
+    }
+}
+
+uint64_t TEST_get_u64_step_func(){
+    return (uint64_t)test_step_fun;
+}
+uint64_t TEST_get_u64_ris_fal_cblback_func(){
+    return (uint64_t)test_risfail_cb;
+}
+
 } // namespace xspcomm

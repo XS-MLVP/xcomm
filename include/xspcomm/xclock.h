@@ -11,6 +11,10 @@
 #endif
 
 namespace xspcomm {
+
+uint64_t TEST_get_u64_step_func();
+uint64_t TEST_get_u64_ris_fal_cblback_func();
+
 class XClock;
 #if ENABLE_XCOROUTINE
 class XStep : public _XAWait
