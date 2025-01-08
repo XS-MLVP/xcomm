@@ -191,7 +191,7 @@ void XClock::_step_fal()
     this->_fal_pins();
     for(auto &c : sub_clk_fal){c->_fal_pins();}
     for(auto &c : sub_clk_ris){c->_ris_pins();}
-    this->_step(false);
+    if(!this->is_fast_mode)this->_step(false);
     this->_fal_ports();
     for(auto &c : sub_clk_fal){c->_fal_ports();}
     for(auto &c : sub_clk_ris){c->_ris_ports();}
@@ -208,7 +208,7 @@ void XClock::_step_ris()
     this->_ris_pins();
     for(auto &c : sub_clk_ris){c->_ris_pins();}
     for(auto &c : sub_clk_fal){c->_fal_pins();}
-    this->_step(false);
+    if(!this->is_fast_mode)this->_step(false);
     this->_ris_ports();
     for(auto &c : sub_clk_ris){c->_ris_ports();}
     for(auto &c : sub_clk_fal){c->_fal_ports();}
