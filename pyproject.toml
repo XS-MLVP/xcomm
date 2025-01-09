@@ -4,6 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
 sdist.include = [".git"]
+cmake.build-type = "Release"
 
 [project]
 name = "xspcomm"
