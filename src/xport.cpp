@@ -127,6 +127,19 @@ XPort &XPort::WriteOnFall()
     return *this;
 }
 
+XPort &XPort::AsImmWrite(){
+    for (auto &e : this->port_list) { if(!e.second->IsOutIO())e.second->AsImmWrite(); }
+    return *this;
+}
+XPort &XPort::AsRiseWrite(){
+    for (auto &e : this->port_list) { if(!e.second->IsOutIO())e.second->AsRiseWrite(); }
+    return *this;
+}
+XPort &XPort::AsFallWrite(){
+    for (auto &e : this->port_list) { if(!e.second->IsOutIO())e.second->AsFallWrite(); }
+    return *this;
+}
+
 XPort &XPort::ReadFresh(xspcomm::WriteMode m)
 {
     for (auto &e : this->port_list) { e.second->ReadFresh(m); }
