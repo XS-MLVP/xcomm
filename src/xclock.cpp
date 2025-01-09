@@ -191,11 +191,18 @@ void XClock::_step_fal()
     this->_fal_pins();
     for(auto &c : sub_clk_fal){c->_fal_pins();}
     for(auto &c : sub_clk_ris){c->_ris_pins();}
-    if(this->fast_mode_level < 2)this->_step(false);
-    this->_fal_ports();
-    for(auto &c : sub_clk_fal){c->_fal_ports();}
-    for(auto &c : sub_clk_ris){c->_ris_ports();}
-    this->_step(true);
+    if(this->fast_mode_level < 2){
+        this->_step(false);
+        this->_fal_ports();
+        for(auto &c : sub_clk_fal){c->_fal_ports();}
+        for(auto &c : sub_clk_ris){c->_ris_ports();}
+        this->_step(true);
+    }else{
+        this->_step(true);
+        this->_fal_ports();
+        for(auto &c : sub_clk_fal){c->_fal_ports();}
+        for(auto &c : sub_clk_ris){c->_ris_ports();}
+    }
     this->_fal_refresh();
     for(auto &c : sub_clk_fal){c->_fal_refresh();}
     for(auto &c : sub_clk_ris){c->_ris_refresh();}
@@ -208,11 +215,18 @@ void XClock::_step_ris()
     this->_ris_pins();
     for(auto &c : sub_clk_ris){c->_ris_pins();}
     for(auto &c : sub_clk_fal){c->_fal_pins();}
-    if(this->fast_mode_level < 2)this->_step(false);
-    this->_ris_ports();
-    for(auto &c : sub_clk_ris){c->_ris_ports();}
-    for(auto &c : sub_clk_fal){c->_fal_ports();}
-    this->_step(true);
+    if(this->fast_mode_level < 2){
+        this->_step(false);
+        this->_ris_ports();
+        for(auto &c : sub_clk_ris){c->_ris_ports();}
+        for(auto &c : sub_clk_fal){c->_fal_ports();}
+        this->_step(true);
+    }else{
+        this->_step(true);
+        this->_ris_ports();
+        for(auto &c : sub_clk_ris){c->_ris_ports();}
+        for(auto &c : sub_clk_fal){c->_fal_ports();}
+    }
     this->_ris_refresh();
     for(auto &c : sub_clk_ris){c->_ris_refresh();}
     for(auto &c : sub_clk_fal){c->_fal_refresh();}
