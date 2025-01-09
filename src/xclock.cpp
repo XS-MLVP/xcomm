@@ -262,7 +262,9 @@ void XClock::_fal_pins(){
 }
 
 void XClock::_fal_ports(){
-    for (auto &p : this->ports) { p->WriteOnFall();}
+    if(this->fast_mode_level < 3){
+        for (auto &p : this->ports) { p->WriteOnFall();}
+    }
 }
 
 void XClock::_fal_refresh(){
@@ -277,7 +279,9 @@ void XClock::_ris_pins(){
 }
 
 void XClock::_ris_ports(){
-    for (auto &p : this->ports) { p->WriteOnRise(); }
+    if(this->fast_mode_level < 3){
+        for (auto &p : this->ports) { p->WriteOnRise(); }
+    }
 }
 
 void XClock::_ris_refresh(){

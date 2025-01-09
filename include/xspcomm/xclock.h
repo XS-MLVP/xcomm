@@ -53,7 +53,7 @@ class XClock
     std::vector<XClockCallBack> list_call_back_ris;
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
-    int fast_mode_level = 0;
+    int fast_mode_level = 0;  // 0 default, 1 ignore read_refresh, 2 ignore step(false), 3 ignore port write, use with XData writeImme Model.
 
     virtual void _step(bool d);
     void _shchedule_await();
