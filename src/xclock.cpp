@@ -266,7 +266,9 @@ void XClock::_fal_ports(){
 }
 
 void XClock::_fal_refresh(){
-    for (auto &p : this->ports) { p->ReadFresh(WriteMode::Fall); }
+    if(!this->is_fast_mode){
+        for (auto &p : this->ports) { p->ReadFresh(WriteMode::Fall); }
+    }
     this->_call_back(this->list_call_back_fal);
 }
 
@@ -279,7 +281,9 @@ void XClock::_ris_ports(){
 }
 
 void XClock::_ris_refresh(){
-    for (auto &p : this->ports) { p->ReadFresh(WriteMode::Rise); }
+    if(!this->is_fast_mode){
+        for (auto &p : this->ports) { p->ReadFresh(WriteMode::Rise); }
+    }
     this->_call_back(this->list_call_back_ris);
 }
 
