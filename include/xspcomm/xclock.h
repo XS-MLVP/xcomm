@@ -53,7 +53,7 @@ class XClock
     std::vector<XClockCallBack> list_call_back_ris;
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
-    bool is_fast_mode = false;
+    int fast_mode_level = 0;
 
     virtual void _step(bool d);
     void _shchedule_await();
@@ -109,8 +109,8 @@ public:
     void FreqDivDelete(XClock &clk){return this->FreqDivDelete(&clk);};
     void ClearRisCallBacks();
     void ClearFalCallBacks();
-    void FastMode(bool fast){this->is_fast_mode = fast;};
-    bool IsFastMode(){return this->is_fast_mode;}
+    void SetFastMode(int level){this->fast_mode_level = level;};
+    int GetFastMode(){return this->fast_mode_level;}
     uint64_t CSelf(){return (uint64_t)this;}
     /*************************************************************** */
     //                  End of Stable public user APIs

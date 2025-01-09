@@ -191,7 +191,7 @@ void XClock::_step_fal()
     this->_fal_pins();
     for(auto &c : sub_clk_fal){c->_fal_pins();}
     for(auto &c : sub_clk_ris){c->_ris_pins();}
-    if(!this->is_fast_mode)this->_step(false);
+    if(this->fast_mode_level < 2)this->_step(false);
     this->_fal_ports();
     for(auto &c : sub_clk_fal){c->_fal_ports();}
     for(auto &c : sub_clk_ris){c->_ris_ports();}
@@ -208,7 +208,7 @@ void XClock::_step_ris()
     this->_ris_pins();
     for(auto &c : sub_clk_ris){c->_ris_pins();}
     for(auto &c : sub_clk_fal){c->_fal_pins();}
-    if(!this->is_fast_mode)this->_step(false);
+    if(this->fast_mode_level < 2)this->_step(false);
     this->_ris_ports();
     for(auto &c : sub_clk_ris){c->_ris_ports();}
     for(auto &c : sub_clk_fal){c->_fal_ports();}
@@ -266,7 +266,7 @@ void XClock::_fal_ports(){
 }
 
 void XClock::_fal_refresh(){
-    if(!this->is_fast_mode){
+    if(this->fast_mode_level < 1){
         for (auto &p : this->ports) { p->ReadFresh(WriteMode::Fall); }
     }
     this->_call_back(this->list_call_back_fal);
@@ -281,7 +281,7 @@ void XClock::_ris_ports(){
 }
 
 void XClock::_ris_refresh(){
-    if(!this->is_fast_mode){
+    if(this->fast_mode_level < 1){
         for (auto &p : this->ports) { p->ReadFresh(WriteMode::Rise); }
     }
     this->_call_back(this->list_call_back_ris);
