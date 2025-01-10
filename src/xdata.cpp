@@ -693,7 +693,14 @@ void XData::OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
     cb.fc   = func;
     cb.desc = desc;
     this->call_back_on_change.push_back(cb);
+    this->has_on_change_cbs = true;
 }
+
+void XData::ClearOnChangeCbs(){
+    this->call_back_on_change.clear();
+    this->has_on_change_cbs = false;
+}
+
 uint32_t XData::W()
 {
     return this->mWidth;
