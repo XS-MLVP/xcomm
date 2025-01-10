@@ -296,6 +296,27 @@ int test_xdata()
     big_s = big_binstr((int*)&big3, int_size).c_str();
     test_assert(big_s == "0001111011011100101110101001100010011010101111001101111011110000", "sync_data_to fail: %s", big_s.c_str());
 
+    // test xdata bind native data
+    uint64_t value_lgc;
+    uint64_t value_l64;
+    uint64_t value_b64[] = {0, 1};
+    XData xlc(0, XData::In, "xlc");
+    XData x64(32, XData::In, "x64");
+    XData x72(72, XData::In, "x72");
+    x64.BindNativeData((uint64_t)&value_l64);
+    xlc.BindNativeData((uint64_t)&value_lgc);
+    x72.BindNativeData((uint64_t)value_b64);
+    x64.AsImmWrite(); xlc.AsImmWrite(); x72.AsImmWrite();
+
+    x64 = 0x1234; xlc = 1; x72 = 0x4321;
+    test_assert(x64 == value_l64, "bind native data fail: %lx", value_l64);
+    test_assert(xlc == value_lgc, "bind native data fail: %lx", value_lgc);
+    test_assert(x72 == value_b64[0], "bind native data fail: %lx", value_b64[0]);
+    value_l64 = 0x5678; value_lgc = 0; value_b64[0] = 0x789;
+    test_assert(x64 == 0x5678, "bind native data fail: %lx", value_l64);
+    test_assert(xlc == 0, "bind native data fail: %lx", value_lgc);
+    test_assert(x72 == 0x789, "bind native data fail: %lx", value_b64[0]);
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
