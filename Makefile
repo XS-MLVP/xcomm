@@ -52,3 +52,9 @@ rbuild: clean build run
 
 wheel: clean
 	XSPCOMM_INSTALL_PREFIX=picker/ XSPCOMM_BUILD_WHEEL=1 pipx run build
+
+build_all:
+	make BUILD_XSPCOMM_SWIG=python,scala,java,golang,lua
+
+test_all: build_all test_lua test_python test_java test_scala test_golang test_pythird_call
+	@echo "All tests passed"
