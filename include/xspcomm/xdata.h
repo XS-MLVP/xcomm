@@ -121,6 +121,7 @@ public:
     XData & value;
 private:
     std::vector<XDataCallBack> call_back_on_change;
+    bool has_on_change_cbs = false;
     xfunction<void, xsvLogic *> bitRead        = nullptr;
     xfunction<void, xsvLogic> bitWrite         = nullptr;
     xfunction<void, xsvLogicVecVal *> vecRead  = nullptr;
@@ -276,6 +277,8 @@ public:
     bool GetBits(u_int8_t *buffer, u_int32_t count);
     void OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
                   void *args = nullptr, std::string desc = "");
+    void ClearOnChangeCbs();
+    bool inline HasOnChangeCbs(){return this->has_on_change_cbs;}
     void ReadFresh(WriteMode m);
     PinBind &operator[](u_int32_t index);
     bool operator==(XData &data);
