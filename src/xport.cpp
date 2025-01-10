@@ -142,7 +142,7 @@ XPort &XPort::AsFallWrite(){
 
 XPort &XPort::ReadFresh(xspcomm::WriteMode m)
 {
-    for (auto &e : this->port_list) { e.second->ReadFresh(m); }
+    for (auto &e : this->port_list) { if(e.second->HasOnChangeCbs())e.second->ReadFresh(m); }
     return *this;
 }
 
