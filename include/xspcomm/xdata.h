@@ -199,6 +199,7 @@ public:
                    xfunction<void, unsigned char> write);
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
+    void BindNativeData(uint64_t pdata);
     bool BindVPI(vpiHandle obj, func_vpi_get get,
                    func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name="");
     bool BindVPI(uint64_t obj, uint64_t get, uint64_t get_value, uint64_t put_value, std::string name=""){

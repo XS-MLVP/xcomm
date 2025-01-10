@@ -583,6 +583,27 @@ void XData::BindDPIRW(void (*read)(void *), void (*write)(const unsigned char)) 
     this->bitWrite = write;
     this->update_read();
 }
+void XData::BindNativeData(uint64_t pdata){
+    if (this->mWidth == 0){
+        this->bitRead = [pdata](void *d){
+            *(unsigned char *)d = (unsigned char)*(u_int64_t *)pdata;
+        };
+        this->bitWrite = [pdata](const unsigned char d){
+            *(u_int64_t *)pdata = (u_int64_t)d;
+        };
+    }else{
+        this->vecRead = [this, pdata](void *d){
+            for(int i = 0; i < this->vecSize; i++){
+                ((xsvLogicVecVal *)d)[i].aval = ((uint32_t *)pdata)[i];
+            }
+        };
+        this->vecWrite = [this, pdata](const void *d){
+            for(int i = 0; i < this->vecSize; i++){
+                ((uint32_t *)pdata)[i] = ((xsvLogicVecVal *)d)[i].aval;
+            }
+        };
+    }
+}
 void XData::SetBits(u_int8_t *buffer, int count, u_int8_t *mask, int start)
 {
     Assert(this->mWidth > 0, "Only svVec support SetBits");
