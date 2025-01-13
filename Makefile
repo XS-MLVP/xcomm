@@ -1,7 +1,7 @@
 .DEFAULT_GOAL = rbuild
 
 build:
-	cmake . -Bbuild -DCMAKE_BUILD_TYPE=Release
+	cmake . -Bbuild -DCMAKE_BUILD_TYPE=Release -DCMAKE_BUILD_PARALLEL=`nproc`
 	cd build && make -j`nproc`
 
 install: clean build

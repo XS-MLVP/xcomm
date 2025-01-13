@@ -28,7 +28,11 @@ endif()
 
 set(XSPCOMM_VERSION "${PROJECT_VERSION}" PARENT_SCOPE)
 
+if(NOT DEFINED CMAKE_BUILD_PARALLEL)
 set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -mtune=native -funroll-loops -fomit-frame-pointer")
+else()
+set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto=${CMAKE_BUILD_PARALLEL} -O3 -mtune=native -funroll-loops -fomit-frame-pointer")
+endif()
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
