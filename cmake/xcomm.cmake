@@ -28,11 +28,11 @@ endif()
 
 set(XSPCOMM_VERSION "${PROJECT_VERSION}" PARENT_SCOPE)
 
-if(NOT DEFINED CMAKE_BUILD_PARALLEL)
-set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -mtune=native -funroll-loops -fomit-frame-pointer")
-else()
-set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto=${CMAKE_BUILD_PARALLEL} -O3 -mtune=native -funroll-loops -fomit-frame-pointer")
+if(DEFINED CMAKE_BUILD_PARALLEL)
+set(INNER_CMAKE_BUILD_PARALLEL "=${CMAKE_BUILD_PARALLEL}")
 endif()
+
+set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto${INNER_CMAKE_BUILD_PARALLEL} -O3 -ftree-vectorize -mtune=native -funroll-loops -funswitch-loops -fomit-frame-pointer")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
