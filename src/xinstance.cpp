@@ -317,6 +317,25 @@ int test_xdata()
     test_assert(xlc == 0, "bind native data fail: %lx", value_lgc);
     test_assert(x72 == 0x789, "bind native data fail: %lx", value_b64[0]);
 
+    // test xsignal cfg
+    uint64_t cfg_base[] = {0,1,2,3,4,0xffffffffffffffff,6,7,8,9};
+    std::string cfg_str = R"(variables:
+  - name: Cache_top.clock
+    type: CData
+    mem_bytes: 1
+    rtl_width: 1
+    offset: 8
+  - name: Cache_top.reset
+    type: CData
+    mem_bytes: 1
+    rtl_width: 8
+    offset: 46)";
+    XSignalCFG cfg(cfg_str, (uint64_t)cfg_base);
+    auto clk = cfg.NewXData("Cache_top.clock");
+    auto rst = cfg.NewXData("Cache_top.reset");
+    test_assert(clk->U() == *(uint8_t*)((uint64_t)cfg_base+8), "xsignal cfg fail: %d  <- %d", clk->AsInt32(), *(uint8_t*)((uint64_t)cfg_base+8));
+    test_assert(rst->U() == *(uint8_t*)((uint64_t)cfg_base+46), "xsignal cfg fail: %d  <- %d", rst->AsInt32(), *(uint8_t*)((uint64_t)cfg_base+46));
+
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
