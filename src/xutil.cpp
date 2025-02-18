@@ -1,7 +1,7 @@
 #include "xspcomm/xutil.h"
 
 namespace xspcomm {
-LogLevel log_level = LogLevel::debug;
+LogLevel log_level = LogLevel::info;
 LogLevel get_log_level()
 {
     return log_level;
