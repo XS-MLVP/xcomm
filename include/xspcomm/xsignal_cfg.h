@@ -31,7 +31,7 @@ class XSignalCFG {
     XData* NewXData(std::string name);
     XData* NewXData(std::string name, int array_index);
     std::vector<XData*> NewXDataArray(std::string name);
-    std::vector<std::string> GetSiganlNames(std::string patten = "");
+    std::vector<std::string> GetSignalNames(std::string patten = "");
     s_xsignal_cfg At(std::string name);
     /*************************************************************** */
     //                  End of Stable public user APIs
