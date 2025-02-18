@@ -18,6 +18,8 @@
 #include <climits>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
+#include <fstream>
 
 #ifdef HAVE_EXECINFO_H
 #ifndef FORCE_NO_EXECINFO_H
@@ -325,6 +327,11 @@ inline void sync_data_to(int *input_data, int size, int *mask, int *output_data)
     for (int i = 0; i < size; ++i) {
         output_data[i] = (output_data[i] & ~mask[i]) | (input_data[i] & mask[i]);
     }
+}
+
+inline bool fileExists(const std::string& fileName) {
+    std::ifstream file(fileName);
+    return file.good();
 }
 
 } // namespace xspcomm
