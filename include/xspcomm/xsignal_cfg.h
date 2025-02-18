@@ -12,6 +12,7 @@ typedef struct
     uint32_t mem_bytes = 0;
     uint32_t rtl_width = 0;
     uint64_t array_size = 0;
+    bool is_empty = true;
     std::string type = "";
 } s_xsignal_cfg, *p_xsignal_cfg;
 
@@ -45,3 +46,4 @@ class XSignalCFG {
 } // namespace xspcomm
 
 #endif
+

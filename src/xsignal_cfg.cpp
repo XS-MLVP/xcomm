@@ -46,6 +46,7 @@ namespace xspcomm
                 return;
             }
             s_xsignal_cfg cfg;
+            cfg.is_empty = false;
             cfg.offset = var["offset"].get_value<uint64_t>();
             cfg.mem_bytes = var["mem_bytes"].get_value<uint32_t>();
             cfg.rtl_width = var["rtl_width"].get_value<uint32_t>();
