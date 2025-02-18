@@ -1,0 +1,21 @@
+variables:
+  - name: Cache_top.clock
+    type: CData
+    mem_bytes: 1
+    rtl_width: 1
+    offset: 9
+  - name: Cache_top.reset
+    type: CData
+    mem_bytes: 1
+    rtl_width: 1
+    offset: 46
+  - name: Cache_top.io_in_req_valid
+    type: CData
+    mem_bytes: 1
+    rtl_width: 1
+    offset: 47
+  - name: Cache_top.io_in_req_bits_size
+    type: CData
+    mem_bytes: 1
+    rtl_width: 3
+    offset: 48

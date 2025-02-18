@@ -118,6 +118,12 @@ def test_xdata():
     clk.StepFal(TEST_get_u64_ris_fal_cblback_func(), 0x987)
     clk.Step(3)
 
+    # test xsignal_cfg.h
+    cfg = XSignalCFG("tests/test_signal_cfg.yaml")
+    print("XSignalCFG:\n", cfg.String())
+    assert 0
+
+
 async def test_async():
     clk = XClock(lambda a: 0)
     clk.StepRis(lambda c : print("lambda ris: ", c))
