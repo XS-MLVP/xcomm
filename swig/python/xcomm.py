@@ -115,6 +115,20 @@ XData.Set = XData_Set
 XData.BindDPIName = XDataBindDPIName
 XData.__eq__ = XData__eq__
 
+# XSignalCFG
+XSignalCFG_old__At = XSignalCFG.At
+def XSignalCFG__At(self: XData, key):
+    cfg = XSignalCFG_old__At(self, key)
+    if cfg.is_empty:
+        return None
+    return cfg
+
+def XSignalCFG__getitem__(self: XData, key):
+    return self.At(key)
+
+XSignalCFG.__getitem__ = XSignalCFG__getitem__
+XSignalCFG.At = XSignalCFG__At
+
 # XPort
 XPort_old__init__ = XPort.__init__
 def XPort__init__(self: XPort, prefix = ""):
