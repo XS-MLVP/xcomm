@@ -73,7 +73,7 @@ namespace xspcomm
         }
         return new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, name);
     }
-    std::vector<std::string> XSignalCFG::GetSiganlNames(std::string pattern){
+    std::vector<std::string> XSignalCFG::GetSignalNames(std::string pattern){
         this->load_cfg();
         std::vector<std::string> vec;
         if(!this->init_error_msg.empty()){
