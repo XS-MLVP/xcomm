@@ -123,7 +123,8 @@ namespace xspcomm
         return cfg;
     }
     std::string XSignalCFG::String(){
-        std::string ret;
+        this->load_cfg();
+        std::string ret = "\nBaseAddress: " + std::to_string(this->cfg_base_address) + "\n";
         for(auto &e : this->cfg_map){
             ret += e.first + ":\n";
             ret += "  offset: " + std::to_string(e.second.offset) + " (address: " + \
