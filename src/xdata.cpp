@@ -209,7 +209,7 @@ void XData::_local_to_sv()
 }
 void XData::_dpi_read()
 {
-    if (this->mIOType != IOType::Output) {
+    if (this->mIOType == IOType::Input) {
         if (this->write_mode != WriteMode::Imme) return;
     }
     this->_dpi_check();
