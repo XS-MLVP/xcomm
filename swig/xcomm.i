@@ -41,6 +41,7 @@
 
 namespace std {
    %template(StringVector) vector<string>;
+   %template(XDataVector) vector<xspcomm::XData*>;
 }
 
 %include "xspcomm/xclock.h"
