@@ -118,20 +118,31 @@ import java.util.List;
 
 %typemap(javaimports)xspcomm::XClock %{
 import java.util.function.Consumer;
+import java.util.ArrayList;
 %}
 
 %typemap(javacode) xspcomm::XClock %{
+  public ArrayList<CbXClockEval> bufferEval = new ArrayList<>();
+  public ArrayList<CbXClockStep> bufferStepRis = new ArrayList<>();
+  public ArrayList<CbXClockStep> bufferStepFal = new ArrayList<>();
 
   public XClock(Consumer<Boolean> callback){
-    this(new CbXClockEval(callback));
+    this();
+    CbXClockEval cb = new CbXClockEval(callback);
+    this.ReInit(cb);
+    this.bufferEval.add(cb);
   }
 
   public void StepRis(Consumer<Long> callback){
-    this.StepRis(new CbXClockStep(callback));
+    CbXClockStep cb = new CbXClockStep(callback);
+    this.StepRis(cb);
+    this.bufferStepRis.add(cb);
   }
 
   public void StepFal(Consumer<Long> callback){
-    this.StepFal(new CbXClockStep(callback));
+    CbXClockStep cb = new CbXClockStep(callback);
+    this.StepFal(cb);
+    this.bufferStepFal.add(cb);
   }
 
 %}
