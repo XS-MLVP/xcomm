@@ -2,6 +2,7 @@ package com.xspcomm
 
 import java.math.BigInteger
 import scala.languageFeature.implicitConversions
+import scala.collection.mutable.ArrayBuffer
 
 object Main{
     def main(args: Array[String]): Unit = {
@@ -34,5 +35,16 @@ implicit class XDataExtension(a: XData){
     }
 }
 
-implicit def to_cb_void_u64_voidp(cb: (Long) => Unit): cb_void_u64_voidp = {new CbXClockStep(cb)}
-implicit def to_cb_int_bool(cb: (Boolean) => Unit): cb_int_bool = {new CbXClockEval(cb)}
+object XClockGlobalPtrs {
+    var _CbXClockEvalList: ArrayBuffer[CbXClockEval] = ArrayBuffer[CbXClockEval]()
+    var _CbXClockStepList: ArrayBuffer[CbXClockStep] = ArrayBuffer[CbXClockStep]()
+}
+
+implicit def to_cb_void_u64_voidp(cb: (Long) => Unit): cb_void_u64_voidp = {
+    XClockGlobalPtrs._CbXClockStepList += new CbXClockStep(cb)
+    XClockGlobalPtrs._CbXClockStepList.last
+}
+implicit def to_cb_int_bool(cb: (Boolean) => Unit): cb_int_bool = {
+    XClockGlobalPtrs._CbXClockEvalList += new CbXClockEval(cb)
+    XClockGlobalPtrs._CbXClockEvalList.last
+}
