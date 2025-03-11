@@ -57,7 +57,7 @@ namespace xspcomm
         }
         Debug("%d signals loaded", i);
     }
-    XData* XSignalCFG::new_empty_xdata(std::string name, s_xsignal_cfg &cfg, bool no_return){
+    XData* XSignalCFG::new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return){
         this->load_cfg();
         if(!this->init_error_msg.empty()){
             Error("%s", this->init_error_msg.c_str());
@@ -71,7 +71,8 @@ namespace xspcomm
         if(no_return){
             return (XData *)0x1; // return a fake xdata address
         }
-        return new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, name);
+        if(xname.empty())xname = name;
+        return new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname);
     }
     std::vector<std::string> XSignalCFG::GetSignalNames(std::string pattern){
         this->load_cfg();
@@ -93,25 +94,26 @@ namespace xspcomm
         }
         return vec;
     }
-    XData* XSignalCFG::NewXData(std::string name){
+    XData* XSignalCFG::NewXData(std::string name, std::string xname){
         s_xsignal_cfg cfg;
-        auto xdata = new_empty_xdata(name, cfg);
+        auto xdata = new_empty_xdata(name, xname, cfg);
         if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset);
         return xdata;
     }
-    XData* XSignalCFG::NewXData(std::string name, int array_index){
+    XData* XSignalCFG::NewXData(std::string name, int array_index, std::string xname){
         s_xsignal_cfg cfg;
-        auto xdata = new_empty_xdata(name, cfg);
+        auto xdata = new_empty_xdata(name, xname, cfg);
         if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * array_index);
         return xdata;
     }
-    std::vector<XData*> XSignalCFG::NewXDataArray(std::string name){
+    std::vector<XData*> XSignalCFG::NewXDataArray(std::string name, std::string xname){
         std::vector<XData*> vec;
+        if(xname.empty())xname = name;
         s_xsignal_cfg cfg;
-        auto xdata = new_empty_xdata(name, cfg, true);
+        auto xdata = new_empty_xdata(name, xname, cfg, true);
         if(xdata){
             for(uint64_t i = 0; i < cfg.array_size; i++){
-                auto x = new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, name);
+                auto x = new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname + "_" + std::to_string(i));
                 x->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * i);
                 vec.push_back(x);
             }
@@ -120,7 +122,7 @@ namespace xspcomm
     }
     s_xsignal_cfg XSignalCFG::At(std::string name){
         s_xsignal_cfg cfg;
-        new_empty_xdata(name, cfg, true);
+        new_empty_xdata(name, "", cfg, true);
         return cfg;
     }
     std::string XSignalCFG::String(){

@@ -28,9 +28,9 @@ class XSignalCFG {
     //                  Start of Stable public user APIs
     /*************************************************************** */
     XSignalCFG(std::string path_or_str_data, uint64_t base_address = 0): cfg_data(path_or_str_data), cfg_base_address(base_address){};
-    XData* NewXData(std::string name);
-    XData* NewXData(std::string name, int array_index);
-    std::vector<XData*> NewXDataArray(std::string name);
+    XData* NewXData(std::string name, std::string xname="");
+    XData* NewXData(std::string name, int array_index, std::string xname="");
+    std::vector<XData*> NewXDataArray(std::string name, std::string xname="");
     std::vector<std::string> GetSignalNames(std::string patten = "");
     s_xsignal_cfg At(std::string name);
     /*************************************************************** */
@@ -39,7 +39,7 @@ class XSignalCFG {
     std::string String();
     s_xsignal_cfg operator[](std::string name){return this->At(name);}
     private:
-    XData* new_empty_xdata(std::string name, s_xsignal_cfg &cfg, bool no_return=false);
+    XData* new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return=false);
     void load_cfg();
 };
 
