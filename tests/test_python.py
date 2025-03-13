@@ -95,6 +95,8 @@ def test_xdata():
 
     clk.Step(3)
     print(clk)
+    clk.RawStep(1)
+    print(clk)
 
     # test clock
     port1 = XPort("x_")

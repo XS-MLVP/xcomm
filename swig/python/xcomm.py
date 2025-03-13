@@ -260,6 +260,7 @@ XClock.StepRis = XClock_StepRis
 XClock.StepFal = XClock_StepFal
 
 XClock__old_Step = XClock.Step
+XClock.RawStep = XClock__old_Step
 def XClock_Step(self, cycle: int):
     for i in range(cycle):
         XClock__old_Step(self, 1)
