@@ -4,26 +4,38 @@
 
 namespace xspcomm {
 
-    uint64_t _comuse_echo_cfg[3] = {0, 0, 0};
-    static void _comuse_echo(uint64_t c, void *p){
-        xspcomm::XData** pins = (xspcomm::XData **)_comuse_echo_cfg;
-        if ((*pins[0]) != 0){
-            fprintf(_comuse_echo_cfg[3] != 0 ? stderr: stdout,"%c", (char)(*pins[1]));
+u_int64_t ComUseStepCb::GetCb(){
+    return (u_int64_t)ComUseStepCb::Cb;
+}
+
+void ComUseStepCb::Cb(uint64_t c, void *self){
+    ComUseStepCb *p = (ComUseStepCb*)self;
+    p->cycle = c;
+    p->Call();
+}
+
+void ComUseStepCb::Call(){
+    fprintf(stderr, "Error, This is a virtual Call!\n");
+}
+
+void ComUseEcho::Call(){
+    //convert; // 0 (char), 1 (int), 2 (float), 3 (double), 4 (string)
+    Assert(this->valid != NULL, "Pin[valid] is Null");
+    Assert(this->data  != NULL, "Pin[data] is Null");
+    auto o = this->stderr_echo ? stderr: stdout;
+    // Echo
+    if((*this->valid) != 0){
+        switch (this->convert)
+        {
+        case 0:fprintf(o, this->fmt.c_str(), (char)(*this->data));break;
+        case 1:fprintf(o, this->fmt.c_str(), (int64_t)(*this->data));break;
+        case 2:fprintf(o, this->fmt.c_str(), (float)(*this->data));break;
+        case 3:fprintf(o, this->fmt.c_str(), (double)(*this->data));break;
+        case 4:fprintf(o, this->fmt.c_str(), this->data->String().c_str());break;
+        default: Assert(0, "convert type error: %d", this->convert);
+            break;
         }
     }
-
-    void   ComUseSetEchoCfg(u_int64_t valid, u_int64_t data, bool stderr_echo){
-        _comuse_echo_cfg[0] = valid;
-        _comuse_echo_cfg[1] = data;
-        _comuse_echo_cfg[2] = stderr_echo;
-    }
-
-    u_int64_t ComUseGetEchoFunc(){
-        if(!_comuse_echo_cfg[0]){
-            fprintf(stderr, "please call comuse_set_echo_cfg first!\n");
-            return 0;
-        }
-        return (u_int64_t)_comuse_echo;
-    }
+}
 
 } // namespace xspcomm

@@ -93,11 +93,11 @@ def test_xdata():
     except AssertionError as _:
         print("test == assertion pass")
 
-    ComUseSetEchoCfg(p1.CSelf(), p2.CSelf())
+    echo = ComUseEcho(p1.CSelf(), p2.CSelf())
     print("echo:", p1.value, p2.value)
     p1.value = 1
     p2.value = b'A'
-    clk.StepRis(ComUseGetEchoFunc())
+    clk.StepRis(echo.GetCb(), echo.CSelf())
     clk.Step(1)
     p1.value = 0
     p2.value = b'B'
