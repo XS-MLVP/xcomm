@@ -5,6 +5,7 @@
 #include "xspcomm/xport.h"
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xsignal_cfg.h"
+#include "xspcomm/xcomuse.h"
 %}
 
 %feature("director") xfunction;
@@ -49,6 +50,7 @@ namespace std {
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 %include "xspcomm/xsignal_cfg.h"
+%include "xspcomm/xcomuse.h"
 
 %constant void (*_TEST_DPI_LR)(xspcomm::xsvLogic *v) = xspcomm::TEST_DPI_LR;
 %constant void (*_TEST_DPI_LW)(xspcomm::xsvLogic v) = xspcomm::TEST_DPI_LW;
