@@ -34,6 +34,16 @@ namespace xspcomm {
         virtual void Call();
     };
 
+    // Get Array Item
+    uint64_t GetFromU64Array(uint64_t address, int index);
+    uint32_t GetFromU32Array(uint64_t address, int index);
+    uint8_t   GetFromU8Array(uint64_t address, int index);
+
+    // Ptr As U64
+    uint64_t U64PtrAsU64(uint64_t *p);
+    uint64_t U32PtrAsU64(uint32_t *p);
+    uint64_t  U8PtrAsU64(uint8_t  *p);
+
 }
 
 #endif
