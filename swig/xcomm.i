@@ -20,6 +20,16 @@
 %apply unsigned short {uint16_t}
 %apply unsigned char {uint8_t}
 
+// pointers
+%apply unsigned long long * { uint64_t * }
+%apply unsigned int * {uint32_t *}
+%apply unsigned short * {uint16_t *}
+%apply unsigned char * {uint8_t *}
+%apply unsigned long long [] { uint64_t [] }
+%apply unsigned int [] {uint32_t [] }
+%apply unsigned short [] {uint16_t [] }
+%apply unsigned char [] {uint8_t [] }
+
 %apply long long {i_int64_t}
 %apply int {i_int32_t}
 %apply short {i_int16_t}
