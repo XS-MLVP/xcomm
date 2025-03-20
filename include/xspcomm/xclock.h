@@ -53,6 +53,7 @@ class XClock
     std::vector<XClockCallBack> list_call_back_ris;
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
+    bool is_disable = false;
     int fast_mode_level = 0;  // 0 default, 1 ignore read_refresh, 2 ignore step(false), 3 ignore port write, use with XData writeImme Model.
 
     virtual void _step(bool d);
@@ -111,6 +112,9 @@ public:
     void ClearFalCallBacks();
     void SetFastMode(int level){this->fast_mode_level = level;};
     int GetFastMode(){return this->fast_mode_level;}
+    bool IsDisable(){return this->is_disable;}
+    void Disable(){this->is_disable = true;}
+    void Enable(){this->is_disable = false;}
     uint64_t CSelf(){return (uint64_t)this;}
     /*************************************************************** */
     //                  End of Stable public user APIs

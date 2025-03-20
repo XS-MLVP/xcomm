@@ -162,11 +162,13 @@ XClock& XClock::Add(xspcomm::XPort &d)
 
 void XClock::Step(int s)
 {
+    if (this->is_disable)return;
     if (this->in_callback == true) {
         Warn("Cannot call XClock.Step in callbacks, Ignore!");
         return;
     }
     for (int i = 0; i < s; i++) {
+        if(this->is_disable)return;
         this->clk += 1;
         if (this->stop_on_rise) {
             this->_step_fal();
