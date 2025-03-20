@@ -2,6 +2,7 @@
 #define __xspcomm_xcomuse_h__
 
 #include "xspcomm/xcomm.h"
+#include <tuple>
 
 namespace xspcomm {
 
@@ -47,6 +48,35 @@ namespace xspcomm {
     uint64_t U64PtrAsU64(unsigned long long *p);
     uint64_t U32PtrAsU64(unsigned int       *p);
     uint64_t  U8PtrAsU64(unsigned char      *p);
+    unsigned long long *U64AsU64Ptr(uint64_t p);
+    unsigned int       *U64AsU32Ptr(uint64_t p);
+    unsigned char      *U64AsU8Ptr(uint64_t p);
+
+    // Condition Checker
+    enum class ComUseCondCmp{
+        EQ = 0,
+        NE = 1,
+        GT = 2,
+        GE = 3,
+        LT = 4,
+        LE = 5,
+    };
+    class ComUseCondCheck: public ComUseStepCb{
+        std::vector<XClock*> clk_list;
+        std::map<std::string, std::tuple<XData*, XData*, ComUseCondCmp, XData*, XData*, xfunction<bool, XData*, XData*>, int>> cond_map_xdata;
+        std::map<std::string, std::tuple<uint64_t, uint64_t, ComUseCondCmp, int, uint64_t, uint64_t, xfunction<bool, uint64_t, uint64_t>, int>> cond_map_uint64;
+    public:
+        ComUseCondCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
+        void BindXClock(XClock *clk);
+        void SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid = nullptr, XData *valid_value = nullptr, xfunction<bool, XData*, XData*> func = nullptr);
+        void SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr = 0, uint64_t valid_value_ptr = 0, xfunction<bool, uint64_t, uint64_t> func = nullptr);
+        void RemoveCondition(std::string unique_name);
+        std::vector<std::string> GetTriggeredConditionKeys();
+        void ClearClock();
+        void ClearCondition();
+        void ClearAll(){this->ClearClock(); this->ClearCondition();};
+        virtual void Call();
+    };
 
 }
 

@@ -350,6 +350,22 @@ int test_xdata()
     clk1.Step(10);
     test_assert(clk1.clk == clk_old+10, "clk1 enable fail: %ld", clk1.clk);
 
+    // ComUseCondCheck
+    ComUseCondCheck check(&clk1);
+    clk1.StepRis(check.GetCb(), check.CSelf());
+    check.SetCondition("key_EQ", &x64, &x64, ComUseCondCmp::EQ);
+    check.SetCondition("key_GT", &x64, &d1, ComUseCondCmp::GT);
+    int px1[1] = {2};
+    int px2[1] = {2};
+    check.SetCondition("key_EQ_1", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::EQ, 4);
+    check.SetCondition("key_GT_2", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::GT, 4);
+
+    clk_old = clk1.clk;
+    clk1.Step(10);
+    test_assert(check.GetTriggeredConditionKeys().size() == 3, "check fail: %ld", check.GetTriggeredConditionKeys().size());
+    test_assert(clk1.clk == clk_old + 1, "clk1 disable fail: %ld", clk1.clk);
+
+    Info("clk: %ld", clk1.clk);
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
