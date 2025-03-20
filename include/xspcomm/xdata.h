@@ -282,6 +282,11 @@ public:
     bool inline HasOnChangeCbs(){return this->has_on_change_cbs;}
     void ReadFresh(WriteMode m);
     PinBind &operator[](u_int32_t index);
+    bool Comp(XData &data, int opcode, int eq=0); // opcode 0: equal, 1: less, 2: greater
+    bool operator>(XData &data){return this->Comp(data, 2);}
+    bool operator<(XData &data){return this->Comp(data, 1);}
+    bool operator>=(XData &data){return this->Comp(data, 2, 1);}
+    bool operator<=(XData &data){return this->Comp(data, 1, 1);}
     bool operator==(XData &data);
     bool operator==(u_int64_t data);
     bool operator==(std::string &str);
