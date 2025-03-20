@@ -1,5 +1,6 @@
 #include "xspcomm/xcomm.h"
 #include "xspcomm/xinstance.h"
+#include "xspcomm/xcomuse.h"
 
 namespace xspcomm {
 
@@ -252,6 +253,11 @@ int test_xdata()
     test_assert(d1 == d2, "connect fail, d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
     d1 = 2;
     test_assert(d1 == d2, "connect fail, d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
+    d2 = 3;
+    test_assert(d1 < d2, "d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
+    test_assert(d1 <= d2, "d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
+    test_assert(!(d1 > d2), "d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
+    test_assert(!(d1 >= d2), "d1=%s, d2=%s", d1.String().c_str(), d2.String().c_str());
 
     p3 = p1;
     test_assert(p1.String() == p3.String(), "copy fail, p1=%s, p3=%s", p1.String().c_str(), p3.String().c_str());
@@ -335,6 +341,14 @@ int test_xdata()
     auto rst = cfg.NewXData("Cache_top.reset");
     test_assert(clk->U() == *(uint8_t*)((uint64_t)cfg_base+8), "xsignal cfg fail: %d  <- %d", clk->AsInt32(), *(uint8_t*)((uint64_t)cfg_base+8));
     test_assert(rst->U() == *(uint8_t*)((uint64_t)cfg_base+46), "xsignal cfg fail: %d  <- %d", rst->AsInt32(), *(uint8_t*)((uint64_t)cfg_base+46));
+
+    auto clk_old = clk1.clk;
+    clk1.Disable();
+    clk1.Step(10);
+    test_assert(clk1.clk == clk_old, "clk1 disable fail: %ld", clk1.clk);
+    clk1.Enable();
+    clk1.Step(10);
+    test_assert(clk1.clk == clk_old+10, "clk1 enable fail: %ld", clk1.clk);
 
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;

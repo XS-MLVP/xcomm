@@ -866,6 +866,31 @@ XData &XData::operator=(XData &data)
     this->_update_shadow();
     return *this;
 }
+bool XData::Comp(XData &data, int opcode, int eq){
+    // opcode 0: equal, 1: less, 2: greater
+    if(opcode == 0)return *this == data;
+    if(*this == data){
+        if(eq){
+            return true;
+        }
+        return false;
+    }
+    if(this->mWidth < 64 && data.mWidth < 64){
+        if(opcode == 1)return this->udata < data.udata;
+        return this->udata > data.udata;
+    }
+    Assert(this->mWidth == data.mWidth, "Need left.mWidth(%d) == right.mWidth(%d)", this->mWidth, data.mWidth);
+    for(int i = 0; i < this->vecSize; i++){
+        if(opcode == 1){
+            if(this->pVecData[i].aval < data.pVecData[i].aval)return true;
+            if(this->pVecData[i].aval > data.pVecData[i].aval)return false;
+        }else{
+            if(this->pVecData[i].aval > data.pVecData[i].aval)return true;
+            if(this->pVecData[i].aval < data.pVecData[i].aval)return false;
+        }
+    }
+    return false;
+}
 bool XData::operator==(XData &data)
 {
     // update value
