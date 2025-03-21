@@ -110,5 +110,5 @@ namespace std {
 %x_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
 // ComUseCondCheck
-%x_callback(bool, XData*, XData*);
-%x_callback(bool, uint64_t, uint64_t);
+%x_callback(cb_bool_XData_XData, bool, xspcomm::XData*, xspcomm::XData*);
+%x_callback(cb_bool_uint64_uint64, bool, uint64_t, uint64_t);
