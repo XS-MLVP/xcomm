@@ -273,6 +273,56 @@ void XClock::ClearFalCallBacks(){this->list_call_back_fal.clear();}
 int XClock::StepRisQueueSize(){ return (int)this->list_call_back_ris.size(); }
 int XClock::StepFalQueueSize(){ return (int)this->list_call_back_fal.size(); }
 
+int XClock::RemoveStepRisCbByDesc(std::string desc){return this->_remove_step_cb_by(1, 0, desc, nullptr);}
+int XClock::RemoveStepRisCbByFunc(xfunction<void, u_int64_t, void *> func){return this->_remove_step_cb_by(0, 0, "", func);}
+int XClock::RemoveStepRisCb(xfunction<void, u_int64_t, void *> func, std::string desc){return this->_remove_step_cb_by(2, 0, desc, func);}
+
+int XClock::RemoveStepFalCbByDesc(std::string desc){return this->_remove_step_cb_by(1, 1, desc, nullptr);}
+int XClock::RemoveStepFalCbByFunc(xfunction<void, u_int64_t, void *> func){return this->_remove_step_cb_by(0, 1, "", func);}
+int XClock::RemoveStepFalCb(xfunction<void, u_int64_t, void *> func, std::string desc){return this->_remove_step_cb_by(2, 1, desc, func);}
+
+std::vector<std::string> XClock::ListSteRisCbDesc(){
+    std::vector<std::string> ret;
+    for(auto &x: this->list_call_back_ris){ret.push_back(x.desc);}
+    return ret;
+}
+std::vector<std::string> XClock::ListSteFalCbDesc(){
+    std::vector<std::string> ret;
+    for(auto &x: this->list_call_back_fal){ret.push_back(x.desc);}
+    return ret;
+}
+
+int XClock::_remove_step_cb_by(int type, int group, std::string desc, xfunction<void, u_int64_t, void *> func){
+    // group:0 -> ris
+    // group:1 -> fal
+    int remove_count = 0;
+    std::vector<XClockCallBack> *vec = &this->list_call_back_ris;
+    if(group != 0)vec = &this->list_call_back_fal;
+    remove_count = (int)vec->size();
+    vec->erase(
+        std::remove_if(vec->begin(), vec->end(),
+            [&func, &desc, &type](const auto& x) {
+                switch (type)
+                {
+                case 0:
+                    return x.func == func;
+                    break;
+                case 1:
+                    return x.desc == desc;
+                    break;
+                case 2:
+                    return x.func==func && x.desc == desc;
+                    break;
+                default:
+                    break;
+                }
+                return false;
+        }),
+        vec->end()
+    );
+    return remove_count - (int)vec->size();
+}
+
 void XClock::_fal_pins(){
     for (auto &v : this->clock_pins) { *v = 0; }
 }
