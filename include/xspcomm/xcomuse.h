@@ -71,6 +71,7 @@ namespace xspcomm {
         void SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid = nullptr, XData *valid_value = nullptr, xfunction<bool, XData*, XData*> func = nullptr);
         void SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr = 0, uint64_t valid_value_ptr = 0, xfunction<bool, uint64_t, uint64_t> func = nullptr);
         void RemoveCondition(std::string unique_name);
+        std::map<std::string, bool> ListCondition();
         std::vector<std::string> GetTriggeredConditionKeys();
         void ClearClock();
         void ClearCondition();

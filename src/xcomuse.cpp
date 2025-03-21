@@ -96,6 +96,26 @@ std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
     }
     return ret;
 }
+std::map<std::string, bool> ComUseCondCheck::ListCondition(){
+    std::map<std::string, bool> ret;
+    for(auto &e : this->cond_map_xdata){
+        auto [_1, _2, _3, _4, _5, _6, valid] = e.second;
+        if(valid){
+            ret[e.first] = true;
+        }else{
+            ret[e.first] = false;
+        }
+    }
+    for(auto &e : this->cond_map_uint64){
+        auto [_1, _2, _3, _4, _5, _6, _7, valid] = e.second;
+        if(valid){
+            ret[e.first] = true;
+        }else{
+            ret[e.first] = false;
+        }
+    }
+    return ret;
+}
 void ComUseCondCheck::ClearClock(){this->clk_list.clear();}
 void ComUseCondCheck::ClearCondition(){this->cond_map_xdata.clear(); this->cond_map_uint64.clear();};
 void ComUseCondCheck::Call(){
