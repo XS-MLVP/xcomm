@@ -102,6 +102,14 @@ public:
                  std::string desc = "");
     void StepRis(u_int64_t func, u_int64_t args = 0, std::string desc = "");
     void StepFal(u_int64_t func, u_int64_t args = 0, std::string desc = "");
+    int RemoveStepRisCbByDesc(std::string desc);
+    int RemoveStepRisCbByFunc(xfunction<void, u_int64_t, void *> func);
+    int RemoveStepRisCb(xfunction<void, u_int64_t, void *> func, std::string desc);
+    int RemoveStepFalCbByDesc(std::string desc);
+    int RemoveStepFalCbByFunc(xfunction<void, u_int64_t, void *> func);
+    int RemoveStepFalCb(xfunction<void, u_int64_t, void *> func, std::string desc);
+    std::vector<std::string> ListSteRisCbDesc();
+    std::vector<std::string> ListSteFalCbDesc();
     int StepRisQueueSize();
     int StepFalQueueSize();
     void FreqDivWith(int div, XClock *clk, int shift=0);
@@ -125,6 +133,7 @@ public:
     void _ris_pins();
     void _ris_ports();
     void _ris_refresh();
+    int _remove_step_cb_by(int type, int group, std::string desc, xfunction<void, u_int64_t, void *> func=nullptr);
     std::vector<XClock *> _get_div_clk_ris(u_int64_t cycle, bool rise);
     std::vector<XClock *> _get_div_clk_fal(u_int64_t cycle, bool rise);
 #if ENABLE_XCOROUTINE

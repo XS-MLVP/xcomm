@@ -269,17 +269,17 @@ int test_xdata()
     XClock clk2([](bool x){ return 0; });
     clk1.StepFal([](u_int64_t clk, void *args){
         //printf("------------------ %ld -F\n", 2*clk - 1);
-    }, nullptr);
+    }, nullptr, "Fal-lambda");
     clk1.StepRis([](u_int64_t clk, void *args){
         //printf("------------------ %ld -R\n", 2*clk);
-    }, nullptr);
+    }, nullptr, "Ris-lambda");
 
     clk2.StepRis([&clk1](u_int64_t clk, void *args){
         //printf("clk2-R: %ld\n",clk);
-    }, nullptr);
+    }, nullptr, "Ris-lambda");
     clk2.StepFal([&clk1](u_int64_t clk, void *args){
         //printf("clk2-F: %ld\n",clk);
-    }, nullptr);
+    }, nullptr, "Fal-lambda");
     clk1.FreqDivWith(5, clk2);
     clk1.Step(20);
     test_assert(clk1.clk == 20, "clk1: %ld", clk1.clk);
@@ -352,7 +352,7 @@ int test_xdata()
 
     // ComUseCondCheck
     ComUseCondCheck check(&clk1);
-    clk1.StepRis(check.GetCb(), check.CSelf());
+    clk1.StepRis(check.GetCb(), check.CSelf(),"ComUseCondCheck");
     check.SetCondition("key_EQ", &x64, &x64, ComUseCondCmp::EQ);
     check.SetCondition("key_GT", &x64, &d1, ComUseCondCmp::GT);
     int px1[1] = {2};
@@ -365,7 +365,7 @@ int test_xdata()
     test_assert(check.GetTriggeredConditionKeys().size() == 3, "check fail: %ld", check.GetTriggeredConditionKeys().size());
     test_assert(clk1.clk == clk_old + 1, "clk1 disable fail: %ld", clk1.clk);
 
-    Info("clk: %ld", clk1.clk);
+    test_assert(1 == clk1.RemoveStepFalCbByDesc("Fal-lambda"), "check remove step cb fail");
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
