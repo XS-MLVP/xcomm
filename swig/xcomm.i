@@ -53,6 +53,7 @@
 namespace std {
    %template(StringVector) vector<string>;
    %template(XDataVector) vector<xspcomm::XData*>;
+   %template(DictStrBool) map<string, bool>;
 }
 
 %include "xspcomm/xclock.h"
