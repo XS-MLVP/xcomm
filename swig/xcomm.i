@@ -108,3 +108,7 @@ namespace std {
 // XClock
 %x_callback(cb_int_bool, int, bool);
 %x_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
+
+// ComUseCondCheck
+%x_callback(bool, XData*, XData*);
+%x_callback(bool, uint64_t, uint64_t);
