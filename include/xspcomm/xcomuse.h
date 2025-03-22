@@ -79,6 +79,47 @@ namespace xspcomm {
         virtual void Call();
     };
 
+    class ComUseDataArray{
+    int byte_size;
+    int *buffer = nullptr;
+    public:
+        ComUseDataArray(int byte_size):byte_size(byte_size){
+            Assert(byte_size > 0, "Need size > 0");
+            int n = byte_size/4 + (byte_size % 4 == 0 ? 0:1);
+            this->buffer = new int[n];
+            memset(this->buffer, 0, this->byte_size);
+        }
+        ~ComUseDataArray(){delete[] this->buffer;}
+        bool operator==(ComUseDataArray & t){
+            if(this->byte_size != t.byte_size)return false;
+            return memcmp(this->buffer, t.buffer, this->byte_size) == 0;
+        }
+        void SyncFrom(uint64_t addr, int size){
+            memcpy(this->buffer, (void*)addr, size);
+        }
+        void SyncTo(uint64_t addr, int size){
+            memcpy((void*)addr, this->buffer, size);
+        }
+        void SetZero(){memset(this->buffer, 0, this->byte_size);}
+        uint64_t BaseAddr(){return (u_int64_t)this->buffer;}
+        int Size(){return this->byte_size;}
+        std::vector<unsigned char> AsBytes(){
+            std::vector<unsigned char> ret;
+            unsigned char * base = (unsigned char*)this->buffer;
+            for(int i=0; i<this->byte_size; i++){
+                ret.push_back(base[i]);
+            }
+            return ret;
+        }
+        int FromBytes(std::vector<unsigned char> &input){
+            auto size = std::min(this->byte_size, (int)input.size());
+            unsigned char * base = (unsigned char*)this->buffer;
+            for(int i=0; i < size; i++){
+                base[i] = input[i];
+            }
+            return size;
+        }
+    };
 }
 
 #endif
