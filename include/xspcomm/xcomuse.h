@@ -80,6 +80,7 @@ namespace xspcomm {
     };
 
     class ComUseDataArray{
+    bool is_ref = false;
     int byte_size;
     int *buffer = nullptr;
     public:
@@ -89,10 +90,19 @@ namespace xspcomm {
             this->buffer = new int[n];
             memset(this->buffer, 0, this->byte_size);
         }
-        ~ComUseDataArray(){delete[] this->buffer;}
+        ComUseDataArray(uint64_t base, int byte_size):byte_size(byte_size){
+            this->buffer = (int*)base;
+            this->is_ref = true;
+        }
+        ~ComUseDataArray(){if(!this->is_ref)delete[] this->buffer;}
         bool operator==(ComUseDataArray & t){
             if(this->byte_size != t.byte_size)return false;
             return memcmp(this->buffer, t.buffer, this->byte_size) == 0;
+        }
+        ComUseDataArray * Copy(){
+            auto ret = new ComUseDataArray(this->byte_size);
+            ret->SyncFrom(ret->BaseAddr(), this->byte_size);
+            return ret;
         }
         void SyncFrom(uint64_t addr, int size){
             memcpy(this->buffer, (void*)addr, size);
