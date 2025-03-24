@@ -26,36 +26,64 @@ namespace xspcomm
         }
         auto vars = root["variables"];
         if(!vars.is_sequence()){
-            this->init_error_msg = "variables is not a list";
+            if(vars.is_mapping()){
+                int count = this->_rec_set_cfg_data(vars, "");
+                Debug("%d signals loaded (map mode)", count);
+                return;
+            }
+            this->init_error_msg = "variables is not a list or map";
             return;
         }
         int i = 0;
         for(auto var : vars){
-            if(!var.is_mapping()){
-                this->init_error_msg = "variables item is not a map";
-                return;
-            }
-            for(auto key: {"name", "offset", "mem_bytes", "rtl_width"}){
-                if(!var.contains(key)){
-                    this->init_error_msg = "variables item not contains key: " + std::string(key);
-                    return;
-                }
-            }
-            if(!var.contains("name")){
-                this->init_error_msg = "variables item not contains name";
-                return;
-            }
-            s_xsignal_cfg cfg;
-            cfg.is_empty = false;
-            cfg.offset = var["offset"].get_value<uint64_t>();
-            cfg.mem_bytes = var["mem_bytes"].get_value<uint32_t>();
-            cfg.rtl_width = var["rtl_width"].get_value<uint32_t>();
-            if(var.contains("array_size"))cfg.array_size = var["array_size"].get_value<uint64_t>();
-            if(var.contains("type"))cfg.type = var["type"].get_value<std::string>();
-            this->cfg_map[var["name"].get_value<std::string>()] = cfg;
+            if(!this->_set_cfg_data(var))return;
             i++;
         }
-        Debug("%d signals loaded", i);
+        Debug("%d signals loaded (list mode)", i);
+    }
+    bool XSignalCFG::_set_cfg_data(fkyaml::node &var, std::string prefix){
+        if(!var.is_mapping()){
+            this->init_error_msg = "variables item is not a map";
+            return false;
+        }
+        for(auto key: {"offset", "mem_bytes", "rtl_width"}){
+            if(!var.contains(key)){
+                this->init_error_msg = "variables item not contains key: " + std::string(key);
+                return false;
+            }
+        }
+        std::string cfg_key = prefix;
+        if(var.contains("name")){
+            cfg_key = prefix + (prefix.empty()? "":".") + var["name"].get_value<std::string>();
+        }
+        s_xsignal_cfg cfg;
+        cfg.is_empty = false;
+        cfg.offset = var["offset"].get_value<uint64_t>();
+        cfg.mem_bytes = var["mem_bytes"].get_value<uint32_t>();
+        cfg.rtl_width = var["rtl_width"].get_value<uint32_t>();
+        if(var.contains("array_size"))cfg.array_size = var["array_size"].get_value<uint64_t>();
+        if(var.contains("type"))cfg.type = var["type"].get_value<std::string>();
+        Assert(cfg_key.empty() == false, "cfg_key is empty, check prefix and name");
+        this->cfg_map[cfg_key] = cfg;
+        return true;
+    }
+    int XSignalCFG::_rec_set_cfg_data(fkyaml::node &var, std::string prefix){
+        if(!var.is_mapping())return 0;
+        int count = 0;
+        for (auto& pair : var.map_items()) {
+            // leaf node
+            if(var.contains("offset") && var.contains("mem_bytes") && var.contains("rtl_width")){
+                if(var["offset"].is_integer() && var["mem_bytes"].is_integer() && var["rtl_width"].is_integer()){
+                    if(this->_set_cfg_data(var, prefix))return 1;
+                    Error("set cfg data failed: %s", this->init_error_msg.c_str());
+                    return 0;
+                }
+            }
+            if(pair.value().is_mapping()){
+                count += this->_rec_set_cfg_data(pair.value(), prefix + (prefix.empty() ? "":".") + pair.key().get_value<std::string>());
+            }
+        }
+        return count;
     }
     XData* XSignalCFG::new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return){
         this->load_cfg();
