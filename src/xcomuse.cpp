@@ -75,8 +75,8 @@ void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* v
     this->cond_map_xdata[unique_name] = t;
     this->cond_map_uint64.erase(unique_name);
 };
-void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, xfunction<bool, uint64_t, uint64_t> func){
-    std::tuple<uint64_t, uint64_t, ComUseCondCmp, int, uint64_t, uint64_t, xfunction<bool, uint64_t, uint64_t>, int> t(pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, func, 0);
+void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, int valid_bytes, xfunction<bool, uint64_t, uint64_t> func){
+    std::tuple<uint64_t, uint64_t, ComUseCondCmp, int, uint64_t, uint64_t, int, xfunction<bool, uint64_t, uint64_t>, int> t(pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, valid_bytes, func, 0);
     this->cond_map_uint64[unique_name] = t;
     this->cond_map_xdata.erase(unique_name);
 };
@@ -91,7 +91,7 @@ std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
         if(valid)ret.push_back(e.first);
     }
     for(auto &e : this->cond_map_uint64){
-        auto [_1, _2, _3, _4, _5, _6, _7, valid] = e.second;
+        auto [_1, _2, _3, _4, _5, _6, _7, _8, valid] = e.second;
         if(valid)ret.push_back(e.first);
     }
     return ret;
@@ -107,7 +107,7 @@ std::map<std::string, bool> ComUseCondCheck::ListCondition(){
         }
     }
     for(auto &e : this->cond_map_uint64){
-        auto [_1, _2, _3, _4, _5, _6, _7, valid] = e.second;
+        auto [_1, _2, _3, _4, _5, _6, _7, _8, valid] = e.second;
         if(valid){
             ret[e.first] = true;
         }else{
@@ -183,49 +183,49 @@ void ComUseCondCheck::Call(){
     }
     // check uint64_t condition
     for(auto &e : this->cond_map_uint64){
-        auto [pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, func, _] = e.second;
+        auto [pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, valid_bytes, func, _] = e.second;
         // not triggered
-        std::get<7>(e.second) = 0;
+        std::get<8>(e.second) = 0;
         if (valid_ptr != 0){
             Assert(valid_value_ptr != 0, "valid_value is null");
-            if(memcmp((void*)valid_ptr, (void*)valid_value_ptr, bytes) == 0)continue;
+            if(memcmp((void*)valid_ptr, (void*)valid_value_ptr, valid_bytes) == 0)continue;
         }
         // check cmp
         if(func){
             if(func(pin_ptr, val_ptr)){
-                std::get<7>(e.second) = 1;
+                std::get<8>(e.second) = 1;
             }
         }else{
             switch (cmp)
             {
             case ComUseCondCmp::EQ: // EQ
                 if(memcmp((void*)pin_ptr, (void*)val_ptr, bytes) == 0){
-                    std::get<7>(e.second) = 1;
+                    std::get<8>(e.second) = 1;
                 }
                 break;
             case ComUseCondCmp::NE: // NE
                 if(memcmp((void*)pin_ptr, (void*)val_ptr, bytes) != 0){
-                    std::get<7>(e.second) = 1;
+                    std::get<8>(e.second) = 1;
                 }
                 break;
             case ComUseCondCmp::GT: // GT
                 if(memcmp((void*)pin_ptr, (void*)val_ptr, bytes) > 0){
-                    std::get<7>(e.second) = 1;
+                    std::get<8>(e.second) = 1;
                 }
                 break;
             case ComUseCondCmp::GE: // GE
                 if(memcmp((void*)pin_ptr, (void*)val_ptr, bytes) >= 0){
-                    std::get<7>(e.second) = 1;
+                    std::get<8>(e.second) = 1;
                 }
                 break;
             case ComUseCondCmp::LT: // LT
                 if(memcmp((void*)pin_ptr, (void*)val_ptr, bytes) < 0){
-                    std::get<7>(e.second) = 1;
+                    std::get<8>(e.second) = 1;
                 }
                 break;
             case ComUseCondCmp::LE: // LE
                 if(memcmp((void*)pin_ptr, (void*)val_ptr, bytes) <= 0){
-                    std::get<7>(e.second) = 1;
+                    std::get<8>(e.second) = 1;
                 }
                 break;
             default:
@@ -233,13 +233,8 @@ void ComUseCondCheck::Call(){
                 break;
             }
         }
-        if(std::get<7>(e.second)){
-            for(auto &clk : this->clk_list){
-                clk->Disable();
-            }
-        }
         if(!is_triggered){
-            if(std::get<6>(e.second)){
+            if(std::get<8>(e.second)){
                 for(auto &clk : this->clk_list){
                     clk->Disable();
                 }
