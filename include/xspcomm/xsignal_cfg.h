@@ -41,6 +41,8 @@ class XSignalCFG {
     private:
     XData* new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return=false);
     void load_cfg();
+    bool _set_cfg_data(fkyaml::node &var, std::string prefix="");
+    int _rec_set_cfg_data(fkyaml::node &var, std::string prefix);
 };
 
 } // namespace xspcomm

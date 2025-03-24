@@ -124,7 +124,8 @@ def test_xdata():
 
     # test xsignal_cfg.h
     cfg = XSignalCFG("tests/test_signal_cfg.yaml")
-    print("XSignalCFG:\n", cfg.String())
+    cfg2 = XSignalCFG("tests/test_signal_cfg_map.yaml")
+    assert cfg.String() == cfg2.String(), "%s != %s" % (cfg.String().strip(), cfg2.String().strip())
 
 
 async def test_async():
