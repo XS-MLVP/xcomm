@@ -461,15 +461,14 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
     // read data from ref
     uint32_t start_p = this->sub_offset / 32;
     uint32_t start_f = this->sub_offset % 32;
-    uint32_t end_p = (this->sub_offset + this->mWidth) / 32;
-    uint32_t end_f = (this->sub_offset + this->mWidth) % 32;
-
+    uint32_t end_p = (this->sub_offset + this->mWidth - 1) / 32;
+    uint32_t end_f = (this->sub_offset + this->mWidth - 1) % 32 + 1;
     if (this->vecSize == 0 && this->mWidth == 0) {
-        if(is_read){
+        if (is_read) {
             auto aval = (this->sub_pVecRef[start_p].aval >> start_f) & 1;
             auto bval = (this->sub_pVecRef[start_p].bval >> start_f) & 1;
             this->mLogicData = bval * 2 + aval;
-        }else{
+        } else {
             uint32_t mask = 1 << start_f;
             uint32_t maskb = ~mask;
             this->sub_pVecRef[start_p].aval = (maskb & this->sub_pVecRef[start_p].aval) | ((this->mLogicData & 1) << start_f);
@@ -477,56 +476,74 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
         }
         return;
     }
-
     xsvLogicVecVal * p = this->sub_pVecRef;
     // copy/write data
     // from/dist:      |_|_|_|_|_|_|
     //                 /     /
     // to/from:        |_|_|_|
     // [shadow data][mask][aval][bval]
-    int secs = end_p - start_p + (end_f > 0 ? 1 : 0);
+    int secs = end_p - start_p + 1;
     int * temp_mask = (int *)this->__pVecData + this->vecSize * 2;
     int * temp_aval = temp_mask + secs;
     int * temp_bval = temp_aval + secs;
-
     Assert(secs > 0, "Error! SubDataRef: secs <= 0");
     Assert(secs <= (this->vecSize + 1), "Error! SubDataRef: secs(%d) > vecSize(%d) + 1", secs, this->vecSize);
-
-    if(is_read){
-        for(int i = 0; i < secs; i++){
+    if(is_read) {
+        // Logic for reading data
+        for (int i = 0; i < secs; i++) {
             temp_aval[i] = p[start_p + i].aval;
             temp_bval[i] = p[start_p + i].bval;
         }
-        if(start_f > 0){
+        if (start_f > 0) {
             big_shift(temp_aval, secs, start_f);
             big_shift(temp_bval, secs, start_f);
         }
-        for(int i = 0; i < this->vecSize; i++){
+        for (int i = 0; i < this->vecSize; i++){
             this->pVecData[i].aval = temp_aval[i];
             this->pVecData[i].bval = temp_bval[i];
         }
-    }else{
-        for(int i = 0; i < this->vecSize; i++){
+    } else {
+        // Logic for writing data
+        for (int i = 0; i < this->vecSize; i++) {
             temp_aval[i] = this->pVecData[i].aval;
             temp_bval[i] = this->pVecData[i].bval;
         }
-        if(start_f > 0){
+        if (start_f > 0) {
             big_shift(temp_aval, secs, -start_f);
             big_shift(temp_bval, secs, -start_f);
         }
-        big_mask(temp_mask, secs, start_f, 32*(end_p - start_p) + end_f);
-        for(int i = 0; i < secs; i++){
-            if(i==0 || i == (secs - 1)){
-                p[start_p + i].aval = (~temp_mask[i] & p[start_p + i].aval) | (temp_aval[i] & temp_mask[i]);
-                p[start_p + i].bval = (~temp_mask[i] & p[start_p + i].bval) | (temp_bval[i] & temp_mask[i]);
-            }else{
-                p[start_p + i].aval = temp_aval[i];
-                p[start_p + i].bval = temp_bval[i];
+        // Calculate bit mask
+        // Use a more precise method to calculate the mask
+        memset(temp_mask, 0, secs * sizeof(int));
+        // Create mask for the first 32-bit block
+        uint32_t first_mask_bits = 32 - start_f;
+        if (this->mWidth < first_mask_bits) {
+            first_mask_bits = this->mWidth;
+        }
+        uint32_t first_mask = (1 << first_mask_bits) - 1;
+        temp_mask[0] = first_mask << start_f;
+        // Create mask for the middle blocks (if any)
+        for (int i = 1; i < secs - 1; i++) {
+            temp_mask[i] = 0xFFFFFFFF;  // Set all bits to 1
+        }
+        // Create mask for the last block (if different from the first block)
+        if (secs > 1) {
+            uint32_t last_bits = (this->sub_offset + this->mWidth) % 32;
+            if (last_bits == 0) {
+                // If exactly on the boundary, set all bits
+                temp_mask[secs - 1] = 0xFFFFFFFF;
+            } else {
+                // Otherwise, set only the required bits
+                temp_mask[secs - 1] = (1 << last_bits) - 1;
             }
         }
+        // Apply the mask and update the data
+        for (int i = 0; i < secs; i++) {
+            p[start_p + i].aval = (p[start_p + i].aval & ~temp_mask[i]) | (temp_aval[i] & temp_mask[i]);
+            p[start_p + i].bval = (p[start_p + i].bval & ~temp_mask[i]) | (temp_bval[i] & temp_mask[i]);
+        }
     }
-
-    // update local
+    // Update local data
     this->_sv_to_local();
     this->_update_shadow();
 }

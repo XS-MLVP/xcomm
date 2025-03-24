@@ -22,6 +22,15 @@ def test_xdata():
     except AssertionError as _:
         print("test == assertion pass")
 
+    # test SubDataRef
+    body = XData(200, XData.InOut)
+    shadow_clones = [body.SubDataRef(i * 6, 6) for i in range(33)]
+    for i in range(len(shadow_clones)):
+        s = shadow_clones[i]
+        s.value = 0b101011
+        assert body.value == (0b101011 << (i * 6))
+        s.value = 0
+
     data = XData(64, XData.InOut)
     data.value = -1
     data[0] = 0
