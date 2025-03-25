@@ -230,7 +230,10 @@ def XClock_StepRis(self, call_back, args=(), kwargs={}):
         assert isinstance(args, int), "args must be int"
     else:
         args = 0
-    return XClock_old_StepRis(self, call_back, args, "C_RIS_%x_%x" % (call_back, args))
+    desc = "C_RIS_%x_%x" % (call_back, args)
+    if isinstance(kwargs, str) and kwargs:
+        desc = kwargs
+    return XClock_old_StepRis(self, call_back, args, desc)
 
 def XClock_StepFal(self, call_back, args=(), kwargs={}):
     if callable(call_back):
@@ -242,7 +245,10 @@ def XClock_StepFal(self, call_back, args=(), kwargs={}):
         assert isinstance(args, int), "args must be int"
     else:
         args = 0
-    return XClock_old_StepFal(self, call_back, args, "C_FAL_%x_%x" % (call_back, args))
+    desc = "C_FAL_%x_%x" % (call_back, args)
+    if isinstance(kwargs, str) and kwargs:
+        desc = kwargs
+    return XClock_old_StepFal(self, call_back, args, desc)
 
 def XClock_Add_Exception(self, exception):
     if getattr(self, "exceptions", None) is None:
