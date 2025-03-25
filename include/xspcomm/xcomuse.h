@@ -44,6 +44,15 @@ namespace xspcomm {
     uint32_t GetFromU32Array(unsigned int       *address, int index);
     uint8_t   GetFromU8Array(unsigned char      *address, int index);
 
+    // Get Array Item
+    void SetU64Array(uint64_t address, int index, uint64_t data);
+    void SetU32Array(uint64_t address, int index, uint32_t data);
+    void  SetU8Array(uint64_t address, int index, uint8_t  data);
+
+    void SetU64Array(unsigned long long *address, int index, uint64_t data);
+    void SetU32Array(unsigned int       *address, int index, uint32_t data);
+    void  SetU8Array(unsigned char      *address, int index, uint8_t  data);
+
     // Ptr As U64
     uint64_t U64PtrAsU64(unsigned long long *p);
     uint64_t U32PtrAsU64(unsigned int       *p);
@@ -80,9 +89,9 @@ namespace xspcomm {
     };
 
     class ComUseDataArray{
-    bool is_ref = false;
-    int byte_size;
-    int *buffer = nullptr;
+        bool is_ref = false;
+        int byte_size;
+        int *buffer = nullptr;
     public:
         ComUseDataArray(int byte_size):byte_size(byte_size){
             Assert(byte_size > 0, "Need size > 0");
