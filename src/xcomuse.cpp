@@ -10,8 +10,25 @@ u_int64_t ComUseStepCb::GetCb(){
 
 void ComUseStepCb::Cb(uint64_t c, void *self){
     ComUseStepCb *p = (ComUseStepCb*)self;
+    if(!p->cb_enable)return;
     p->cycle = c;
     p->Call();
+    p->cb_counts += 1;
+    if(p->cb_maxcts > 0 && p->cb_counts >= p->cb_maxcts)p->Disable();
+}
+
+void ComUseStepCb::Disable(){
+    this->cb_enable = false;
+}
+void ComUseStepCb::Enable(){
+    this->cb_enable = true;
+}
+void ComUseStepCb::SetMaxCbs(int c){
+    this->cb_maxcts = c;
+}
+void ComUseStepCb::Reset(){
+    this->cb_enable = true;
+    this->cb_counts = 0;
 }
 
 void ComUseStepCb::Call(){

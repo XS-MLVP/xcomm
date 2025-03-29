@@ -7,9 +7,16 @@
 namespace xspcomm {
 
     class ComUseStepCb{
+        int cb_maxcts = -1;
+        int cb_counts = 0;
+        bool cb_enable = true;
     public:
         uint64_t cycle;
         ComUseStepCb(){}
+        void Disable();
+        void Enable();
+        void SetMaxCbs(int c);
+        void Reset();
         static u_int64_t GetCb();
         u_int64_t CSelf(){return (u_int64_t)this;};
         static void Cb(uint64_t c, void *self);
