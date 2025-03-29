@@ -95,14 +95,14 @@ unsigned char      *U64AsU8Ptr(uint64_t p){return (unsigned char *)p;}
 void ComUseCondCheck::BindXClock(XClock *clk){
     this->clk_list.push_back(clk);
 }
-void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid, XData *valid_value, xfunction<bool, XData*, XData*> func){
+void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid, XData *valid_value, xfunction<bool, XData*, XData*, uint64_t> func, uint64_t arg){
     Assert(func == nullptr, "func type error: %d", func.func == nullptr);
-    std::tuple<XData*, XData*, ComUseCondCmp, XData*, XData*, xfunction<bool, XData*, XData*>, int> t(pin, val, cmp, valid, valid_value, func, 0);
+    std::tuple<XData*, XData*, ComUseCondCmp, XData*, XData*, xfunction<bool, XData*, XData*, uint64_t>, int, uint64_t> t(pin, val, cmp, valid, valid_value, func, 0, arg);
     this->cond_map_xdata[unique_name] = t;
     this->cond_map_uint64.erase(unique_name);
 };
-void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, int valid_bytes, xfunction<bool, uint64_t, uint64_t> func){
-    std::tuple<uint64_t, uint64_t, ComUseCondCmp, int, uint64_t, uint64_t, int, xfunction<bool, uint64_t, uint64_t>, int> t(pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, valid_bytes, func, 0);
+void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, int valid_bytes, xfunction<bool, uint64_t, uint64_t, uint64_t> func, uint64_t arg){
+    std::tuple<uint64_t, uint64_t, ComUseCondCmp, int, uint64_t, uint64_t, int, xfunction<bool, uint64_t, uint64_t, uint64_t>, int, uint64_t> t(pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, valid_bytes, func, 0, arg);
     this->cond_map_uint64[unique_name] = t;
     this->cond_map_xdata.erase(unique_name);
 };
@@ -113,11 +113,11 @@ void ComUseCondCheck::RemoveCondition(std::string unique_name){
 std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
     std::vector<std::string> ret;
     for(auto &e : this->cond_map_xdata){
-        auto [_1, _2, _3, _4, _5, _6, valid] = e.second;
+        auto [_1, _2, _3, _4, _5, _6, valid, arg] = e.second;
         if(valid)ret.push_back(e.first);
     }
     for(auto &e : this->cond_map_uint64){
-        auto [_1, _2, _3, _4, _5, _6, _7, _8, valid] = e.second;
+        auto [_1, _2, _3, _4, _5, _6, _7, _8, valid, arg] = e.second;
         if(valid)ret.push_back(e.first);
     }
     return ret;
@@ -125,7 +125,7 @@ std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
 std::map<std::string, bool> ComUseCondCheck::ListCondition(){
     std::map<std::string, bool> ret;
     for(auto &e : this->cond_map_xdata){
-        auto [_1, _2, _3, _4, _5, _6, valid] = e.second;
+        auto [_1, _2, _3, _4, _5, _6, valid, arg] = e.second;
         if(valid){
             ret[e.first] = true;
         }else{
@@ -133,7 +133,7 @@ std::map<std::string, bool> ComUseCondCheck::ListCondition(){
         }
     }
     for(auto &e : this->cond_map_uint64){
-        auto [_1, _2, _3, _4, _5, _6, _7, _8, valid] = e.second;
+        auto [_1, _2, _3, _4, _5, _6, _7, _8, valid, arg] = e.second;
         if(valid){
             ret[e.first] = true;
         }else{
@@ -148,7 +148,7 @@ void ComUseCondCheck::Call(){
     // check XData condition
     bool is_triggered = false;
     for(auto &e : this->cond_map_xdata){
-        auto [pin, val, cmp, valid, valid_value, func, _] = e.second;
+        auto [pin, val, cmp, valid, valid_value, func, _, arg] = e.second;
         // not triggered
         std::get<6>(e.second) = 0;
         if (valid != nullptr){
@@ -157,7 +157,7 @@ void ComUseCondCheck::Call(){
         }
         // check cmp
         if(func){
-            if(func(pin, val)){
+            if(func(pin, val, arg)){
                 std::get<6>(e.second) = 1;
             }
         }else{
@@ -209,7 +209,7 @@ void ComUseCondCheck::Call(){
     }
     // check uint64_t condition
     for(auto &e : this->cond_map_uint64){
-        auto [pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, valid_bytes, func, _] = e.second;
+        auto [pin_ptr, val_ptr, cmp, bytes, valid_ptr, valid_value_ptr, valid_bytes, func, _, arg] = e.second;
         // not triggered
         std::get<8>(e.second) = 0;
         if (valid_ptr != 0){
@@ -218,7 +218,7 @@ void ComUseCondCheck::Call(){
         }
         // check cmp
         if(func){
-            if(func(pin_ptr, val_ptr)){
+            if(func(pin_ptr, val_ptr, arg)){
                 std::get<8>(e.second) = 1;
             }
         }else{
