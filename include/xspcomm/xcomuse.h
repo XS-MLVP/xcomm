@@ -146,6 +146,38 @@ namespace xspcomm {
             return size;
         }
     };
+
+    class ComUseRangeCheck {
+        int bytes;
+        int range;
+    public:
+        ComUseRangeCheck(int range, int bytes):bytes(bytes), range(range){
+            Assert(bytes <= 8, "FIXME: bytes more than 8 is not supported!");
+        }
+        static bool cmp(uint64_t t, uint64_t c, int r){
+            if(r >= 0){
+                return (c - r <= t) && (c >= t);
+            }
+            return (c - r >= t) && (c <= t);
+        }
+        static bool ArrayCmp(uint64_t a, uint64_t b, uint64_t self){
+            ComUseRangeCheck * p = (ComUseRangeCheck*)self;
+            uint64_t vamask = p->bytes == 8 ? -1 : (((uint64_t)1 << (8*p->bytes)) - 1);
+            uint64_t target = vamask & (*(uint64_t*)a);
+            uint64_t cvalue = vamask & (*(uint64_t*)b);
+            return cmp(target, cvalue, p->range);
+        }
+        static bool XDataCmp(XData *a, XData *b, uint64_t self){
+            return cmp(a->U(), b->U(), ((ComUseRangeCheck*)self)->range);
+        }
+        uint64_t CSelf(){return (uint64_t)this;}
+        xfunction<bool, uint64_t, uint64_t, uint64_t> GetArrayCmp(){
+            return (bool (*)(uint64_t, uint64_t, uint64_t))ArrayCmp;
+        }
+        xfunction<bool, XData*, XData*, uint64_t> GetXDataCmp(){
+            return (bool (*)(XData*, XData*, uint64_t))XDataCmp;
+        }
+    };
 }
 
 #endif
