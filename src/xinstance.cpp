@@ -366,6 +366,14 @@ int test_xdata()
     test_assert(clk1.clk == clk_old + 1, "clk1 disable fail: %ld", clk1.clk);
 
     test_assert(1 == clk1.RemoveStepFalCbByDesc("Fal-lambda"), "check remove step cb fail");
+    px2[0] = 6;
+    check.ClearCondition();
+    ComUseRangeCheck rcheck(6, 4);
+    check.SetCondition("key_RG", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::GT, 4,
+                       0, 0, 0, rcheck.GetArrayCmp(), rcheck.CSelf());
+    clk1.Enable();
+    clk1.Step(10);
+    test_assert(clk1.IsDisable(), "ComUseRangeCheck check fail");
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }
