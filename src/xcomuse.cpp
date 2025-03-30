@@ -13,7 +13,6 @@ void ComUseStepCb::Cb(uint64_t c, void *self){
     if(!p->cb_enable)return;
     p->cycle = c;
     p->Call();
-    p->cb_counts += 1;
     if(p->cb_maxcts > 0 && p->cb_counts >= p->cb_maxcts)p->Disable();
 }
 
@@ -22,6 +21,20 @@ void ComUseStepCb::Disable(){
 }
 void ComUseStepCb::Enable(){
     this->cb_enable = true;
+}
+bool ComUseStepCb::IsDisable(){
+    return !this->cb_enable;
+}
+int ComUseStepCb::GetCbCount(){
+    return this->cb_counts;
+}
+int ComUseStepCb::IncCbCount(){
+    this->cb_counts += 1;
+    return this->cb_counts;
+}
+int ComUseStepCb::DecCbCount(){
+    this->cb_counts -= 1;
+    return this->cb_counts;
 }
 void ComUseStepCb::SetMaxCbs(int c){
     this->cb_maxcts = c;
@@ -204,6 +217,7 @@ void ComUseCondCheck::Call(){
                     clk->Disable();
                 }
                 is_triggered = true;
+                this->IncCbCount();
             }
         }
     }
@@ -265,6 +279,7 @@ void ComUseCondCheck::Call(){
                     clk->Disable();
                 }
                 is_triggered = true;
+                this->IncCbCount();
             }
         }
     }

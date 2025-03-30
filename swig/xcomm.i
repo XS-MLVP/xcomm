@@ -96,8 +96,8 @@ namespace std {
 %d_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
 // ComUseCondCheck
-%d_callback(cb_bool_XData_XData, bool, xspcomm::XData*, xspcomm::XData*);
-%d_callback(cb_bool_uint64_uint64, bool, uint64_t, uint64_t);
+%d_callback(cb_bool_XData_XData, bool, xspcomm::XData*, xspcomm::XData*, uint64_t);
+%d_callback(cb_bool_uint64_uint64, bool, uint64_t, uint64_t, uint64_t);
 
 // Note: need include callback after director
 %include "xspcomm/xcallback.h"
@@ -114,5 +114,5 @@ namespace std {
 %x_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
 // ComUseCondCheck
-%x_callback(cb_bool_XData_XData, bool, xspcomm::XData*, xspcomm::XData*);
-%x_callback(cb_bool_uint64_uint64, bool, uint64_t, uint64_t);
+%x_callback(cb_bool_XData_XData, bool, xspcomm::XData*, xspcomm::XData*, uint64_t);
+%x_callback(cb_bool_uint64_uint64, bool, uint64_t, uint64_t, uint64_t);
