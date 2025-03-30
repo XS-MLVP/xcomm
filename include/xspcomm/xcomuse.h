@@ -15,7 +15,11 @@ namespace xspcomm {
         ComUseStepCb(){}
         void Disable();
         void Enable();
+        bool IsDisable();
         void SetMaxCbs(int c);
+        int GetCbCount();
+        int IncCbCount();
+        int DecCbCount();
         void Reset();
         static u_int64_t GetCb();
         u_int64_t CSelf(){return (u_int64_t)this;};
