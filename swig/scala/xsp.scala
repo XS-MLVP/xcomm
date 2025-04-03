@@ -48,3 +48,22 @@ implicit def to_cb_int_bool(cb: (Boolean) => Unit): cb_int_bool = {
     XClockGlobalPtrs._CbXClockEvalList += new CbXClockEval(cb)
     XClockGlobalPtrs._CbXClockEvalList.last
 }
+
+trait BaseDUTTrait{
+    def GetXClock(): XClock
+    def GetXPort(): XPort
+    def OpenWaveform(): Boolean
+    def CloseWaveform(): Boolean
+    def SetWaveform(wave_name: String): Unit
+    def FlushWaveform(): Unit
+    def SetCoverage(coverage_name: String): Unit
+    def Step(i: Int = 1): Unit
+    def StepRis(callback: (Long) => Unit): Unit
+    def StepFal(callback: (Long) => Unit): Unit
+    def Finish(): Unit
+    def InitClock(clock_name: String): Unit
+    def RefreshComb(): Unit
+    def CheckPoint(check_point: String): Unit
+    def Restore(check_point: String): Unit
+    def VPIInternalSignalList(prefix: String, deep: Int): StringVector
+}
