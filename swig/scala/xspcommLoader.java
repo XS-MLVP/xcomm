@@ -7,10 +7,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 
-public class xspcomm {
+public class xspcommLoader {
   private static boolean LIB_LOADED = false;
   public static void loadLibraryFromJar(String path) throws IOException {
-    InputStream inputStream = xspcomm.class.getResourceAsStream(path);
+    InputStream inputStream = xspcommLoader.class.getResourceAsStream(path);
     if (inputStream == null) {
         throw new IOException("Could not find library: " + path);
     }
