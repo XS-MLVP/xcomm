@@ -75,6 +75,8 @@ package object xspcomm {
         def CheckPoint(check_point: String): Unit
         def Restore(check_point: String): Unit
         def VPIInternalSignalList(prefix: String, deep: Int): StringVector
+        def apply(key: String): XData = {
+            this.GetXPort().Get(key)
+        }
     }
-
 }
