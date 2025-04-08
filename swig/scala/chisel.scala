@@ -31,7 +31,7 @@ object chiselUT {
     new File(classWorkDir.toString).mkdirs()
     // Check if Need to Rebuild
     val rebuild = forceRebuild || !scalaJarFile.toFile.exists() || !verilogFile.toFile.exists() || !recomTagFile.toFile.exists() ||
-      (hasFileChanged[A](verilogFile.toFile, recomTagFile.toFile) && autoRebuild)
+      (hasFileChanged[A](verilogFile.toFile, recomTagFile.toFile, pickerExArgs) && autoRebuild)
     // build if needed
     if(rebuild){
       deleteDirectory(Paths.get(workDir, "DUT").toFile)
@@ -44,7 +44,7 @@ object chiselUT {
       debug(s"Generating Verilog for $dutClassName...")
       issueVerilog(classWorkDir.toString(), verilogFile.toString())
       if(verilogFile.toFile.exists()) {
-        saveMetadata[A](verilogFile.toFile, recomTagFile.toFile)
+        saveMetadata[A](verilogFile.toFile, recomTagFile.toFile, pickerExArgs)
       } else {
         throw new RuntimeException(s"Verilog file $verilogFile does not exist after generation.")
       }
@@ -75,14 +75,15 @@ object chiselUT {
     new URLClassLoader(jarUrls, ClassLoader.getSystemClassLoader)
   }
 
-  def hasFileChanged[T: TypeTag](file: File, metadataFile: File): Boolean = {
+  def hasFileChanged[T: TypeTag](file: File, metadataFile: File, pickerArgs: String): Boolean = {
     val currentLastModified = file.lastModified()
     val currentHash = computeFileHash(file)
-    val classHash = computeClassHash[T]()
+    val currentClassHash = computeClassHash[T]()
+    val currentArgHash = sha1(pickerArgs)
     readMetadata(metadataFile) match {
-      case Some((savedLastModified, savedHash, classHash)) =>
+      case Some((savedLastModified, savedHash, classHash, argHash)) =>
         currentLastModified != savedLastModified || currentHash != savedHash ||
-        classHash != classHash
+        classHash != currentClassHash || currentArgHash != argHash
       case None =>
         true
     }
@@ -94,31 +95,35 @@ object chiselUT {
     digest.digest(bytes).map("%02x".format(_)).mkString
   }
 
-  def saveMetadata[T: TypeTag](file: File, metadataFile: File): Unit = {
+  def saveMetadata[T: TypeTag](file: File, metadataFile: File, pickerArgs: String): Unit = {
     val lastModified = file.lastModified()
     val fileHash = computeFileHash(file)
     val classHash = computeClassHash[T]()
+    val argsHash = sha1(pickerArgs)
     val writer = new PrintWriter(metadataFile)
     try {
       writer.println(s"lastModified=$lastModified")
       writer.println(s"fileHash=$fileHash")
       writer.println(s"classHash=$classHash")
+      writer.println(s"argsHash=$argsHash")
     } finally {
       writer.close()
     }
   }
 
-  def readMetadata(metadataFile: File): Option[(Long, String, String)] = {
+  def readMetadata(metadataFile: File): Option[(Long, String, String, String)] = {
     if (!metadataFile.exists()) return None
     val lines = Source.fromFile(metadataFile).getLines().toList
     val lastModified = lines.find(_.startsWith("lastModified=")).map(_.split("=")(1).toLong)
     val fileHash = lines.find(_.startsWith("fileHash=")).map(_.split("=")(1))
     val classHash = lines.find(_.startsWith("classHash=")).map(_.split("=")(1))
+    val argsHash = lines.find(_.startsWith("argsHash=")).map(_.split("=")(1))
     for {
       lm <- lastModified
       fh <- fileHash
       ch <- classHash
-    } yield (lm, fh, ch)
+      ah <- argsHash
+    } yield (lm, fh, ch, ah)
   }
 
   def computeClassHash[T: TypeTag](): String = {
