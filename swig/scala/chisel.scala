@@ -32,10 +32,14 @@ object chiselUT {
     // Check if Need to Rebuild
     val rebuild = forceRebuild || !scalaJarFile.toFile.exists() || !verilogFile.toFile.exists() || !recomTagFile.toFile.exists() ||
       (hasFileChanged[A](verilogFile.toFile, recomTagFile.toFile, pickerExArgs) && autoRebuild)
+    if(forceRebuild)debug(s"Rebuild DUT.")
+    if(!scalaJarFile.toFile.exists())debug(s"Scala JAR file $scalaJarFile does not exist.")
+    if(!verilogFile.toFile.exists())debug(s"Verilog file $verilogFile does not exist.")
+    if(!recomTagFile.toFile.exists())debug(s"Recom Tag file $recomTagFile does not exist.")
     // build if needed
     if(rebuild){
-      deleteDirectory(Paths.get(workDir, "DUT").toFile)
-      debug(s"Re-Compile DUT.")
+      deleteDirectory(Paths.get(workDir, "DUT", dutClassName).toFile)
+      debug(s"Re-Compile $dutClassName.")
       val scalaXspcommJar: String = "picker --show_xcom_lib_location_scala".!!
       val scalaXspcommJarFile = scalaXspcommJar.split(" ").headOption.getOrElse("").trim
       if (!Paths.get(scalaXspcommJarFile).toFile.exists()) {
@@ -81,10 +85,27 @@ object chiselUT {
     val currentClassHash = computeClassHash[T]()
     val currentArgHash = sha1(pickerArgs)
     readMetadata(metadataFile) match {
-      case Some((savedLastModified, savedHash, classHash, argHash)) =>
-        currentLastModified != savedLastModified || currentHash != savedHash ||
-        classHash != currentClassHash || currentArgHash != argHash
+      case Some((savedLastModified, savedHash, classHash, argHash)) =>{
+        if(currentArgHash != argHash) {
+          debug(s"Arguments have changed: $currentArgHash != $argHash")
+          return true
+        }
+        if(currentClassHash != classHash) {
+          debug(s"Class hash has changed: $currentClassHash != $classHash")
+          return true
+        }
+        if(currentHash != savedHash) {
+          debug(s"File hash has changed: $currentHash != $savedHash")
+          return true
+        }
+        if(currentLastModified != savedLastModified) {
+          debug(s"File last modified has changed: $currentLastModified != $savedLastModified")
+          return true
+        }
+        return false
+      }
       case None =>
+        debug(s"Read Metadata file $metadataFile file does not exist.")
         true
     }
   }
