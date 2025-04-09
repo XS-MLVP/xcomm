@@ -74,7 +74,10 @@ package object xspcomm {
         def RefreshComb(): Unit
         def CheckPoint(check_point: String): Unit
         def Restore(check_point: String): Unit
-        def VPIInternalSignalList(prefix: String, deep: Int): StringVector
+        def VPIInternalSignalList(prefix: String = "", deep: Int = 99): Array[String]
+        def GetInternalSignal(name: String, index: Int = -1, use_vpi: Boolean = false): XData
+        def GetInternalSignal(name: String, is_array: Boolean): Array[XData]
+        def GetInternalSignalList(prefix: String="", deep: Int = 99, use_vpi: Boolean = false): Array[String]
         def apply(key: String): XData = {
             this.GetXPort().Get(key)
         }
