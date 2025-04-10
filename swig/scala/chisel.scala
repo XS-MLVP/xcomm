@@ -9,6 +9,32 @@ import java.security.MessageDigest
 import java.net.URL
 import java.net.URLClassLoader
 
+import scala.language.experimental.macros
+import scala.reflect.macros.whitebox
+import scala.annotation.tailrec
+
+object nameOf {
+  // This function is edited from: https://github.com/dwickern/scala-nameof/blob/master/src/main/scala-2/com/github/dwickern/macros/NameOfImpl.scala
+  def apply(exprs: Any*): Map[String, Any] = macro nameOfImpl
+  def nameOfImpl(c: whitebox.Context)(exprs: c.Expr[Any]*): c.Expr[Map[String, Any]] = {
+    import c.universe._
+    @tailrec def extract(tree: c.Tree): String = tree match {
+      case Ident(n) => n.decodedName.toString
+      case Select(_, n) => n.decodedName.toString
+      case Function(_, body) => extract(body)
+      case Block(_, expr) => extract(expr)
+      case Apply(func, _) => extract(func)
+      case TypeApply(func, _) => extract(func)
+      case _ =>
+        c.abort(c.enclosingPosition, s"Unsupported expression: ${tree}")
+    }
+    val entries = exprs.map { expr =>
+      val name = extract(expr.tree)
+      q"$name -> $expr"
+    }
+    c.Expr[Map[String, Any]](q"Map(..$entries)")
+  }
+}
 
 object chiselUT {
 
