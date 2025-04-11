@@ -36,6 +36,25 @@ object nameOf {
   }
 }
 
+object attrOf {
+  def apply[T: TypeTag](x: AnyRef, filter: (String, T)=>Boolean = (k:String, v:T) => true): Map[String, T] = {
+    var mirror = runtimeMirror(x.getClass.getClassLoader)
+    var instanceMirror = mirror.reflect(x)
+    val classSymbol = mirror.classSymbol(x.getClass)
+    val targetType = typeOf[T]
+    val ret = classSymbol.toType.decls.collect {
+      case term: TermSymbol
+      if (term.isVar || term.isVal) &&
+         (term.typeSignature <:< targetType)
+      =>
+      val fn = term.name.toString
+      val fv = instanceMirror.reflectField(term).get
+      fn -> fv.asInstanceOf[T]
+    }.toMap
+    ret.filter{case (k, v) => filter(k, v)}
+  }
+}
+
 object chiselUT {
 
   def debug(msg: String): Unit = {
