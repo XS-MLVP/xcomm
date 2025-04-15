@@ -98,6 +98,12 @@ func XDataFromVPI(a ...interface{}) XData {
     return ret
 }
 
+func NewXDataFrom(raw XDataGo) XData {
+    ret := SwigcptrXData{}
+    ret.XDataGo = raw
+    return ret
+}
+
 func (p SwigcptrXData) SubDataRef(a ...interface{}) XData {
     ret := SwigcptrXData{}
     ret.XDataGo = p.XDataGo.SubDataRefRawGo(a...)
