@@ -166,7 +166,7 @@ void ComUseCondCheck::Call(){
         std::get<6>(e.second) = 0;
         if (valid != nullptr){
             Assert(valid_value != nullptr, "valid_value is null");
-            if(*valid == *valid_value)continue;
+            if(*valid != *valid_value)continue;
         }
         // check cmp
         if(func){
@@ -228,7 +228,7 @@ void ComUseCondCheck::Call(){
         std::get<8>(e.second) = 0;
         if (valid_ptr != 0){
             Assert(valid_value_ptr != 0, "valid_value is null");
-            if(memcmp((void*)valid_ptr, (void*)valid_value_ptr, valid_bytes) == 0)continue;
+            if(memcmp((void*)valid_ptr, (void*)valid_value_ptr, valid_bytes) != 0)continue;
         }
         // check cmp
         if(func){
