@@ -359,6 +359,7 @@ int test_xdata()
     int px2[1] = {2};
     check.SetCondition("key_EQ_1", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::EQ, 4);
     check.SetCondition("key_GT_2", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::GT, 4);
+    check.SetValidCmpMode("key_EQ_1", ComUseCondCmp::NE);
 
     clk_old = clk1.clk;
     clk1.Step(10);
