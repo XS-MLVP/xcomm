@@ -85,6 +85,7 @@ namespace xspcomm {
         std::vector<XClock*> clk_list;
         std::map<std::string, std::tuple<XData*, XData*, ComUseCondCmp, XData*, XData*, xfunction<bool, XData*, XData*, uint64_t>, int, uint64_t, int>> cond_map_xdata;
         std::map<std::string, std::tuple<uint64_t, uint64_t, ComUseCondCmp, int, uint64_t, uint64_t, int, xfunction<bool, uint64_t, uint64_t, uint64_t>, int, uint64_t, int>> cond_map_uint64;
+        int _valcmp(uint64_t a, u_int64_t b, int bytes);
     public:
         ComUseCondCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
         void BindXClock(XClock *clk);
