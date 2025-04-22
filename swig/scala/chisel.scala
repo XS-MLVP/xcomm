@@ -113,7 +113,7 @@ object chiselUT {
     val classLoader = loadJars(Seq(
       Paths.get(scalaJarFile.toString).toFile,
     ))
-    val dutClass = classLoader.loadClass(s"com.ut.UT_$dutClassName")
+    val dutClass = classLoader.loadClass(s"com.ut.$dutClassName.UT_$dutClassName")
     val dutInstance = dutClass.getDeclaredConstructor().newInstance().asInstanceOf[BaseDUTTrait]
     dutInstance
   }
