@@ -136,6 +136,12 @@ def test_xdata():
     cfg2 = XSignalCFG("tests/test_signal_cfg_map.yaml")
     assert cfg.String() == cfg2.String(), "%s != %s" % (cfg.String().strip(), cfg2.String().strip())
 
+    # test cstring
+    cs1 = CString("cs1")
+    cs2 = CString("------------")
+    cs1.Set(cs2.Get())
+    assert cs1.Get() == cs2.Get()
+
 
 async def test_async():
     clk = XClock(lambda a: 0)
