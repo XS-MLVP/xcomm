@@ -185,6 +185,30 @@ namespace xspcomm {
             return (bool (*)(XData*, XData*, uint64_t))XDataCmp;
         }
     };
+
+    class CString {
+        public:
+        std::string str;
+        CString(std::string val):str(val){}
+        CString():str(""){}
+        uint64_t CharAddress(){
+            return (uint64_t)this->str.c_str();
+        }
+        void AssignTo(char * addr){
+            addr = (char *)this->str.c_str();
+        }
+        void AssignTo(uint64_t addr){
+            return this->AssignTo((char*)addr);
+        }
+        void AssignFrom(const char * val){
+            this->str = std::string(val);
+        }
+        void AssignFrom(uint64_t val){
+            return this->AssignFrom((const char*)val);
+        }
+        std::string Get(){return this->str;}
+        void Set(std::string val){this->str = val;}
+    };
 }
 
 #endif
