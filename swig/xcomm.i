@@ -82,6 +82,14 @@ namespace std {
 
 %define %x_callback(Name, Ret, T...)
 %template(Name) xfunction<Ret,T>;
+%inline %{
+   xfunction<Ret,T> Name##_from_addr(uint64_t addr) {
+       return (Ret(*)(T...))addr;
+   }
+   xfunction<Ret,T> Name##_from_func(Ret (* func)(T...)) {
+      return func;
+   }
+%}
 %enddef
 
 // d_callback defines
