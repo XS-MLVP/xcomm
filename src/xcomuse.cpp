@@ -198,6 +198,14 @@ int  ComUseCondCheck::_valcmp(uint64_t a, u_int64_t b, int bytes){
     }
     return 0;
 }
+xfunction<bool, XData*, XData*, uint64_t> ComUseCondCheck::AsXDataXFunc(uint64_t func){
+    xfunction<bool, XData*, XData*, uint64_t> ret = (bool (*)(XData*, XData*, uint64_t))func;
+    return ret;
+}
+xfunction<bool, uint64_t, uint64_t, uint64_t> ComUseCondCheck::AsPtrXFunc(uint64_t func){
+    xfunction<bool, uint64_t, uint64_t, uint64_t> ret = (bool (*)(uint64_t, uint64_t, uint64_t))func;
+    return ret;
+}
 void ComUseCondCheck::Call(){
     // check XData condition
     bool is_triggered = false;
