@@ -100,6 +100,8 @@ namespace xspcomm {
         void ClearCondition();
         void ClearAll(){this->ClearClock(); this->ClearCondition();};
         virtual void Call();
+        xfunction<bool, XData*, XData*, uint64_t> AsXDataXFunc(uint64_t func);
+        xfunction<bool, uint64_t, uint64_t, uint64_t> AsPtrXFunc(uint64_t func);
     };
 
     class ComUseDataArray{
