@@ -106,11 +106,7 @@ import java.util.List;
   }
 
   public void Set(long data) {
-    if(data < 0){
-      this.Set(BigInteger.valueOf(data));
-    }else{
-      this.Setl(data);
-    }
+    this.Set(BigInteger.valueOf(data));
   }
 
 %}
