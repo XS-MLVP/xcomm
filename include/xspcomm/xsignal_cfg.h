@@ -30,7 +30,7 @@ class XSignalCFG {
     XSignalCFG(std::string path_or_str_data, uint64_t base_address = 0): cfg_data(path_or_str_data), cfg_base_address(base_address){};
     XData* NewXData(std::string name, std::string xname="");
     XData* NewXData(std::string name, int array_index, std::string xname="");
-    std::vector<XData*> NewXDataArray(std::string name, std::string xname="");
+    std::vector<std::shared_ptr<XData>> NewXDataArray(std::string name, std::string xname="");
     std::vector<std::string> GetSignalNames(std::string patten = "");
     s_xsignal_cfg At(std::string name);
     /*************************************************************** */
