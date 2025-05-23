@@ -322,5 +322,9 @@ public:
         return (T)(this->operator u_int64_t());
     }
 };
+
+// test
+std::vector<std::shared_ptr<XData>> TEST_GetXDataList();
+
 } // namespace xspcomm
 #endif

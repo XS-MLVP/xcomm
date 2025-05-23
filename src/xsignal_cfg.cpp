@@ -134,8 +134,8 @@ namespace xspcomm
         if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * array_index);
         return xdata;
     }
-    std::vector<XData*> XSignalCFG::NewXDataArray(std::string name, std::string xname){
-        std::vector<XData*> vec;
+    std::vector<std::shared_ptr<XData>> XSignalCFG::NewXDataArray(std::string name, std::string xname){
+        std::vector<std::shared_ptr<XData>> vec;
         if(xname.empty())xname = name;
         s_xsignal_cfg cfg;
         auto xdata = new_empty_xdata(name, xname, cfg, true);
@@ -143,7 +143,7 @@ namespace xspcomm
             for(uint64_t i = 0; i < cfg.array_size; i++){
                 auto x = new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname + "_" + std::to_string(i));
                 x->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * i);
-                vec.push_back(x);
+                vec.push_back(std::shared_ptr<XData>(x));
             }
         }
         return vec;

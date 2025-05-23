@@ -52,7 +52,7 @@
 
 namespace std {
    %template(StringVector) vector<string>;
-   %template(XDataVector) vector<xspcomm::XData*>;
+   %template(XDataVector) vector<std::shared_ptr<xspcomm::XData>>;
    %template(DictStrBool) map<string, bool>;
 }
 

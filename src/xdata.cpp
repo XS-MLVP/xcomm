@@ -1393,4 +1393,15 @@ XData * XData::FromVPI(vpiHandle obj, func_vpi_get get, func_vpi_get_value get_v
     return nullptr;
 }
 
+
+// test
+std::vector<std::shared_ptr<XData>> TEST_GetXDataList(){
+    std::vector<std::shared_ptr<XData>> ret;
+    XData *xdata = new XData(32, IOType::Input);
+    xdata->mName = "test";
+    std::shared_ptr<XData> x(xdata);
+    ret.push_back(x);
+    return ret;
+};
+
 } // namespace xspcomm

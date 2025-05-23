@@ -142,6 +142,9 @@ def test_xdata():
     cs1.Set(cs2.Get())
     assert cs1.Get() == cs2.Get()
 
+    # test array
+    arr = TEST_GetXDataList()
+    print("arr:", arr[0])
 
 async def test_async():
     clk = XClock(lambda a: 0)
