@@ -138,6 +138,8 @@ def XPort__str__(self: XPort):
     return f"XPort(prefix={self.prefix}, size={self.PortCount()})"
 
 def XPort__getitem__(self: XPort, key):
+    assert isinstance(key, str), f"Pin key ({key}) must be str"
+    assert self.Has(key), f"Pin '{key}' not found in XPort"
     return self.Get(key)
 
 def XPort__setitem__(self: XPort, key, value):
