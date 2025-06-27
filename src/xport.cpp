@@ -95,6 +95,11 @@ xspcomm::XData &XPort::operator[](std::string key)
     return this->Get(key);
 }
 
+bool XPort::Has(std::string key, bool raw_key)
+{
+    return this->port_list.count(raw_key ? key : this->asKey(key)) > 0;
+}
+
 xspcomm::XData &XPort::Get(std::string key, bool raw_key)
 {
     Assert(this->port_list.count(raw_key ? key : this->asKey(key)) > 0,
