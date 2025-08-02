@@ -153,6 +153,10 @@ namespace xspcomm
         new_empty_xdata(name, "", cfg, true);
         return cfg;
     }
+    uint64_t XSignalCFG::Address(std::string name){
+        auto cfg = this->At(name);
+        return this->cfg_base_address + cfg.offset;
+    }
     std::string XSignalCFG::String(){
         this->load_cfg();
         std::string ret = "\nBaseAddress: " + std::to_string(this->cfg_base_address) + "\n";

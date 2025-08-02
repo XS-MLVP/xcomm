@@ -33,6 +33,7 @@ class XSignalCFG {
     std::vector<std::shared_ptr<XData>> NewXDataArray(std::string name, std::string xname="");
     std::vector<std::string> GetSignalNames(std::string patten = "");
     s_xsignal_cfg At(std::string name);
+    uint64_t Address(std::string name);
     /*************************************************************** */
     //                  End of Stable public user APIs
     /*************************************************************** */

@@ -44,6 +44,15 @@ struct XClockCallBack {
     void *args;
 };
 
+enum class FastMode {
+    Default = 0,             // Default mode, step on both rise and fall edges
+    IGNORE_READ_REFRESH = 1, // Ignore read refresh
+    IGNORE_STEP_FALSE = 2,   // Ignore step(false)
+    IGNORE_PORT_WRITE = 3,   // Ignore port write, use with XData writeImme Model
+    ONLY_STEP_RIS = -1,      // Only step on rise edges (half cycle, For GSIM simulation)
+    ONLY_STEP_FAL = -2,      // Only step on fall edges (half cycle)
+};
+
 class XClock
 {
     xfunction<int, bool> step_fc;
@@ -54,13 +63,6 @@ class XClock
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
     bool is_disable = false;
-    // 0 default
-    // 1 ignore read_refresh
-    // 2 ignore step(false)
-    // 3 ignore port write, use with XData writeImme Model.
-    // 4-10 reserved for future use
-    // 11 only step_ris cbs
-    // 12 only step_fal cbs
     int fast_mode_level = 0;
 
     virtual void _step(bool d);
@@ -122,10 +124,11 @@ public:
     void FreqDivWith(int div, XClock *clk, int shift=0);
     void FreqDivWith(int div, XClock &clk, int shift=0){return this->FreqDivWith(div, &clk, shift);};
     void FreqDivDelete(XClock *clk);
-    void FreqDivDelete(XClock &clk){return this->FreqDivDelete(&clk);};
+    void FreqDivDelete(XClock &clk){return this->FreqDivDelete(&clk);}
     void ClearRisCallBacks();
     void ClearFalCallBacks();
-    void SetFastMode(int level){this->fast_mode_level = level;};
+    void SetFastMode(int level){this->fast_mode_level = level;}
+    void SetFastMode(FastMode mode){SetFastMode((int)mode);}
     int GetFastMode(){return this->fast_mode_level;}
     bool IsDisable(){return this->is_disable;}
     void Disable(){this->is_disable = true;}
