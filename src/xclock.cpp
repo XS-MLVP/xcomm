@@ -188,7 +188,7 @@ void XClock::RunStep(int s)
 
 void XClock::_step_fal()
 {
-    if(this->fast_mode_level == 11)return;
+    if(this->fast_mode_level == -1)return;
     auto sub_clk_ris = this->_get_div_clk_ris(this->clk, false);
     auto sub_clk_fal = this->_get_div_clk_fal(this->clk, false);
     this->_fal_pins();
@@ -213,7 +213,7 @@ void XClock::_step_fal()
 
 void XClock::_step_ris()
 {
-    if(this->fast_mode_level == 12)return;
+    if(this->fast_mode_level == -2)return;
     auto sub_clk_ris = this->_get_div_clk_ris(this->clk, true);
     auto sub_clk_fal = this->_get_div_clk_fal(this->clk, true);
     this->_ris_pins();
