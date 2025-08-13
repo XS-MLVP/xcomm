@@ -74,6 +74,10 @@ import java.util.List;
     return this.Get();
   }
 
+  public void Set(boolean v) {
+    this.Seti(v ? 1 : 0);
+  }
+
   public void Set(byte[] v) {    
     this.SetBytes(v);
   }
