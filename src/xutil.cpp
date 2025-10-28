@@ -2,7 +2,7 @@
 #include <map>
 
 namespace xspcomm {
-LogLevel log_level = LogLevel::info;
+LogLevel log_level = LogLevel::error;
 LogLevel get_log_level()
 {
     std::map<std::string, LogLevel> levels;
