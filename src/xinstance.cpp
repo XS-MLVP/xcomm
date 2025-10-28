@@ -35,12 +35,12 @@ int test_xdata()
                 "check u_int64  fail");
     XData w4(4, XData::In);
     w4 = -1;
-    test_assert(w4.S() == -1, "w4 need be -1 (%ld)", w4.S());
+    test_assert(w4.S() == -1, "w4 need be -1 (%lld)", w4.S());
     XData w0(0, XData::In);
     XData w1(1, XData::In);
     w0 =  1;
     w1 = -1;
-    test_assert(w0.S() == 1 && w1.S() == -1, "w0 need be 1(%ld) and w1 need be -1(%ld)", w0.S(), w1.S());
+    test_assert(w0.S() == 1 && w1.S() == -1, "w0 need be 1(%lld) and w1 need be -1(%lld)", w0.S(), w1.S());
 
     XData zx_z;
     XData zx_x(32, XData::In);
@@ -282,8 +282,8 @@ int test_xdata()
     }, nullptr, "Fal-lambda");
     clk1.FreqDivWith(5, clk2);
     clk1.Step(20);
-    test_assert(clk1.clk == 20, "clk1: %ld", clk1.clk);
-    test_assert(clk2.clk == 4, "clk2: %ld", clk2.clk);
+    test_assert(clk1.clk == 20, "clk1: %lld", clk1.clk);
+    test_assert(clk2.clk == 4, "clk2: %lld", clk2.clk);
     // test big operations
     u_int64_t big = 0x123456789abcdef0;
     u_int64_t big2 = 0xfedcba9876543210;
@@ -315,13 +315,13 @@ int test_xdata()
     x64.AsImmWrite(); xlc.AsImmWrite(); x72.AsImmWrite();
 
     x64 = 0x1234; xlc = 1; x72 = 0x4321;
-    test_assert(x64 == value_l64, "bind native data fail: %lx", value_l64);
-    test_assert(xlc == value_lgc, "bind native data fail: %lx", value_lgc);
-    test_assert(x72 == value_b64[0], "bind native data fail: %lx", value_b64[0]);
+    test_assert(x64 == value_l64, "bind native data fail: %llx", value_l64);
+    test_assert(xlc == value_lgc, "bind native data fail: %llx", value_lgc);
+    test_assert(x72 == value_b64[0], "bind native data fail: %llx", value_b64[0]);
     value_l64 = 0x5678; value_lgc = 0; value_b64[0] = 0x789;
-    test_assert(x64 == 0x5678, "bind native data fail: %lx", value_l64);
-    test_assert(xlc == 0, "bind native data fail: %lx", value_lgc);
-    test_assert(x72 == 0x789, "bind native data fail: %lx", value_b64[0]);
+    test_assert(x64 == 0x5678, "bind native data fail: %llx", value_l64);
+    test_assert(xlc == 0, "bind native data fail: %llx", value_lgc);
+    test_assert(x72 == 0x789, "bind native data fail: %llx", value_b64[0]);
 
     // test xsignal cfg
     uint64_t cfg_base[] = {0,1,2,3,4,0xffffffffffffffff,6,7,8,9};
@@ -345,10 +345,10 @@ int test_xdata()
     auto clk_old = clk1.clk;
     clk1.Disable();
     clk1.Step(10);
-    test_assert(clk1.clk == clk_old, "clk1 disable fail: %ld", clk1.clk);
+    test_assert(clk1.clk == clk_old, "clk1 disable fail: %lld", clk1.clk);
     clk1.Enable();
     clk1.Step(10);
-    test_assert(clk1.clk == clk_old+10, "clk1 enable fail: %ld", clk1.clk);
+    test_assert(clk1.clk == clk_old+10, "clk1 enable fail: %lld", clk1.clk);
 
     // ComUseCondCheck
     ComUseCondCheck check(&clk1);
@@ -364,7 +364,7 @@ int test_xdata()
     clk_old = clk1.clk;
     clk1.Step(10);
     test_assert(check.GetTriggeredConditionKeys().size() == 3, "check fail: %ld", check.GetTriggeredConditionKeys().size());
-    test_assert(clk1.clk == clk_old + 1, "clk1 disable fail: %ld", clk1.clk);
+    test_assert(clk1.clk == clk_old + 1, "clk1 disable fail: %lld", clk1.clk);
 
     test_assert(1 == clk1.RemoveStepFalCbByDesc("Fal-lambda"), "check remove step cb fail");
     px2[0] = 6;
