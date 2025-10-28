@@ -16,13 +16,13 @@ XStep *XStep::clone() const
 }
 bool XStep::await_ready() noexcept
 {
-    Assert(this->clk->clk <= this->target_clk, "clk overflow: %lx > %lx",
+    Assert(this->clk->clk <= this->target_clk, "clk overflow: %llx > %llx",
            this->clk->clk, this->target_clk);
     return this->clk->clk == this->target_clk;
 }
 bool XStep::ready()
 {
-    Assert(this->clk->clk <= this->target_clk, "clk overflow: %lx > %lx",
+    Assert(this->clk->clk <= this->target_clk, "clk overflow: %llx > %llx",
            this->clk->clk, this->target_clk);
     return this->clk->clk == this->target_clk;
 }
@@ -422,7 +422,7 @@ extern "C" {
         return 0;
     };
     void test_risfail_cb(u_int64_t cycle, void* args){
-        Info("[%ld]test ris/fal callback called: %p", cycle, args);
+        Info("[%lld]test ris/fal callback called: %p", cycle, args);
     }
 }
 
