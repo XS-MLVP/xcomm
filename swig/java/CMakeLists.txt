@@ -10,18 +10,32 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_javaswig)
 set_property(SOURCE java.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(javaxspcomm LANGUAGE java SOURCES java.i)
-target_link_options(javaxspcomm PRIVATE
- -Wl,-rpath,~/.local/lib
- -Wl,-rpath,/usr/local/lib)
- target_link_libraries(javaxspcomm PRIVATE xspcomm)
+target_link_libraries(javaxspcomm PRIVATE xspcomm)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../java/xspcomm)
 set_property(TARGET javaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspcomm)
+# set rpath prefix
+set(RPATH_PREFIX "")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+ # macOS doesn't support $ORIGIN
+ set(RPATH_PREFIX "@loader_path")
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+ set(RPATH_PREFIX "$ORIGIN")
+endif ()
+# set rpath
+set(JAVAXSPCOMM_RPATH
+        "$ENV{HOME}/.local/lib"
+        "/usr/local/lib"
+        "${RPATH_PREFIX}/../../lib"
+        "${RPATH_PREFIX}/../picker/share/picker/lib"
+        "${RPATH_PREFIX}/../picker/lib"
+        "${RPATH_PREFIX}/"
+)
 set_target_properties(javaxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
+      INSTALL_RPATH "${JAVAXSPCOMM_RPATH}"
       BUILD_WITH_INSTALL_RPATH true
 )
 
@@ -29,17 +43,20 @@ set_target_properties(javaxspcomm
 add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/javaxspcomm.java
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${SWIG_OUTFILE_DIR}/libjavaxspcomm.so
-            ${XCOMM_LIB_DIR}/libjavaxspcomm.so.${PROJECT_VERSION}
+            $<TARGET_FILE:javaxspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${XCOMM_LIB_DIR}/../../lib/libxspcomm.so
-            ${XCOMM_LIB_DIR}/
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:xspcomm>
+    COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:xspcomm>
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.java
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/*.java
-            ${XCOMM_LIB_DIR}/
+            ${XCOMM_LIB_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.MF
             ${XCOMM_LIB_DIR}/../
@@ -52,8 +69,8 @@ add_custom_command(
 add_custom_command(
     OUTPUT javaxspcomm_so_lnk
     COMMAND ${CMAKE_COMMAND} -E copy
-            "libjavaxspcomm.so.${PROJECT_VERSION}"
-            "libjavaxspcomm.so"
+            "$<TARGET_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}"
+            "$<TARGET_FILE_NAME:javaxspcomm>"
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}
     DEPENDS ${XCOMM_LIB_DIR}/javaxspcomm.java
 )
