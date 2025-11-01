@@ -61,8 +61,8 @@ package object xspcomm {
     trait BaseDUTTrait{
         def GetXClock(): XClock
         def GetXPort(): XPort
-        def OpenWaveform(): Boolean
-        def CloseWaveform(): Boolean
+        def ResumeWaveformDump(): Boolean
+        def PauseWaveformDump(): Boolean
         def SetWaveform(wave_name: String): Unit
         def FlushWaveform(): Unit
         def SetCoverage(coverage_name: String): Unit
