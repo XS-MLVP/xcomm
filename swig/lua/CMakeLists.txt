@@ -20,39 +20,51 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_luaswig)
 set_property(SOURCE lua.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(luaxspcomm LANGUAGE lua SOURCES lua.i)
-target_link_options(luaxspcomm PRIVATE
- -Wl,-rpath,~/.local/lib
- -Wl,-rpath,/usr/local/lib)
- target_link_libraries(luaxspcomm PRIVATE xspcomm)
+target_link_libraries(luaxspcomm PRIVATE xspcomm)
 
 # set buld output directory
-set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../lua/)
+set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../lua)
+
+# set rpath prefix
+set(RPATH_PREFIX "")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    # macOS doesn't support $ORIGIN
+    set(RPATH_PREFIX "@loader_path")
+    target_link_options(luaxspcomm PRIVATE -Wl,-undefined,dynamic_lookup)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    set(RPATH_PREFIX "$ORIGIN")
+endif ()
+# set rpath
+set(LUAXSPCOMM_RPATH
+        "$ENV{HOME}/.local/lib"
+        "/usr/local/lib"
+        "${RPATH_PREFIX}/../../lib"
+        "${RPATH_PREFIX}/../lib"
+        "${RPATH_PREFIX}/../picker/share/picker/lib"
+        "${RPATH_PREFIX}/../picker/lib"
+        "${RPATH_PREFIX}/"
+)
+
 set_target_properties(luaxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
+      INSTALL_RPATH "${LUAXSPCOMM_RPATH}"
       BUILD_WITH_INSTALL_RPATH true
 )
 
 # copy file
-add_custom_command(
-    OUTPUT ${XCOMM_LIB_DIR}/luaxspcomm.so.${PROJECT_VERSION}
+add_custom_command(TARGET luaxspcomm POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${SWIG_OUTFILE_DIR}/luaxspcomm.so
-            ${XCOMM_LIB_DIR}/luaxspcomm.so.${PROJECT_VERSION}
+            $<TARGET_FILE:luaxspcomm>
+            ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/xspcomm.lua
             ${XCOMM_LIB_DIR}/
-    DEPENDS luaxspcomm
-)
-
-add_custom_target(
-    _DummyTarget_create_luaspcomm_so_link ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink luaxspcomm.so.${PROJECT_VERSION} luaxspcomm.so
-    WORKING_DIRECTORY ${XCOMM_LIB_DIR}
-    DEPENDS ${XCOMM_LIB_DIR}/luaxspcomm.so.${PROJECT_VERSION}
 )
 
 # Install
-install(FILES ${XCOMM_LIB_DIR}/luaxspcomm.so.${PROJECT_VERSION} ${XCOMM_LIB_DIR}/luaxspcomm.so ${XCOMM_LIB_DIR}/xspcomm.lua
-        DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/lua)
+install(FILES 
+    ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:luaxspcomm> 
+    ${XCOMM_LIB_DIR}/xspcomm.lua
+    DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/lua)
