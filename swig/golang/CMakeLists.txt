@@ -4,18 +4,37 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_golangswig)
 # Add swig module
 set_property(SOURCE golang.i PROPERTY CPLUSPLUS ON)
 
-swig_add_library(golangxspcomm LANGUAGE go SOURCES golang.i)
-target_link_options(golangxspcomm PRIVATE
- -Wl,-rpath,~/.local/lib
- -Wl,-rpath,/usr/local/lib)
- target_link_libraries(golangxspcomm PRIVATE xspcomm)
+swig_add_library(golangxspcomm TYPE SHARED LANGUAGE go SOURCES golang.i)
+target_link_libraries(golangxspcomm PRIVATE xspcomm)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../golang/src/xspcomm)
+
+# set rpath prefix
+set(RPATH_PREFIX "")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+ # macOS doesn't support $ORIGIN
+ set(RPATH_PREFIX "@loader_path")
+ target_link_options(golangxspcomm PRIVATE -Wl,-undefined,dynamic_lookup)
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+ set(RPATH_PREFIX "$ORIGIN")
+endif ()
+
+# set rpath
+set(GOXSPCOMM_RPATH
+        "$ENV{HOME}/.local/lib"
+        "/usr/local/lib"
+        "${RPATH_PREFIX}/../../lib"
+        "${RPATH_PREFIX}/../picker/share_/picker/lib"
+        "${RPATH_PREFIX}/../picker/lib"
+        "${RPATH_PREFIX}/"
+)
+
 set_target_properties(golangxspcomm
     PROPERTIES
+      SUFFIX ".so"
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
+      INSTALL_RPATH "${GOXSPCOMM_RPATH}"
       BUILD_WITH_INSTALL_RPATH true
 )
 
@@ -23,14 +42,14 @@ set_target_properties(golangxspcomm
 add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/xspcomm.go
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${SWIG_OUTFILE_DIR}/golangxspcomm.so
-            ${XCOMM_LIB_DIR}/golangxspcomm.so.${PROJECT_VERSION}
+            $<TARGET_FILE:golangxspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/../xspcomm.go
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${SWIG_OUTFILE_DIR}/../../../lib/libxspcomm.so
-            ${XCOMM_LIB_DIR}/libxspcomm.so.${PROJECT_VERSION}
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/go.mod
             ${XCOMM_LIB_DIR}/
@@ -40,8 +59,8 @@ add_custom_command(
 add_custom_command(
     OUTPUT golangspcomm_js_lnk
     COMMAND ${CMAKE_COMMAND} -E create_symlink
-            "golangxspcomm.so.${PROJECT_VERSION}"
-            "golangxspcomm.so"
+            "$<TARGET_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}"
+            "$<TARGET_FILE_NAME:golangxspcomm>"
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}
     DEPENDS ${XCOMM_LIB_DIR}/xspcomm.go
 )
