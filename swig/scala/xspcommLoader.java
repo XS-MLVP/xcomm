@@ -14,7 +14,8 @@ public class xspcommLoader {
     if (inputStream == null) {
         throw new IOException("Could not find library: " + path);
     }
-    File tempFile = File.createTempFile("lib", ".so");
+    String suffix = path.substring(path.lastIndexOf('.'));
+    File tempFile = File.createTempFile("lib", suffix);
     tempFile.deleteOnExit();
     try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
         byte[] buffer = new byte[1024];
@@ -27,8 +28,20 @@ public class xspcommLoader {
   }
   static {
     try {
-        loadLibraryFromJar("/libxspcomm.so");
-        loadLibraryFromJar("/libscalaxspcomm.so");
+        String os = System.getProperty("os.name").toLowerCase();
+        String coreLibName;
+        String jniLibName;
+        if (os.contains("mac")) {
+            coreLibName = "/libxspcomm.dylib";
+            jniLibName  = "/libscalaxspcomm.jnilib";
+        } else if (os.contains("nux")) {
+            coreLibName = "/libxspcomm.so";
+            jniLibName  = "/libscalaxspcomm.so";
+        } else {
+            throw new UnsupportedOperationException("Unsupported OS: " + os);
+        }
+        loadLibraryFromJar(coreLibName);
+        loadLibraryFromJar(jniLibName);
         LIB_LOADED = true;
     } catch (Exception e) {
         System.err.println("Error load so fail:");

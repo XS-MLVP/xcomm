@@ -19,33 +19,55 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_scalaswig)
 set_property(SOURCE scala.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(scalaxspcomm LANGUAGE java SOURCES scala.i)
-target_link_options(scalaxspcomm PRIVATE
- -Wl,-rpath,~/.local/lib
- -Wl,-rpath,/usr/local/lib)
- target_link_libraries(scalaxspcomm PRIVATE xspcomm)
+
+target_link_libraries(scalaxspcomm PRIVATE xspcomm)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../scala/xspcomm)
 set_property(TARGET scalaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspcomm)
+
+# set rpath prefix
+set(RPATH_PREFIX "")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    # macOS doesn't support $ORIGIN
+    set(RPATH_PREFIX "@loader_path")
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    set(RPATH_PREFIX "$ORIGIN")
+endif ()
+
+# set rpath
+set(SCALAXSPCOMM_RPATH
+        "$ENV{HOME}/.local/lib"
+        "/usr/local/lib"
+        "${RPATH_PREFIX}/../../lib"
+        "${RPATH_PREFIX}/../picker/share/picker/lib"
+        "${RPATH_PREFIX}/../picker/lib"
+        "${RPATH_PREFIX}/"
+)
+
 set_target_properties(scalaxspcomm
     PROPERTIES
       LIBRARY_OUTPUT_DIRECTORY ${SWIG_OUTFILE_DIR}
-      INSTALL_RPATH "$ORIGIN/../../lib:$ORIGIN/../picker/share/picker/lib:$ORIGIN/../picker/lib:$ORIGIN/"
+      INSTALL_RPATH "${SCALAXSPCOMM_RPATH}"
       BUILD_WITH_INSTALL_RPATH true
 )
 
 # copy file
 add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/scalaxspcomm.java
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${SWIG_OUTFILE_DIR}/libscalaxspcomm.so
-            ${XCOMM_LIB_DIR}/libscalaxspcomm.so.${PROJECT_VERSION}
+            $<TARGET_FILE:scalaxspcomm>
+            ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.java
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${XCOMM_LIB_DIR}/../../lib/libxspcomm.so
+            $<TARGET_FILE:xspcomm>
             ${XCOMM_LIB_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:xspcomm>
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.scala
             ${XCOMM_LIB_DIR}/
@@ -65,8 +87,8 @@ add_custom_command(
 add_custom_command(
     OUTPUT scalaxspcomm_so_lnk
     COMMAND ${CMAKE_COMMAND} -E copy
-            "libscalaxspcomm.so.${PROJECT_VERSION}"
-            "libscalaxspcomm.so"
+            "$<TARGET_FILE_NAME:scalaxspcomm>"
+            "$<TARGET_LINKER_FILE_NAME:scalaxspcomm>"
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}
     DEPENDS ${XCOMM_LIB_DIR}/scalaxspcomm.java
 )
