@@ -7,7 +7,7 @@
 %}
 
 %insert(cgo_comment) %{
-#cgo LDFLAGS: ${SRCDIR}/golangxspcomm.so
+#cgo LDFLAGS: ${SRCDIR}/golangxspcomm.so -Wl,-rpath,${SRCDIR} -Wl,-rpath,${SRCDIR}/../xspcomm
 %}
 
 %go_import("math/big", "fmt")
