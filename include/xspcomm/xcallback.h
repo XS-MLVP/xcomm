@@ -54,7 +54,7 @@ public:
 		return this->_xfunction(cb);
 	}
 
-	xfunction & operator = (const nullptr_t & n) {
+	xfunction & operator = (const std::nullptr_t & n) {
 		this->func = nullptr;
 		return *this;
 	}
@@ -68,12 +68,12 @@ public:
 		return this->func != nullptr;
 	}
 
-	bool operator == (const nullptr_t & n) const {
+	bool operator == (const std::nullptr_t & n) const {
 		if(this->force_callable)return false;
 		return this->func == nullptr;
 	}
 
-	bool operator != (const nullptr_t & n) const {
+	bool operator != (const std::nullptr_t & n) const {
 		return !this->operator==(n);
 	}
 
