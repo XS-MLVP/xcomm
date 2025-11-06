@@ -43,7 +43,7 @@ add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/xspcomm.go
     COMMAND ${CMAKE_COMMAND} -E copy
             $<TARGET_FILE:golangxspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}
+            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/../xspcomm.go
             ${XCOMM_LIB_DIR}/
@@ -58,9 +58,10 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT golangspcomm_js_lnk
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
     COMMAND ${CMAKE_COMMAND} -E create_symlink
-            "$<TARGET_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}"
-            "$<TARGET_FILE_NAME:golangxspcomm>"
+            "$<TARGET_LINKER_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}"
+            "$<TARGET_LINKER_FILE_NAME:golangxspcomm>"
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}
     DEPENDS ${XCOMM_LIB_DIR}/xspcomm.go
 )

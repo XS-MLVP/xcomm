@@ -44,7 +44,7 @@ add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/javaxspcomm.java
     COMMAND ${CMAKE_COMMAND} -E copy
             $<TARGET_FILE:javaxspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}
+            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}
     COMMAND ${CMAKE_COMMAND} -E copy
             $<TARGET_FILE:xspcomm>
             ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:xspcomm>
@@ -69,8 +69,8 @@ add_custom_command(
 add_custom_command(
     OUTPUT javaxspcomm_so_lnk
     COMMAND ${CMAKE_COMMAND} -E copy
-            "$<TARGET_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}"
-            "$<TARGET_FILE_NAME:javaxspcomm>"
+            "$<TARGET_LINKER_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}"
+            "$<TARGET_LINKER_FILE_NAME:javaxspcomm>"
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}
     DEPENDS ${XCOMM_LIB_DIR}/javaxspcomm.java
 )
