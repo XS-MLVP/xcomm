@@ -63,28 +63,29 @@ set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py PROPERTIES 
 add_custom_command(
         OUTPUT ${XCOMM_LIB_DIR}/info.py
         COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:pyxspcomm>
-        ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
+            $<TARGET_FILE:pyxspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
         COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:xspcomm>
-        ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:xspcomm>
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:xspcomm>
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
-        ${XCOMM_LIB_DIR}/pyxspcomm.py
+            ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
+            ${XCOMM_LIB_DIR}/pyxspcomm.py
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/xcomm.py
-        ${XCOMM_LIB_DIR}/__init__.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/xcomm.py
+            ${XCOMM_LIB_DIR}/__init__.py
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/info.py
-        ${XCOMM_LIB_DIR}/info.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/info.py
+            ${XCOMM_LIB_DIR}/info.py
         DEPENDS pyxspcomm
 )
 
 add_custom_command(
         OUTPUT pyxspcomm_so_lnk
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
         COMMAND ${CMAKE_COMMAND} -E create_symlink
-        $<TARGET_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
-        $<TARGET_FILE_NAME:pyxspcomm>
+            $<TARGET_LINKER_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
+            $<TARGET_LINKER_FILE_NAME:pyxspcomm>
         WORKING_DIRECTORY ${XCOMM_LIB_DIR}
         DEPENDS ${XCOMM_LIB_DIR}/info.py
 )
