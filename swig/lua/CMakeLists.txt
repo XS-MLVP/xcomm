@@ -36,13 +36,13 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
 endif ()
 # set rpath
 set(LUAXSPCOMM_RPATH
-        "$ENV{HOME}/.local/lib"
-        "/usr/local/lib"
+        "${RPATH_PREFIX}/"
         "${RPATH_PREFIX}/../../lib"
         "${RPATH_PREFIX}/../lib"
         "${RPATH_PREFIX}/../picker/share/picker/lib"
         "${RPATH_PREFIX}/../picker/lib"
-        "${RPATH_PREFIX}/"
+        "$ENV{HOME}/.local/lib"
+        "/usr/local/lib"
 )
 
 set_target_properties(luaxspcomm
