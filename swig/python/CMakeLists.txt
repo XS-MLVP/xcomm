@@ -43,12 +43,12 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
 endif ()
 # set rpath
 set(PYXSPCOMM_RPATH
-        "$ENV{HOME}/.local/lib"
-        "/usr/local/lib"
+        "${RPATH_PREFIX}/"
         "${RPATH_PREFIX}/../../lib"
         "${RPATH_PREFIX}/../picker/share/picker/lib"
         "${RPATH_PREFIX}/../picker/lib"
-        "${RPATH_PREFIX}/"
+        "$ENV{HOME}/.local/lib"
+        "/usr/local/lib"
 )
 
 set_target_properties(pyxspcomm
@@ -67,7 +67,7 @@ add_custom_command(
             ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
         COMMAND ${CMAKE_COMMAND} -E copy
             $<TARGET_FILE:xspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:xspcomm>.${PROJECT_VERSION}
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
             ${XCOMM_LIB_DIR}/pyxspcomm.py
@@ -86,6 +86,9 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E create_symlink
             $<TARGET_LINKER_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
             $<TARGET_LINKER_FILE_NAME:pyxspcomm>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+            $<TARGET_LINKER_FILE_NAME:xspcomm>.${PROJECT_VERSION}
+            $<TARGET_LINKER_FILE_NAME:xspcomm>
         WORKING_DIRECTORY ${XCOMM_LIB_DIR}
         DEPENDS ${XCOMM_LIB_DIR}/info.py
 )
