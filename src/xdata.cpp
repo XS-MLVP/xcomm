@@ -4,6 +4,13 @@
 
 namespace xspcomm {
 
+const IOType XData::In;
+const IOType XData::Out;
+const IOType XData::InOut;
+const WriteMode XData::Imme;
+const WriteMode XData::Rise;
+const WriteMode XData::Fall;
+
 void TEST_DPI_LR(void *v)
 {
     Debug("test DPI Logic Read");
