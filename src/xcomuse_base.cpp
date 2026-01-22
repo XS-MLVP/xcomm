@@ -1,5 +1,9 @@
 
-#include "xspcomm/xcomuse.h"
+#include "xspcomm/xcomuse_base.h"
+
+#include <algorithm>
+#include <cctype>
+#include <stdexcept>
 
 
 namespace xspcomm {
