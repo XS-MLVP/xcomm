@@ -126,13 +126,13 @@ namespace xspcomm {
             this->is_ref = true;
         }
         ~ComUseDataArray(){if(!this->is_ref)delete[] this->buffer;}
-        bool operator==(ComUseDataArray & t){
+        bool operator==(const ComUseDataArray & t) const{
             if(this->byte_size != t.byte_size)return false;
             return memcmp(this->buffer, t.buffer, this->byte_size) == 0;
         }
         ComUseDataArray * Copy(){
             auto ret = new ComUseDataArray(this->byte_size);
-            ret->SyncFrom(ret->BaseAddr(), this->byte_size);
+            ret->SyncFrom(this->BaseAddr(), this->byte_size);
             return ret;
         }
         void SyncFrom(uint64_t addr, int size){

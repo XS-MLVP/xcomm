@@ -61,6 +61,9 @@ namespace std {
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 %include "xspcomm/xsignal_cfg.h"
+%include "xspcomm/xcomuse_base.h"
+%include "xspcomm/xexpr.h"
+%include "xspcomm/xfsm.h"
 %include "xspcomm/xcomuse.h"
 
 %constant void (*_TEST_DPI_LR)(xspcomm::xsvLogic *v) = xspcomm::TEST_DPI_LR;

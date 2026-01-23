@@ -46,7 +46,7 @@ test_pythird_call: build
 
 
 run: build
-	./build/tests/test_xdata
+	ctest --test-dir build/tests
 
 rbuild: clean build run
 
