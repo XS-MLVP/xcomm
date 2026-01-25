@@ -50,6 +50,9 @@ void XClock::_shchedule_await()
 
 void XClock::_call_back(std::vector<XClockCallBack> &list)
 {
+    if (likely(list.empty())) {
+        return;
+    }
     this->in_callback = true;
     for (auto &e : list) {
         Assert(e.func != nullptr,

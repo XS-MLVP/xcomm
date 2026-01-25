@@ -6,7 +6,14 @@
 namespace xspcomm {
 
     class ComUseFsmTrigger: public ComUseStepCb{
-        struct FsmAction{
+        struct FsmTransition{
+            int cond_root = -1;
+            std::string next_name;
+            int next_state = -1;
+            bool trigger = false;
+            int line = 0;
+        };
+        struct FsmAction {
             enum class Type{
                 SetFlag,
                 ClearFlag,
@@ -15,13 +22,7 @@ namespace xspcomm {
             };
             Type type = Type::SetFlag;
             int index = -1;
-        };
-        struct FsmTransition{
-            int cond_root = -1;
-            std::string next_name;
-            int next_state = -1;
-            bool trigger = false;
-            int line = 0;
+            void (*exec)(ComUseFsmTrigger*, int) = nullptr;
         };
         struct FsmState{
             std::string name;
@@ -45,6 +46,10 @@ namespace xspcomm {
         int current_state = -1;
         bool triggered = false;
         std::string triggered_state;
+        static void ExecSetFlag(ComUseFsmTrigger* self, int idx);
+        static void ExecClearFlag(ComUseFsmTrigger* self, int idx);
+        static void ExecIncCounter(ComUseFsmTrigger* self, int idx);
+        static void ExecResetCounter(ComUseFsmTrigger* self, int idx);
     public:
         ComUseFsmTrigger(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}        
         void BindXClock(XClock *clk);

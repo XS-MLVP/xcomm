@@ -205,16 +205,19 @@ uint64_t ExprEngine::EvalNode(int id){
 }
 
 uint64_t ExprEngine::EvalIterative(int root){
-    if(root < 0 || root >= (int)this->nodes.size()){
+    if(unlikely(root < 0 || root >= (int)this->nodes.size())){
         return 0;
     }
-    struct Frame {
-        int id;
-        int state;
-        uint64_t lhs_val;
-    };
-    std::vector<Frame> stack;
-    std::vector<uint64_t> vals;
+    auto &stack = this->eval_stack;
+    auto &vals = this->eval_vals;
+    stack.clear();
+    vals.clear();
+    if (stack.capacity() < this->nodes.size()) {
+        stack.reserve(this->nodes.size());
+    }
+    if (vals.capacity() < this->nodes.size()) {
+        vals.reserve(this->nodes.size());
+    }
     stack.push_back({root, 0, 0});
     auto pop_val = [&vals]() -> uint64_t {
         if(vals.empty()) return 0;
@@ -223,8 +226,8 @@ uint64_t ExprEngine::EvalIterative(int root){
         return v;
     };
     while(!stack.empty()){
-        Frame &f = stack.back();
-        if(f.id < 0 || f.id >= (int)this->nodes.size()){
+        EvalFrame &f = stack.back();
+        if(unlikely(f.id < 0 || f.id >= (int)this->nodes.size())){
             vals.push_back(0);
             stack.pop_back();
             continue;
@@ -243,7 +246,7 @@ uint64_t ExprEngine::EvalIterative(int root){
         case ExprOp::LNOT:
             if(f.state == 0){
                 f.state = 1;
-                stack.push_back({n.lhs, 0, 0});
+            stack.push_back({n.lhs, 0, 0});
             }else{
                 uint64_t v = pop_val();
                 if(n.op == ExprOp::BNOT){
@@ -626,65 +629,77 @@ int ComUseExprCheck::ExprNewCompareConstSig(int op, uint64_t lhs, XData* rhs){
 }
 
 int ComUseExprCheck::CompileExpr(std::string expr, XSignalCFG* cfg){
-    return this->engine.CompileExpr(expr, cfg);
+    try{
+        return this->engine.CompileExpr(expr, cfg);
+    }catch(const std::exception &e){
+        Error("CompileExpr failed: %s", e.what());
+        return -1;
+    }
 }
 
 void ComUseExprCheck::SetExpr(std::string name, int root){
-    if(this->expr_map.find(name) == this->expr_map.end()){
-        this->expr_order.push_back(name);
+    auto it = this->expr_index.find(name);
+    if(it == this->expr_index.end()){
+        ExprItem item;
+        item.name = name;
+        item.root = root;
+        this->expr_list.push_back(std::move(item));
+        this->expr_index[name] = this->expr_list.size() - 1;
+    }else{
+        this->expr_list[it->second].root = root;
     }
-    this->expr_map[name] = root;
-    this->expr_trig[name] = false;
 }
 
 void ComUseExprCheck::RemoveExpr(std::string name){
-    this->expr_map.erase(name);
-    this->expr_trig.erase(name);
-    auto it = std::find(this->expr_order.begin(), this->expr_order.end(), name);
-    if(it != this->expr_order.end()){
-        this->expr_order.erase(it);
+    auto it = this->expr_index.find(name);
+    if(it == this->expr_index.end()) return;
+    size_t at = it->second;
+    size_t last = this->expr_list.size() - 1;
+    if(at != last){
+        this->expr_list[at] = std::move(this->expr_list[last]);
+        this->expr_index[this->expr_list[at].name] = at;
     }
+    this->expr_list.pop_back();
+    this->expr_index.erase(it);
 }
 
 std::map<std::string, bool> ComUseExprCheck::ListExpr(){
     std::map<std::string, bool> ret;
-    for(const auto &name : this->expr_order){
-        auto it = this->expr_trig.find(name);
-        ret[name] = (it != this->expr_trig.end()) ? it->second : false;
+    for(const auto &item : this->expr_list){
+        ret[item.name] = (item.last_trigger_cycle == this->last_eval_cycle);
     }
     return ret;
 }
 
 std::vector<std::string> ComUseExprCheck::GetTriggeredExprKeys(){
     std::vector<std::string> ret;
-    for(const auto &name : this->expr_order){
-        auto it = this->expr_trig.find(name);
-        if(it != this->expr_trig.end() && it->second){
-            ret.push_back(name);
+    for(const auto &item : this->expr_list){
+        if(item.last_trigger_cycle == this->last_eval_cycle){
+            ret.push_back(item.name);
         }
     }
     return ret;
 }
 
 void ComUseExprCheck::ClearExpr(){
-    this->expr_map.clear();
-    this->expr_trig.clear();
-    this->expr_order.clear();
+    this->expr_index.clear();
+    this->expr_list.clear();
+    this->last_eval_cycle = 0;
     this->engine.Clear();
 }
 
 void ComUseExprCheck::Call(){
-    for(auto &kv : this->expr_trig){
-        kv.second = false;
+    if (likely(this->expr_list.empty())) {
+        return;
     }
     bool triggered = false;
     this->engine.SetCycle(this->cycle);
-    for(const auto &name : this->expr_order){
-        auto it = this->expr_map.find(name);
-        if(it == this->expr_map.end()) continue;
-        uint64_t v = this->engine.Eval(it->second);
+    this->last_eval_cycle = this->cycle;
+    for(auto &item : this->expr_list){
+        if(item.root < 0) continue;
+        uint64_t v = this->engine.Eval(item.root);
         if(v != 0){
-            this->expr_trig[name] = true;
+            item.last_trigger_cycle = this->last_eval_cycle;
             if(!triggered){
                 for(auto &clk : this->clk_list){
                     clk->Disable();

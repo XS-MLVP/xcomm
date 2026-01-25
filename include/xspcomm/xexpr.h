@@ -4,6 +4,7 @@
 #include "xspcomm/xcomuse_base.h"
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <string>
 
@@ -55,10 +56,17 @@ namespace xspcomm {
     };
 
     class ExprEngine{
+        struct EvalFrame{
+            int id;
+            int state;
+            uint64_t lhs_val;
+        };
         std::vector<ExprNode> nodes;
         std::vector<std::unique_ptr<XData>> const_xdata;
         std::map<std::string, std::unique_ptr<XData>> signal_xdata;
         std::map<std::string, XData*> external_signal_xdata;
+        std::vector<EvalFrame> eval_stack;
+        std::vector<uint64_t> eval_vals;
         uint64_t current_cycle = 0;
         uint64_t EvalNode(int id);
         bool EvalCompareNode(const ExprNode &node);
@@ -92,10 +100,15 @@ namespace xspcomm {
 
     class ComUseExprCheck: public ComUseStepCb{
         ExprEngine engine;
+        struct ExprItem{
+            std::string name;
+            int root = -1;
+            uint64_t last_trigger_cycle = (uint64_t)-1;
+        };
         std::vector<XClock*> clk_list;
-        std::vector<std::string> expr_order;
-        std::map<std::string, int> expr_map;
-        std::map<std::string, bool> expr_trig;
+        std::vector<ExprItem> expr_list;
+        std::unordered_map<std::string, size_t> expr_index;
+        uint64_t last_eval_cycle = 0;
     public:
         ComUseExprCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}        
         void BindXClock(XClock *clk);
