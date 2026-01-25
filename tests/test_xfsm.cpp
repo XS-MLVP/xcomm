@@ -57,21 +57,32 @@ TEST_CASE("FSM else/goto", "[xfsm]") {
 TEST_CASE("FSM parse errors", "[xfsm]") {
     ComUseFsmTrigger fsm;
 
-    REQUIRE_THROWS(fsm.LoadProgram("", nullptr));
-    REQUIRE_THROWS(fsm.LoadProgram("state A", nullptr));
+    REQUIRE_NOTHROW(fsm.LoadProgram("", nullptr));
+    REQUIRE(fsm.ListStates().empty());
+    REQUIRE(fsm.GetCurrentState().empty());
+
+    REQUIRE_NOTHROW(fsm.LoadProgram("state A", nullptr));
+    REQUIRE(fsm.ListStates().empty());
+    REQUIRE(fsm.GetCurrentState().empty());
 
     const std::string dup =
         "state A:\n"
         "state A:\n";
-    REQUIRE_THROWS(fsm.LoadProgram(dup, nullptr));
+    REQUIRE_NOTHROW(fsm.LoadProgram(dup, nullptr));
+    REQUIRE(fsm.ListStates().empty());
+    REQUIRE(fsm.GetCurrentState().empty());
 
     const std::string bad_start =
         "start X\n"
         "state A:\n";
-    REQUIRE_THROWS(fsm.LoadProgram(bad_start, nullptr));
+    REQUIRE_NOTHROW(fsm.LoadProgram(bad_start, nullptr));
+    REQUIRE(fsm.ListStates().empty());
+    REQUIRE(fsm.GetCurrentState().empty());
 
     const std::string bad_goto =
         "state A:\n"
         "  goto B\n";
-    REQUIRE_THROWS(fsm.LoadProgram(bad_goto, nullptr));
+    REQUIRE_NOTHROW(fsm.LoadProgram(bad_goto, nullptr));
+    REQUIRE(fsm.ListStates().empty());
+    REQUIRE(fsm.GetCurrentState().empty());
 }
