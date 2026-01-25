@@ -110,12 +110,41 @@ void CollectSpecialNames(const std::string &expr,
     }
 }
 } // namespace
+void ComUseFsmTrigger::ExecSetFlag(ComUseFsmTrigger* self, int idx){
+    if(idx >= 0 && idx < (int)self->flags.size()){
+        self->flags[idx].value = 1;
+        (*self->flags[idx].xdata) = (uint64_t)1;
+    }
+}
+
+void ComUseFsmTrigger::ExecClearFlag(ComUseFsmTrigger* self, int idx){
+    if(idx >= 0 && idx < (int)self->flags.size()){
+        self->flags[idx].value = 0;
+        (*self->flags[idx].xdata) = (uint64_t)0;
+    }
+}
+
+void ComUseFsmTrigger::ExecIncCounter(ComUseFsmTrigger* self, int idx){
+    if(idx >= 0 && idx < (int)self->counters.size()){
+        self->counters[idx].value += 1;
+        (*self->counters[idx].xdata) = self->counters[idx].value;
+    }
+}
+
+void ComUseFsmTrigger::ExecResetCounter(ComUseFsmTrigger* self, int idx){
+    if(idx >= 0 && idx < (int)self->counters.size()){
+        self->counters[idx].value = 0;
+        (*self->counters[idx].xdata) = (uint64_t)0;
+    }
+}
+
 void ComUseFsmTrigger::BindXClock(XClock *clk){
     this->clk_list.push_back(clk);
 }
 
 void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
     this->Clear();
+    try{
     if(program.empty()){
         throw std::runtime_error("fsm program is empty");
     }
@@ -189,6 +218,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::SetFlag;
             act.index = idx;
+            act.exec = &ComUseFsmTrigger::ExecSetFlag;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -213,6 +243,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::ClearFlag;
             act.index = idx;
+            act.exec = &ComUseFsmTrigger::ExecClearFlag;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -237,6 +268,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::IncCounter;
             act.index = idx;
+            act.exec = &ComUseFsmTrigger::ExecIncCounter;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -261,6 +293,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::ResetCounter;
             act.index = idx;
+            act.exec = &ComUseFsmTrigger::ExecResetCounter;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -397,6 +430,11 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
         }
     }
     this->Reset();
+    }catch(const std::exception &e){
+        Error("FSM parse/load failed: %s", e.what());
+        this->Clear();
+        return;
+    }
 }
 
 void ComUseFsmTrigger::Reset(){
@@ -457,34 +495,10 @@ void ComUseFsmTrigger::Call(){
     this->engine.SetCycle(this->cycle);
     FsmState &st = this->states[this->current_state];
     for(const auto &act : st.actions){
-        switch(act.type){
-        case FsmAction::Type::SetFlag:
-            if(act.index >= 0 && act.index < (int)this->flags.size()){
-                this->flags[act.index].value = 1;
-                (*this->flags[act.index].xdata) = (uint64_t)1;
-            }
-            break;
-        case FsmAction::Type::ClearFlag:
-            if(act.index >= 0 && act.index < (int)this->flags.size()){
-                this->flags[act.index].value = 0;
-                (*this->flags[act.index].xdata) = (uint64_t)0;
-            }
-            break;
-        case FsmAction::Type::IncCounter:
-            if(act.index >= 0 && act.index < (int)this->counters.size()){
-                this->counters[act.index].value += 1;
-                (*this->counters[act.index].xdata) = this->counters[act.index].value;
-            }
-            break;
-        case FsmAction::Type::ResetCounter:
-            if(act.index >= 0 && act.index < (int)this->counters.size()){
-                this->counters[act.index].value = 0;
-                (*this->counters[act.index].xdata) = (uint64_t)0;
-            }
-            break;
-        default:
-            break;
+        if(unlikely(act.exec == nullptr)){
+            continue;
         }
+        act.exec(this, act.index);
     }
     bool moved = false;
     for(const auto &tr : st.transitions){
