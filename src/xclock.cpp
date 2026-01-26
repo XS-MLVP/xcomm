@@ -35,7 +35,7 @@ XStep::XStep(XClock &clk, u_int64_t step)
 
 void XClock::_step(bool d)
 {
-    if (this->step_fc)
+    if (likely(this->step_fc))
         this->step_fc(d);
     else
         Warn("XClock.step_fc is not set!");
@@ -55,8 +55,6 @@ void XClock::_call_back(std::vector<XClockCallBack> &list)
     }
     this->in_callback = true;
     for (auto &e : list) {
-        Assert(e.func != nullptr,
-               "Clock callback corrupted, may be stackoverflow!!");
         e.func(this->clk, e.args);
     }
     this->in_callback = false;
@@ -65,6 +63,8 @@ void XClock::_add_cb(std::vector<XClockCallBack> &cblist,
                      xfunction<void, u_int64_t, void *> func, void *args,
                      std::string desc)
 {
+    Assert(func != nullptr,
+           "Clock callback corrupted, may be stackoverflow!!");
     XClockCallBack cb;
     cb.args = args;
     cb.func = func;
@@ -165,15 +165,15 @@ XClock& XClock::Add(xspcomm::XPort &d)
 
 void XClock::Step(int s)
 {
-    if (this->is_disable)return;
-    if (this->in_callback == true) {
+    if (unlikely(this->is_disable)) return;
+    if (unlikely(this->in_callback == true)) {
         Warn("Cannot call XClock.Step in callbacks, Ignore!");
         return;
     }
     for (int i = 0; i < s; i++) {
-        if(this->is_disable)return;
+        if (unlikely(this->is_disable)) return;
         this->clk += 1;
-        if (this->stop_on_rise) {
+        if (likely(this->stop_on_rise)) {
             this->_step_fal();
             this->_step_ris();
         } else {
@@ -191,13 +191,13 @@ void XClock::RunStep(int s)
 
 void XClock::_step_fal()
 {
-    if(this->fast_mode_level == -1)return;
+    if (unlikely(this->fast_mode_level == -1)) return;
     auto sub_clk_ris = this->_get_div_clk_ris(this->clk, false);
     auto sub_clk_fal = this->_get_div_clk_fal(this->clk, false);
     this->_fal_pins();
     for(auto &c : sub_clk_fal){c->_fal_pins();}
     for(auto &c : sub_clk_ris){c->_ris_pins();}
-    if(this->fast_mode_level < 2){
+    if (likely(this->fast_mode_level < 2)){
         this->_step(false);
         this->_fal_ports();
         for(auto &c : sub_clk_fal){c->_fal_ports();}
@@ -216,13 +216,13 @@ void XClock::_step_fal()
 
 void XClock::_step_ris()
 {
-    if(this->fast_mode_level == -2)return;
+    if (unlikely(this->fast_mode_level == -2)) return;
     auto sub_clk_ris = this->_get_div_clk_ris(this->clk, true);
     auto sub_clk_fal = this->_get_div_clk_fal(this->clk, true);
     this->_ris_pins();
     for(auto &c : sub_clk_ris){c->_ris_pins();}
     for(auto &c : sub_clk_fal){c->_fal_pins();}
-    if(this->fast_mode_level < 2){
+    if (likely(this->fast_mode_level < 2)){
         this->_step(false);
         this->_ris_ports();
         for(auto &c : sub_clk_ris){c->_ris_ports();}
@@ -333,13 +333,13 @@ void XClock::_fal_pins(){
 }
 
 void XClock::_fal_ports(){
-    if(this->fast_mode_level < 3){
+    if (likely(this->fast_mode_level < 3)){
         for (auto &p : this->ports) { p->WriteOnFall();}
     }
 }
 
 void XClock::_fal_refresh(){
-    if(this->fast_mode_level < 1){
+    if (likely(this->fast_mode_level < 1)){
         for (auto &p : this->ports) { p->ReadFresh(WriteMode::Fall); }
     }
     this->_call_back(this->list_call_back_fal);
@@ -350,13 +350,13 @@ void XClock::_ris_pins(){
 }
 
 void XClock::_ris_ports(){
-    if(this->fast_mode_level < 3){
+    if (likely(this->fast_mode_level < 3)){
         for (auto &p : this->ports) { p->WriteOnRise(); }
     }
 }
 
 void XClock::_ris_refresh(){
-    if(this->fast_mode_level < 1){
+    if (likely(this->fast_mode_level < 1)){
         for (auto &p : this->ports) { p->ReadFresh(WriteMode::Rise); }
     }
     this->_call_back(this->list_call_back_ris);
@@ -380,10 +380,11 @@ void XClock::FreqDivDelete(XClock *clk){
 
 std::vector<XClock *> XClock::_get_div_clk_ris(u_int64_t cycle, bool rise){
     std::vector<XClock *> ret;
+    if (likely(this->div_clk.empty())) return ret;
     auto tick = cycle * 2 - (rise ? 0 : 1);
     for (auto &e : this->div_clk){
         auto ptick = tick + e.second[1];
-        if (ptick % (2 * e.second[0]) == 0){
+        if (unlikely(ptick % (2 * e.second[0]) == 0)){
             if (!e.first->stop_on_rise) e.first->clk += 1;
             ret.push_back(e.first);
         }
@@ -393,10 +394,11 @@ std::vector<XClock *> XClock::_get_div_clk_ris(u_int64_t cycle, bool rise){
 
 std::vector<XClock *> XClock::_get_div_clk_fal(u_int64_t cycle, bool rise){
     std::vector<XClock *> ret;
+    if (likely(this->div_clk.empty())) return ret;
     auto tick = cycle * 2 - (rise ? 0 : 1);
     for (auto &e : this->div_clk){
         auto ptick = tick + e.second[1];
-        if ((ptick + e.second[0]) % (2 * e.second[0]) == 0){
+        if (unlikely((ptick + e.second[0]) % (2 * e.second[0]) == 0)){
             if (e.first->stop_on_rise) e.first->clk += 1;
             ret.push_back(e.first);
         }
