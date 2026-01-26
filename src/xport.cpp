@@ -26,6 +26,7 @@ bool XPort::Add(std::string pin, xspcomm::XData &pin_data)
         return false;
     }
     this->port_list[pin_name] = &pin_data;
+    this->port_vec.push_back(&pin_data);
     this->port_name[pin_name] = pin;
     this->name_port[pin] = pin_name;
     return true;
@@ -37,6 +38,13 @@ bool XPort::Del(std::string pin)
     if (this->port_list.count(pin_name) == 0) {
         Debug("PIN: %s not exits", pin_name.c_str());
         return false;
+    }
+    auto it = this->port_list.find(pin_name);
+    if (it != this->port_list.end()) {
+        auto ptr = it->second;
+        this->port_vec.erase(
+            std::remove(this->port_vec.begin(), this->port_vec.end(), ptr),
+            this->port_vec.end());
     }
     this->port_list.erase(pin_name);
     this->port_name.erase(pin_name);
@@ -67,6 +75,7 @@ XPort &XPort::NewSubPort(std::string subprefix)
             port->port_list[e.first] = e.second;
             port->port_name[e.first] = e.first.substr(port->prefix.length());
             port->name_port[port->port_name[e.first]] = e.first;
+            port->port_vec.push_back(e.second);
         }
     }
     return *port;
@@ -79,6 +88,7 @@ XPort &XPort::SelectPins(std::vector<std::string> pins){
             port->port_list[this->asKey(p)] = this->port_list[this->asKey(p)];
             port->port_name[this->asKey(p)] = p;
             port->name_port[p] = this->asKey(p);
+            port->port_vec.push_back(this->port_list[this->asKey(p)]);
         }else{
             Error("PIN: %s not exits", p.c_str());
         }
@@ -110,51 +120,51 @@ xspcomm::XData &XPort::Get(std::string key, bool raw_key)
 
 XPort &XPort::FlipIOType()
 {
-    for (auto &e : this->port_list) { e.second->FlipIOType(); }
+    for (auto &e : this->port_vec) { e->FlipIOType(); }
     return *this;
 }
 
 XPort &XPort::AsBiIO()
 {
-    for (auto &e : this->port_list) { e.second->AsBiIO(); }
+    for (auto &e : this->port_vec) { e->AsBiIO(); }
     return *this;
 }
 
 XPort &XPort::WriteOnRise()
 {
-    for (auto &e : this->port_list) { e.second->WriteOnRise(); }
+    for (auto &e : this->port_vec) { e->WriteOnRise(); }
     return *this;
 }
 
 XPort &XPort::WriteOnFall()
 {
-    for (auto &e : this->port_list) { e.second->WriteOnFall(); }
+    for (auto &e : this->port_vec) { e->WriteOnFall(); }
     return *this;
 }
 
 XPort &XPort::AsImmWrite(){
-    for (auto &e : this->port_list) { if(!e.second->IsOutIO())e.second->AsImmWrite(); }
+    for (auto &e : this->port_vec) { if(!e->IsOutIO())e->AsImmWrite(); }
     return *this;
 }
 XPort &XPort::AsRiseWrite(){
-    for (auto &e : this->port_list) { if(!e.second->IsOutIO())e.second->AsRiseWrite(); }
+    for (auto &e : this->port_vec) { if(!e->IsOutIO())e->AsRiseWrite(); }
     return *this;
 }
 XPort &XPort::AsFallWrite(){
-    for (auto &e : this->port_list) { if(!e.second->IsOutIO())e.second->AsFallWrite(); }
+    for (auto &e : this->port_vec) { if(!e->IsOutIO())e->AsFallWrite(); }
     return *this;
 }
 
 XPort &XPort::ReadFresh(xspcomm::WriteMode m)
 {
-    for (auto &e : this->port_list) { if(e.second->HasOnChangeCbs())e.second->ReadFresh(m); }
+    for (auto &e : this->port_vec) { if(e->HasOnChangeCbs())e->ReadFresh(m); }
     return *this;
 }
 
 XPort &XPort::SetZero()
 {
-    for (auto &e : this->port_list) {
-        if (e.second->mIOType != IOType::Output) { *e.second = 0; };
+    for (auto &e : this->port_vec) {
+        if (e->mIOType != IOType::Output) { *e = 0; };
     }
     return *this;
 }
@@ -193,6 +203,7 @@ XPort &XPort::operator=(XPort &data){
     this->port_list = data.port_list;
     this->port_name = data.port_name;
     this->prefix = data.prefix;
+    this->port_vec = data.port_vec;
     return *this;
 }
 } // namespace xspcomm

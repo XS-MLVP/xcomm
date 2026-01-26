@@ -4,6 +4,7 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/xutil.h"
 #include <map>
+#include <vector>
 
 namespace xspcomm {
 class XPort
@@ -15,6 +16,7 @@ private:
 public:
     std::string prefix;
     std::map<std::string, xspcomm::XData *> port_list;
+    std::vector<xspcomm::XData *> port_vec;
     /*************************************************************** */
     //                  Start of Stable public user APIs
     /*************************************************************** */

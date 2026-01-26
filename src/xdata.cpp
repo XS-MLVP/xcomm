@@ -216,12 +216,13 @@ void XData::_local_to_sv()
 }
 void XData::_dpi_read()
 {
-    if (this->mIOType == IOType::Input) {
-        if (this->write_mode != WriteMode::Imme) return;
+    if (unlikely(this->mIOType == IOType::Input
+                 && this->write_mode != WriteMode::Imme)) {
+        return;
     }
     this->_dpi_check();
-    if (this->bitRead) this->bitRead(&this->mLogicData);
-    if (this->vecRead) this->vecRead(this->pVecData);
+    if (likely(this->bitRead)) this->bitRead(&this->mLogicData);
+    if (likely(this->vecRead)) this->vecRead(this->pVecData);
 }
 WriteMode XData::GetWriteMode()
 {
@@ -229,7 +230,7 @@ WriteMode XData::GetWriteMode()
 }
 bool XData::SetWriteMode(WriteMode mode)
 {
-    if (this->mIOType == IOType::Output) {
+    if (unlikely(this->mIOType == IOType::Output)) {
         Warn("XData(%s) is output, cannot set write mode", this->mName.c_str());
         return false;
     }
@@ -238,44 +239,44 @@ bool XData::SetWriteMode(WriteMode mode)
 };
 
 void XData::WriteDirect(){
-    if (this->bitWrite) this->bitWrite(this->mLogicData);
-    if (this->vecWrite) this->vecWrite(this->pVecData);
+    if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
+    if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
 }
 
 void XData::WriteOnRise()
 {
-    if (this->mIOType == IOType::Output) return;
-    if (this->write_mode != WriteMode::Rise) return;
+    if (unlikely(this->mIOType == IOType::Output)) return;
+    if (unlikely(this->write_mode != WriteMode::Rise)) return;
     if (this->_need_write()) {
-        if (this->bitWrite) this->bitWrite(this->mLogicData);
-        if (this->vecWrite) this->vecWrite(this->pVecData);
+        if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
+        if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
     }
 }
 
 void XData::WriteOnFall()
 {
-    if (this->mIOType == IOType::Output) return;
-    if (this->write_mode != WriteMode::Fall) return;
+    if (unlikely(this->mIOType == IOType::Output)) return;
+    if (unlikely(this->write_mode != WriteMode::Fall)) return;
     if (this->_need_write()) {
-        if (this->bitWrite) this->bitWrite(this->mLogicData);
-        if (this->vecWrite) this->vecWrite(this->pVecData);
+        if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
+        if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
     }
 }
 void XData::_dpi_write()
 {
-    if (this->mIOType == IOType::Output) return;
-    if (this->write_mode != WriteMode::Imme) return;
+    if (unlikely(this->mIOType == IOType::Output)) return;
+    if (unlikely(this->write_mode != WriteMode::Imme)) return;
     this->_dpi_check();
     if (this->_need_write()) {
-        if (this->bitWrite) this->bitWrite(this->mLogicData);
-        if (this->vecWrite) this->vecWrite(this->pVecData);
+        if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
+        if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
     }
 }
 
 bool XData::_need_write()
 {
-    if (!this->ignore_same_write) return true;
-    if (!this->last_is_write) {
+    if (unlikely(!this->ignore_same_write)) return true;
+    if (unlikely(!this->last_is_write)) {
         this->_update_last_write();
         return true;
     };
@@ -286,15 +287,10 @@ bool XData::_need_write()
         }
         return false;
     } else {
-        for (int i = 0; i < this->vecSize; i++) {
-            if (this->last_pVecData[i].aval != this->pVecData[i].aval) {
-                this->_update_last_write();
-                return true;
-            }
-            if (this->last_pVecData[i].bval != this->pVecData[i].bval) {
-                this->_update_last_write();
-                return true;
-            }
+        if (memcmp(this->last_pVecData, this->pVecData,
+                   this->vecSize * sizeof(xsvLogicVecVal)) != 0) {
+            this->_update_last_write();
+            return true;
         }
     }
     return false;
@@ -309,15 +305,15 @@ void XData::_update_last_write()
             this->last_pVecData =
                 (xsvLogicVecVal *)calloc(this->vecSize, sizeof(xsvLogicVecVal));
         }
-        for (int i = 0; i < this->vecSize; i++) {
-            this->last_pVecData[i] = this->pVecData[i];
-        }
+        memcpy(this->last_pVecData, this->pVecData,
+               this->vecSize * sizeof(xsvLogicVecVal));
     }
 }
 
 void XData::_update_shadow()
 {
-    if (this->igore_callback) return;
+    if (unlikely(this->igore_callback)) return;
+    if (unlikely(!this->has_on_change_cbs)) return;
     bool need_call = false;
     bool validate  = true;
     if (this->mWidth == 0) {
@@ -331,7 +327,7 @@ void XData::_update_shadow()
             if (this->__pVecData[i].bval != this->pVecData[i].bval) {
                 need_call = true;
             }
-            if (this->pVecData->bval) { validate = false; }
+            if (unlikely(this->pVecData[i].bval)) { validate = false; }
             this->__pVecData[i] = this->pVecData[i];
         }
     }
@@ -356,9 +352,24 @@ XData::XData(uint32_t width, IOType itype, std::string name) :
 }
 void XData::ReInit(uint32_t width, IOType itype, std::string name)
 {
+    if (this->pVecData) {
+        for (int i = 0; i < this->mWidth; i++) { delete this->pinbind_vec[i]; }
+        free(this->pinbind_vec);
+        free(this->pVecData);
+        free(this->__pVecData);
+        this->pinbind_vec = nullptr;
+        this->pVecData = nullptr;
+        this->__pVecData = nullptr;
+    }
     this->mWidth  = width;
     this->mIOType = itype;
     this->mName   = name;
+    this->last_is_write = false;
+    this->last_mLogicData = 0;
+    if (this->last_pVecData) {
+        free(this->last_pVecData);
+        this->last_pVecData = nullptr;
+    }
 
     auto write_fc = [this]() {
         this->_dpi_write();
@@ -438,10 +449,14 @@ XData::~XData()
 {
     if (this->pVecData) {
         for (int i = 0; i < this->mWidth; i++) { delete this->pinbind_vec[i]; }
-        delete this->pinbind_vec;
-        delete this->pVecData;
-        delete this->__pVecData;
+        free(this->pinbind_vec);
+        free(this->pVecData);
+        free(this->__pVecData);
         this->pVecData = nullptr;
+    }
+    if (this->last_pVecData) {
+        free(this->last_pVecData);
+        this->last_pVecData = nullptr;
     }
 }
 
@@ -747,12 +762,23 @@ std::vector<unsigned char> XData::GetVU8()
 void XData::OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
                      void *args, std::string desc)
 {
+    bool init_shadow = !this->has_on_change_cbs;
+    if (init_shadow) {
+        this->update_read();
+    }
     XDataCallBack cb;
     cb.args = args;
     cb.fc   = func;
     cb.desc = desc;
     this->call_back_on_change.push_back(cb);
     this->has_on_change_cbs = true;
+    if (init_shadow) {
+        this->__mLogicData = this->mLogicData;
+        if (this->mWidth > 0 && this->__pVecData) {
+            memcpy(this->__pVecData, this->pVecData,
+                   this->vecSize * sizeof(xsvLogicVecVal));
+        }
+    }
 }
 
 void XData::ClearOnChangeCbs(){
@@ -859,7 +885,7 @@ bool XData::operator==(const char *str)
 
 XData &XData::operator=(u_int64_t data)
 {
-    if (this->mIOType == IOType::Output) {
+    if (unlikely(this->mIOType == IOType::Output)) {
         Warn("Can not assign value to ouput.PIN(name=%s)", this->mName.c_str());
         return *this;
     }
