@@ -14,6 +14,7 @@ target_link_libraries(javaxspcomm PRIVATE xspcomm)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../java/xspcomm)
+set(STAGE_NATIVE_LIBRARY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../StageSharedLibrary.cmake)
 set_property(TARGET javaxspcomm PROPERTY SWIG_COMPILE_OPTIONS -package com.xspcomm)
 # set rpath prefix
 set(RPATH_PREFIX "")
@@ -42,15 +43,22 @@ set_target_properties(javaxspcomm
 # copy file
 add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/javaxspcomm.java
-    COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:javaxspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}
-    COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:xspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_FILE_NAME:xspcomm>
-    COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:xspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:xspcomm>
+    COMMAND ${CMAKE_COMMAND}
+            "-DDEST_DIR=${XCOMM_LIB_DIR}"
+            "-DTARGET_FILE=$<TARGET_FILE:javaxspcomm>"
+            "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:javaxspcomm>"
+            "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:javaxspcomm>"
+            "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
+            "-DPROJECT_VERSION=${PROJECT_VERSION}"
+            -P ${STAGE_NATIVE_LIBRARY_SCRIPT}
+    COMMAND ${CMAKE_COMMAND}
+            "-DDEST_DIR=${XCOMM_LIB_DIR}"
+            "-DTARGET_FILE=$<TARGET_FILE:xspcomm>"
+            "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:xspcomm>"
+            "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:xspcomm>"
+            "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
+            "-DPROJECT_VERSION=${PROJECT_VERSION}"
+            -P ${STAGE_NATIVE_LIBRARY_SCRIPT}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.java
             ${XCOMM_LIB_DIR}/
@@ -63,16 +71,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E echo 'Version: ${PROJECT_VERSION}' >> ${XCOMM_LIB_DIR}/../MANIFEST.MF
     COMMAND ${CMAKE_COMMAND} -E echo '' >> ${XCOMM_LIB_DIR}/../MANIFEST.MF
     COMMAND ${Java_JAVAC_EXECUTABLE} -d ${XCOMM_LIB_DIR} ${XCOMM_LIB_DIR}/*.java
-    DEPENDS javaxspcomm
-)
-
-add_custom_command(
-    OUTPUT javaxspcomm_so_lnk
-    COMMAND ${CMAKE_COMMAND} -E copy
-            "$<TARGET_LINKER_FILE_NAME:javaxspcomm>.${PROJECT_VERSION}"
-            "$<TARGET_LINKER_FILE_NAME:javaxspcomm>"
-    WORKING_DIRECTORY ${XCOMM_LIB_DIR}
-    DEPENDS ${XCOMM_LIB_DIR}/javaxspcomm.java
+    DEPENDS javaxspcomm ${STAGE_NATIVE_LIBRARY_SCRIPT}
 )
 
 add_custom_command(
@@ -82,7 +81,7 @@ add_custom_command(
             xspcomm-java.jar
             ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.${PROJECT_VERSION}.jar
     WORKING_DIRECTORY ${XCOMM_LIB_DIR}/..
-    DEPENDS javaxspcomm_so_lnk
+    DEPENDS ${XCOMM_LIB_DIR}/javaxspcomm.java
 )
 
 add_custom_target(

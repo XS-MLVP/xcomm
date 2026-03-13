@@ -9,6 +9,7 @@ target_link_libraries(golangxspcomm PRIVATE xspcomm)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../golang/src/xspcomm)
+set(STAGE_NATIVE_LIBRARY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../StageSharedLibrary.cmake)
 
 # set rpath prefix
 set(RPATH_PREFIX "")
@@ -41,9 +42,14 @@ set_target_properties(golangxspcomm
 # copy file
 add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/xspcomm.go
-    COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:golangxspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}
+    COMMAND ${CMAKE_COMMAND}
+            "-DDEST_DIR=${XCOMM_LIB_DIR}"
+            "-DTARGET_FILE=$<TARGET_FILE:golangxspcomm>"
+            "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:golangxspcomm>"
+            "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:golangxspcomm>"
+            "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
+            "-DPROJECT_VERSION=${PROJECT_VERSION}"
+            -P ${STAGE_NATIVE_LIBRARY_SCRIPT}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${SWIG_OUTFILE_DIR}/../xspcomm.go
             ${XCOMM_LIB_DIR}/
@@ -53,22 +59,12 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/go.mod
             ${XCOMM_LIB_DIR}/
-    DEPENDS golangxspcomm
-)
-
-add_custom_command(
-    OUTPUT golangspcomm_js_lnk
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-            "$<TARGET_LINKER_FILE_NAME:golangxspcomm>.${PROJECT_VERSION}"
-            "$<TARGET_LINKER_FILE_NAME:golangxspcomm>"
-    WORKING_DIRECTORY ${XCOMM_LIB_DIR}
-    DEPENDS ${XCOMM_LIB_DIR}/xspcomm.go
+    DEPENDS golangxspcomm ${STAGE_NATIVE_LIBRARY_SCRIPT}
 )
 
 add_custom_target(
-    _DummyTarget_create_golangxspcomm_js_link ALL
-  DEPENDS golangspcomm_js_lnk
+    _DummyTarget_stage_golangxspcomm ALL
+  DEPENDS ${XCOMM_LIB_DIR}/xspcomm.go
 )
 
 # Install
