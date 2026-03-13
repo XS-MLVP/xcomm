@@ -33,6 +33,7 @@ build/golang/
         ├── golangxspcomm.so.0.0.1
         └── xspcomm.go
 ```
+以上示例为 Linux 下的产物形式。macOS 下原生动态库/扩展模块会保留平台原生命名（例如 `.dylib`、`.jnilib` 或模块实际文件名），不再额外拼接 Linux 风格的 `.${PROJECT_VERSION}` 后缀。
 
 **测试：**
 make命令默认编译执行 tests/test_xdata.cpp。 若要运行 tests/tests_python.py 执行如下命令：

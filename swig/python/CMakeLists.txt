@@ -33,6 +33,7 @@ endif ()
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)
+set(STAGE_NATIVE_LIBRARY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../StageSharedLibrary.cmake)
 # set rpath prefix
 set(RPATH_PREFIX "")
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -62,12 +63,22 @@ set_target_properties(pyxspcomm
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py PROPERTIES GENERATED TRUE)
 add_custom_command(
         OUTPUT ${XCOMM_LIB_DIR}/info.py
-        COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:pyxspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
-        COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:xspcomm>
-            ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:xspcomm>.${PROJECT_VERSION}
+        COMMAND ${CMAKE_COMMAND}
+            "-DDEST_DIR=${XCOMM_LIB_DIR}"
+            "-DTARGET_FILE=$<TARGET_FILE:pyxspcomm>"
+            "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:pyxspcomm>"
+            "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:pyxspcomm>"
+            "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
+            "-DPROJECT_VERSION=${PROJECT_VERSION}"
+            -P ${STAGE_NATIVE_LIBRARY_SCRIPT}
+        COMMAND ${CMAKE_COMMAND}
+            "-DDEST_DIR=${XCOMM_LIB_DIR}"
+            "-DTARGET_FILE=$<TARGET_FILE:xspcomm>"
+            "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:xspcomm>"
+            "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:xspcomm>"
+            "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
+            "-DPROJECT_VERSION=${PROJECT_VERSION}"
+            -P ${STAGE_NATIVE_LIBRARY_SCRIPT}
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_BINARY_DIR}/pyxspcomm.py
             ${XCOMM_LIB_DIR}/pyxspcomm.py
@@ -77,25 +88,12 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/info.py
             ${XCOMM_LIB_DIR}/info.py
-        DEPENDS pyxspcomm
-)
-
-add_custom_command(
-        OUTPUT pyxspcomm_so_lnk
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-            $<TARGET_LINKER_FILE_NAME:pyxspcomm>.${PROJECT_VERSION}
-            $<TARGET_LINKER_FILE_NAME:pyxspcomm>
-        COMMAND ${CMAKE_COMMAND} -E create_symlink
-            $<TARGET_LINKER_FILE_NAME:xspcomm>.${PROJECT_VERSION}
-            $<TARGET_LINKER_FILE_NAME:xspcomm>
-        WORKING_DIRECTORY ${XCOMM_LIB_DIR}
-        DEPENDS ${XCOMM_LIB_DIR}/info.py
+        DEPENDS pyxspcomm ${STAGE_NATIVE_LIBRARY_SCRIPT}
 )
 
 add_custom_target(
-        _DummyTarget_create_pyxspcomm_so_link ALL
-        DEPENDS pyxspcomm_so_lnk
+        _DummyTarget_stage_pyxspcomm ALL
+        DEPENDS ${XCOMM_LIB_DIR}/info.py
 )
 
 install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/python USE_SOURCE_PERMISSIONS)

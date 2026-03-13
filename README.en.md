@@ -34,6 +34,7 @@ build/golang/
         ├── golangxspcomm.so.0.0.1
         └── xspcomm.go
 ```
+The example above shows Linux artifact names. On macOS, native shared libraries and extension modules keep the platform-native filename (for example `.dylib`, `.jnilib`, or the module's actual filename) instead of appending an extra Linux-style `.${PROJECT_VERSION}` suffix.
 
 **Testing:**
 The make command compiles and executes tests/test_xdata.cpp by default. To run tests/tests_python.py, execute the following commands:
