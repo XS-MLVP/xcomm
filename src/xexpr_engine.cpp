@@ -49,6 +49,16 @@ int ExprEngine::NewCompare(ExprOp op, int lhs, int rhs){
     return (int)this->nodes.size() - 1;
 }
 
+int ExprEngine::NewSelect(int cond, int lhs, int rhs){
+    ExprNode n;
+    n.op = ExprOp::SELECT;
+    n.lhs = cond;
+    n.rhs = lhs;
+    n.imm = (uint64_t)rhs;
+    this->nodes.push_back(n);
+    return (int)this->nodes.size() - 1;
+}
+
 int ExprEngine::NewCompareSigSig(ExprOp op, XData* lhs, XData* rhs){
     ExprNode n;
     n.op = op;
@@ -133,6 +143,8 @@ uint64_t ExprEngine::EvalNode(int id){
         if(lv) return 1;
         return EvalNode(n.rhs) ? 1 : 0;
     }
+    case ExprOp::SELECT:
+        return EvalNode(n.lhs) ? EvalNode(n.rhs) : EvalNode((int)n.imm);
     case ExprOp::ADD:
         return EvalNode(n.lhs) + EvalNode(n.rhs);
     case ExprOp::SUB:
@@ -320,6 +332,18 @@ uint64_t ExprEngine::EvalIterative(int root){
                 }else{
                     vals.push_back(rv ? 1 : 0);
                 }
+                stack.pop_back();
+            }
+            break;
+        case ExprOp::SELECT:
+            if(f.state == 0){
+                f.state = 1;
+                stack.push_back({n.lhs, 0, 0});
+            }else if(f.state == 1){
+                f.lhs_val = pop_val();
+                f.state = 2;
+                stack.push_back({f.lhs_val ? n.rhs : (int)n.imm, 0, 0});
+            }else{
                 stack.pop_back();
             }
             break;
@@ -537,6 +561,10 @@ int ExprEngine::ComputeCost(int id, std::vector<int> &memo){
             cost = 1 + ComputeCost(n.lhs, memo) + ComputeCost(n.rhs, memo);
         }
         break;
+    case ExprOp::SELECT:
+        cost = 1 + ComputeCost(n.lhs, memo) + ComputeCost(n.rhs, memo)
+             + ComputeCost((int)n.imm, memo);
+        break;
     case ExprOp::WITHIN:
     case ExprOp::HOLD:
         cost = 2 + ComputeCost(n.lhs, memo);
@@ -559,6 +587,9 @@ int ExprEngine::ComputeStateful(int id, std::vector<int> &memo){
     }
     if(n.lhs >= 0) stateful |= ComputeStateful(n.lhs, memo);
     if(n.rhs >= 0) stateful |= ComputeStateful(n.rhs, memo);
+    if(n.op == ExprOp::SELECT && (int)n.imm >= 0){
+        stateful |= ComputeStateful((int)n.imm, memo);
+    }
     memo[id] = stateful;
     return stateful;
 }
@@ -569,6 +600,9 @@ void ExprEngine::ReorderShortCircuit(int id, const std::vector<int> &memo,
     ExprNode &n = this->nodes[id];
     if(n.lhs >= 0) ReorderShortCircuit(n.lhs, memo, stateful);
     if(n.rhs >= 0) ReorderShortCircuit(n.rhs, memo, stateful);
+    if(n.op == ExprOp::SELECT && (int)n.imm >= 0){
+        ReorderShortCircuit((int)n.imm, memo, stateful);
+    }
     if(n.op == ExprOp::LAND || n.op == ExprOp::LOR){
         int lc = (n.lhs >= 0 && n.lhs < (int)memo.size()) ? memo[n.lhs] : 0;
         int rc = (n.rhs >= 0 && n.rhs < (int)memo.size()) ? memo[n.rhs] : 0;

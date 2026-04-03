@@ -1,5 +1,6 @@
 
 #include "xspcomm/xdata.h"
+#include "xspcomm/xexpr.h"
 #include "xspcomm/xutil.h"
 
 namespace xspcomm {
@@ -230,9 +231,9 @@ WriteMode XData::GetWriteMode()
 }
 bool XData::SetWriteMode(WriteMode mode)
 {
-    if (unlikely(this->mIOType == IOType::Output)) {
-        Warn("XData(%s) is output, cannot set write mode", this->mName.c_str());
-        return false;
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot set write mode",
+               this->mName.c_str());
     }
     this->write_mode = mode;
     return true;
@@ -344,6 +345,11 @@ void XData::_dpi_check(){
     // TBD
 };
 
+bool XData::_check_writeable() const
+{
+    return !this->readonly_backend && this->mIOType != IOType::Output;
+}
+
 XData::XData() : XData(0, IOType::InOut){};
 XData::XData(uint32_t width, IOType itype, std::string name) :
     mWidth(width), mIOType(itype), pinbind_bit(&this->mLogicData), mName(name), value(*this)
@@ -364,6 +370,8 @@ void XData::ReInit(uint32_t width, IOType itype, std::string name)
     this->mWidth  = width;
     this->mIOType = itype;
     this->mName   = name;
+    this->backend_kind = XDataBackendKind::Unknown;
+    this->readonly_backend = false;
     this->last_is_write = false;
     this->last_mLogicData = 0;
     if (this->last_pVecData) {
@@ -587,6 +595,8 @@ void XData::BindDPIPtr(uint64_t read_ptr, uint64_t write_ptr)
         this->bitRead  = (void (*)(void *))read_ptr;
         this->bitWrite = (void (*)(const unsigned char))write_ptr;
     }
+    this->backend_kind = XDataBackendKind::DPI;
+    this->readonly_backend = false;
     this->update_read();
 }
 
@@ -597,6 +607,8 @@ void XData::BindDPIRW(xfunction<void, void *> read,
            this->mName.c_str(), this->mWidth);
     this->vecRead  = read;
     this->vecWrite = write;
+    this->backend_kind = XDataBackendKind::DPI;
+    this->readonly_backend = false;
     this->update_read();
 }
 void XData::BindDPIRW(xfunction<void, void *> read,
@@ -606,6 +618,8 @@ void XData::BindDPIRW(xfunction<void, void *> read,
            this->mName.c_str(), this->mWidth);
     this->bitRead  = read;
     this->bitWrite = write;
+    this->backend_kind = XDataBackendKind::DPI;
+    this->readonly_backend = false;
     this->update_read();
 }
 void XData::BindDPIRW(void (*read)(void *), void (*write)(const void *)) {
@@ -613,6 +627,8 @@ void XData::BindDPIRW(void (*read)(void *), void (*write)(const void *)) {
            this->mName.c_str(), this->mWidth);
     this->vecRead  = read;
     this->vecWrite = write;
+    this->backend_kind = XDataBackendKind::DPI;
+    this->readonly_backend = false;
     this->update_read();
 }
 void XData::BindDPIRW(void (*read)(void *), void (*write)(const unsigned char)) {
@@ -620,6 +636,8 @@ void XData::BindDPIRW(void (*read)(void *), void (*write)(const unsigned char)) 
            this->mName.c_str(), this->mWidth);
     this->bitRead  = read;
     this->bitWrite = write;
+    this->backend_kind = XDataBackendKind::DPI;
+    this->readonly_backend = false;
     this->update_read();
 }
 void XData::BindNativeData(uint64_t pdata){
@@ -655,10 +673,75 @@ void XData::BindNativeData(uint64_t pdata){
             };
         }
     }
+    this->backend_kind = XDataBackendKind::MemDirect;
+    this->readonly_backend = false;
+    this->update_read();
+}
+void XData::BindExpr(std::shared_ptr<ExprEngine> engine, int root_id){
+    Assert(engine != nullptr, "BindExpr engine is null");
+    if (this->mWidth == 0) {
+        this->bitRead = [engine, root_id](void *d){
+            auto value = engine->Eval(root_id);
+            *(xsvLogic *)d = (xsvLogic)((value & 0x1) ? 1 : 0);
+        };
+        this->bitWrite = nullptr;
+        this->vecRead = nullptr;
+        this->vecWrite = nullptr;
+    } else {
+        this->vecRead = [this, engine, root_id](void *d){
+            auto value = engine->Eval(root_id);
+            auto *vec = (xsvLogicVecVal *)d;
+            for (uint32_t i = 0; i < this->vecSize; i++) {
+                vec[i].aval = 0;
+                vec[i].bval = 0;
+            }
+            for (uint32_t i = 0; i < std::min<uint32_t>(2, this->vecSize); i++) {
+                vec[i].aval = (uint32_t)((value >> (i * 32)) & 0xffffffffULL);
+            }
+        };
+        this->vecWrite = nullptr;
+        this->bitRead = nullptr;
+        this->bitWrite = nullptr;
+    }
+    this->backend_kind = XDataBackendKind::Expr;
+    this->readonly_backend = true;
+    this->mIOType = IOType::Output;
+    this->update_read();
+}
+void XData::BindConst(uint64_t value){
+    if (this->mWidth == 0) {
+        this->bitRead = [value](void *d){
+            *(xsvLogic *)d = (xsvLogic)((value & 0x1) ? 1 : 0);
+        };
+        this->bitWrite = nullptr;
+        this->vecRead = nullptr;
+        this->vecWrite = nullptr;
+    } else {
+        this->vecRead = [this, value](void *d){
+            auto *vec = (xsvLogicVecVal *)d;
+            for (uint32_t i = 0; i < this->vecSize; i++) {
+                vec[i].aval = 0;
+                vec[i].bval = 0;
+            }
+            for (uint32_t i = 0; i < std::min<uint32_t>(2, this->vecSize); i++) {
+                vec[i].aval = (uint32_t)((value >> (i * 32)) & 0xffffffffULL);
+            }
+        };
+        this->vecWrite = nullptr;
+        this->bitRead = nullptr;
+        this->bitWrite = nullptr;
+    }
+    this->backend_kind = XDataBackendKind::Const;
+    this->readonly_backend = true;
+    this->mIOType = IOType::Output;
     this->update_read();
 }
 void XData::SetBits(u_int8_t *buffer, int count, u_int8_t *mask, int start)
 {
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot set bits",
+               this->mName.c_str());
+    }
     Assert(this->mWidth > 0, "Only svVec support SetBits");
     int index = start;
     for (int i = 0; i < count; i++) {
@@ -683,6 +766,10 @@ void XData::SetBits(u_int8_t *buffer, int count, u_int8_t *mask, int start)
 void XData::SetBits(u_int32_t *buffer, u_int32_t count, u_int32_t *mask,
                     u_int32_t start)
 {
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot set bits",
+               this->mName.c_str());
+    }
     Assert(this->mWidth > 0, "only svVec support SetBits");
     auto range = std::min(count, this->vecSize - start);
     for (int i = 0; i < range; i++) {
@@ -726,6 +813,10 @@ bool XData::GetBits(u_int8_t *buffer, u_int32_t count)
 
 void XData::SetVU8(std::vector<unsigned char> &buffer)
 {
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot set bytes",
+               this->mName.c_str());
+    }
     Assert(this->mWidth > 0, "only svVec support SetVU8");
     int index = 0;
     for (int i = 0; i < this->vecSize; i++) {
@@ -885,9 +976,9 @@ bool XData::operator==(const char *str)
 
 XData &XData::operator=(u_int64_t data)
 {
-    if (unlikely(this->mIOType == IOType::Output)) {
-        Warn("Can not assign value to ouput.PIN(name=%s)", this->mName.c_str());
-        return *this;
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot assign",
+               this->mName.c_str());
     }
 
     this->udata = data;
@@ -899,8 +990,10 @@ XData &XData::operator=(u_int64_t data)
 XData &XData::operator=(XData &data)
 {
     data.update_read();
-    Assert(this->mIOType != IOType::Output,
-           "Can not assign value to ouput.PIN");
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot assign",
+               this->mName.c_str());
+    }
     Assert(this->mWidth == data.mWidth,
            "Need left.mWidth(%d) == right.mWidth(%d)", this->mWidth,
            data.mWidth);
@@ -990,6 +1083,10 @@ XData &XData::operator=(const char *str)
 }
 XData &XData::operator=(std::string &data)
 {
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot assign",
+               this->mName.c_str());
+    }
     if (this->mWidth == 0) {
         if (sLower(data) == "z") return this->operator=(2);
         if (sLower(data) == "x") return this->operator=(3);
@@ -1012,8 +1109,6 @@ XData &XData::operator=(std::string &data)
     }
 
     auto prefix = data.substr(0, 2);
-    Assert(this->mIOType != IOType::Output,
-           "Can not assign value to ouput.PIN");
     Assert(data.length() > 2
                && contians(std::vector<std::string>{"0b", "0x", "::"}, prefix),
            "Input string needs start with: 0b (binary), 0x (hex) or :: (str)");
@@ -1126,6 +1221,10 @@ XData &XData::AsOutIO()
 
 XData &XData::Invert()
 {
+    if (unlikely(!this->_check_writeable())) {
+        Assert(false, "XData(%s) is not writeable, cannot invert",
+               this->mName.c_str());
+    }
     if (this->mWidth == 0) {
         this->mLogicData = this->mLogicData == 0 ? 1 : 0;
     } else {
@@ -1461,6 +1560,8 @@ bool XData::BindVPI(vpiHandle obj, func_vpi_get get,
         }
     }
     this->AsImmWrite();
+    this->backend_kind = XDataBackendKind::VPI;
+    this->readonly_backend = !writeable;
     return true;
 }
 

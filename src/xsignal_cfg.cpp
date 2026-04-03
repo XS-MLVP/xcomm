@@ -1,7 +1,80 @@
 #include "xspcomm/xsignal_cfg.h"
+#include "xspcomm/xexpr.h"
 
 namespace xspcomm
 {
+    namespace {
+
+    std::string trim_copy(const std::string &value){
+        auto begin = value.find_first_not_of(" \t\r\n");
+        if(begin == std::string::npos){
+            return "";
+        }
+        auto end = value.find_last_not_of(" \t\r\n");
+        return value.substr(begin, end - begin + 1);
+    }
+
+    void replace_all(std::string &text, const std::string &from, const std::string &to){
+        if(from.empty()){
+            return;
+        }
+        size_t pos = 0;
+        while((pos = text.find(from, pos)) != std::string::npos){
+            text.replace(pos, from.size(), to);
+            pos += to.size();
+        }
+    }
+
+    } // namespace
+
+    void XSignalCFG::_register_native_meta(const std::string &name, const s_xsignal_cfg &cfg){
+        s_xsignal_meta meta;
+        meta.kind = "native";
+        meta.type = cfg.type;
+        meta.rtl_width = cfg.rtl_width;
+        meta.bindable = true;
+        this->signal_meta_map[name] = meta;
+    }
+
+    std::string XSignalCFG::_normalize_expr(std::string expr) const{
+        for (const auto &cast : {"(IData)", "(QData)", "(CData)", "(SData)", "(WData)", "(bool)", "(bool_t)"}) {
+            replace_all(expr, cast, "");
+        }
+        replace_all(expr, "VL_ULL(", "(");
+        replace_all(expr, "VL_UL(", "(");
+        replace_all(expr, "VL_EDATASIZE(", "(");
+        return trim_copy(expr);
+    }
+
+    uint64_t XSignalCFG::_parse_const_value(const std::string &value) const{
+        auto expr = this->_normalize_expr(value);
+        std::string s;
+        s.reserve(expr.size());
+        for(char ch : expr){
+            if(ch != '_'){
+                s.push_back(ch);
+            }
+        }
+        while(!s.empty() && std::isalpha((unsigned char)s.back())){
+            s.pop_back();
+        }
+        if(s.empty()){
+            return 0;
+        }
+        if(s.size() >= 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X')){
+            return std::stoull(s, nullptr, 16);
+        }
+        if(s.size() >= 2 && s[0] == '0' && (s[1] == 'b' || s[1] == 'B')){
+            uint64_t out = 0;
+            for(size_t i = 2; i < s.size(); i++){
+                Assert(s[i] == '0' || s[i] == '1', "invalid binary constant: %s", value.c_str());
+                out = (out << 1) | (uint64_t)(s[i] - '0');
+            }
+            return out;
+        }
+        return std::stoull(s, nullptr, 10);
+    }
+
     void XSignalCFG::load_cfg(){
         if(this->is_inited){
             return;
@@ -29,18 +102,41 @@ namespace xspcomm
             if(vars.is_mapping()){
                 int count = this->_rec_set_cfg_data(vars, "");
                 Debug("%d signals loaded (map mode)", count);
+            } else {
+                this->init_error_msg = "variables is not a list or map";
                 return;
             }
-            this->init_error_msg = "variables is not a list or map";
+        } else {
+            int i = 0;
+            for(auto var : vars){
+                if(!this->_set_cfg_data(var))return;
+                i++;
+            }
+            Debug("%d signals loaded (list mode)", i);
+        }
+
+        if(!this->init_error_msg.empty()){
             return;
         }
-        int i = 0;
-        for(auto var : vars){
-            if(!this->_set_cfg_data(var))return;
-            i++;
+
+        for(auto &e : this->cfg_map){
+            this->_register_native_meta(e.first, e.second);
         }
-        Debug("%d signals loaded (list mode)", i);
+
+        if(root.contains("signals")){
+            auto signals = root["signals"];
+            if(!signals.is_sequence()){
+                this->init_error_msg = "signals is not a list";
+                return;
+            }
+            for(auto signal : signals){
+                if(!this->_set_signal_meta(signal)){
+                    return;
+                }
+            }
+        }
     }
+
     bool XSignalCFG::_set_cfg_data(fkyaml::node &var, std::string prefix){
         if(!var.is_mapping()){
             this->init_error_msg = "variables item is not a map";
@@ -67,11 +163,66 @@ namespace xspcomm
         this->cfg_map[cfg_key] = cfg;
         return true;
     }
+
+    bool XSignalCFG::_set_signal_meta(fkyaml::node &signal){
+        if(!signal.is_mapping()){
+            this->init_error_msg = "signals item is not a map";
+            return false;
+        }
+        if(!signal.contains("name") || !signal.contains("kind")){
+            this->init_error_msg = "signals item missing name/kind";
+            return false;
+        }
+        auto name = signal["name"].get_value<std::string>();
+        s_xsignal_meta meta;
+        meta.kind = signal["kind"].get_value<std::string>();
+        if(signal.contains("type"))meta.type = signal["type"].get_value<std::string>();
+        if(signal.contains("rtl_width"))meta.rtl_width = signal["rtl_width"].get_value<uint32_t>();
+        if(signal.contains("source"))meta.source = signal["source"].get_value<std::string>();
+        if(signal.contains("expr"))meta.expr = signal["expr"].get_value<std::string>();
+        if(signal.contains("value")){
+            meta.value = signal["value"].get_value<std::string>();
+        }
+        if(signal.contains("deps")){
+            auto deps = signal["deps"];
+            if(!deps.is_sequence()){
+                this->init_error_msg = "signals.deps is not a list";
+                return false;
+            }
+            for(auto dep : deps){
+                if(dep.is_mapping()){
+                    if(dep.contains("name")){
+                        meta.deps.push_back(dep["name"].get_value<std::string>());
+                    }
+                }else{
+                    meta.deps.push_back(dep.get_value<std::string>());
+                }
+            }
+        }
+
+        if(meta.kind == "direct"){
+            meta.bindable = true;
+            if(!this->_set_cfg_data(signal)){
+                return false;
+            }
+        } else if(meta.kind == "const"){
+            meta.is_const = true;
+            meta.const_value = this->_parse_const_value(meta.value);
+        } else {
+            meta.bindable = false;
+            if(meta.deps.empty() && !meta.source.empty()){
+                meta.deps.push_back(meta.source);
+            }
+        }
+
+        this->signal_meta_map[name] = meta;
+        return true;
+    }
+
     int XSignalCFG::_rec_set_cfg_data(fkyaml::node &var, std::string prefix){
         if(!var.is_mapping())return 0;
         int count = 0;
         for (auto& pair : var.map_items()) {
-            // leaf node
             if(var.contains("offset") && var.contains("mem_bytes") && var.contains("rtl_width")){
                 if(var["offset"].is_integer() && var["mem_bytes"].is_integer() && var["rtl_width"].is_integer()){
                     if(this->_set_cfg_data(var, prefix))return 1;
@@ -85,6 +236,7 @@ namespace xspcomm
         }
         return count;
     }
+
     XData* XSignalCFG::new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return){
         this->load_cfg();
         if(!this->init_error_msg.empty()){
@@ -97,11 +249,12 @@ namespace xspcomm
         }
         cfg = this->cfg_map[name];
         if(no_return){
-            return (XData *)0x1; // return a fake xdata address
+            return (XData *)0x1;
         }
         if(xname.empty())xname = name;
         return new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname);
     }
+
     std::vector<std::string> XSignalCFG::GetSignalNames(std::string pattern){
         this->load_cfg();
         std::vector<std::string> vec;
@@ -109,31 +262,66 @@ namespace xspcomm
             Error("%s", this->init_error_msg.c_str());
             return vec;
         }
-        if(pattern.empty()){
-            for(auto &e : this->cfg_map){
+        for(auto &e : this->signal_meta_map){
+            if(pattern.empty() || e.first.find(pattern) != std::string::npos){
                 vec.push_back(e.first);
-            }
-        }else{
-            for(auto &e : this->cfg_map){
-                if(e.first.find(pattern) != std::string::npos){
-                    vec.push_back(e.first);
-                }
             }
         }
         return vec;
     }
+
     XData* XSignalCFG::NewXData(std::string name, std::string xname){
-        s_xsignal_cfg cfg;
-        auto xdata = new_empty_xdata(name, xname, cfg);
-        if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset);
-        return xdata;
+        this->load_cfg();
+        if(!this->init_error_msg.empty()){
+            Error("%s", this->init_error_msg.c_str());
+            return nullptr;
+        }
+        auto metaIt = this->signal_meta_map.find(name);
+        if(metaIt == this->signal_meta_map.end()){
+            Error("signal name: %s not found", name.c_str());
+            return nullptr;
+        }
+        if(xname.empty())xname = name;
+        auto &meta = metaIt->second;
+        if(meta.bindable){
+            s_xsignal_cfg cfg;
+            auto xdata = new_empty_xdata(name, xname, cfg);
+            if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset);
+            return xdata;
+        }
+        if(meta.is_const){
+            auto xdata = new XData(meta.rtl_width == 1 ? 0 : meta.rtl_width, XData::Out, xname);
+            xdata->BindConst(meta.const_value);
+            return xdata;
+        }
+        if(this->constructing_signals.count(name)){
+            Error("derived signal dependency cycle detected: %s", name.c_str());
+            return nullptr;
+        }
+        this->constructing_signals.insert(name);
+        auto cleanup = [this, &name](){ this->constructing_signals.erase(name); };
+        try{
+            auto engine = std::make_shared<ExprEngine>();
+            auto expr = this->_normalize_expr(meta.expr);
+            auto root = engine->CompileExpr(expr, this);
+            auto xdata = new XData(meta.rtl_width == 1 ? 0 : meta.rtl_width, XData::Out, xname);
+            xdata->BindExpr(engine, root);
+            cleanup();
+            return xdata;
+        } catch (const std::exception &e){
+            cleanup();
+            Error("CompileExpr failed for signal %s: %s", name.c_str(), e.what());
+            return nullptr;
+        }
     }
+
     XData* XSignalCFG::NewXData(std::string name, int array_index, std::string xname){
         s_xsignal_cfg cfg;
         auto xdata = new_empty_xdata(name, xname, cfg);
         if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * array_index);
         return xdata;
     }
+
     std::vector<std::shared_ptr<XData>> XSignalCFG::NewXDataArray(std::string name, std::string xname){
         std::vector<std::shared_ptr<XData>> vec;
         if(xname.empty())xname = name;
@@ -148,26 +336,37 @@ namespace xspcomm
         }
         return vec;
     }
+
     s_xsignal_cfg XSignalCFG::At(std::string name){
         s_xsignal_cfg cfg;
         new_empty_xdata(name, "", cfg, true);
         return cfg;
     }
+
     uint64_t XSignalCFG::Address(std::string name){
         auto cfg = this->At(name);
         return this->cfg_base_address + cfg.offset;
     }
+
     std::string XSignalCFG::String(){
         this->load_cfg();
         std::string ret = "\nBaseAddress: " + std::to_string(this->cfg_base_address) + "\n";
-        for(auto &e : this->cfg_map){
+        for(auto &e : this->signal_meta_map){
             ret += e.first + ":\n";
-            ret += "  offset: " + std::to_string(e.second.offset) + " (address: " + \
-                std::to_string(this->cfg_base_address + e.second.offset) + ")\n";
-            ret += "  mem_bytes: " + std::to_string(e.second.mem_bytes) + "\n";
-            ret += "  rtl_width: " + std::to_string(e.second.rtl_width) + "\n";
-            if(e.second.array_size > 0)ret += "  array_size: " + std::to_string(e.second.array_size) + "\n";
-            if(!e.second.type.empty())ret += "  type: " + e.second.type + "\n";
+            ret += "  kind: " + e.second.kind + "\n";
+            if(e.second.bindable && this->cfg_map.count(e.first)){
+                auto &cfg = this->cfg_map[e.first];
+                ret += "  offset: " + std::to_string(cfg.offset) + " (address: " +
+                    std::to_string(this->cfg_base_address + cfg.offset) + ")\n";
+                ret += "  mem_bytes: " + std::to_string(cfg.mem_bytes) + "\n";
+                ret += "  rtl_width: " + std::to_string(cfg.rtl_width) + "\n";
+                if(cfg.array_size > 0)ret += "  array_size: " + std::to_string(cfg.array_size) + "\n";
+                if(!cfg.type.empty())ret += "  type: " + cfg.type + "\n";
+            } else {
+                if(e.second.rtl_width > 0)ret += "  rtl_width: " + std::to_string(e.second.rtl_width) + "\n";
+                if(!e.second.type.empty())ret += "  type: " + e.second.type + "\n";
+                if(!e.second.expr.empty())ret += "  expr: " + e.second.expr + "\n";
+            }
         }
         return ret;
     }
