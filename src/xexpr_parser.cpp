@@ -84,7 +84,7 @@ public:
             return Token{TokType::Op, two};
         }
         // operators (1-char)
-        if(std::string("+-*/%&|^~!<>").find(c) != std::string::npos){
+        if(std::string("+-*/%&|^~!<>?:").find(c) != std::string::npos){
             pos++;
             return Token{TokType::Op, std::string(1, c)};
         }
@@ -113,7 +113,7 @@ public:
     }
 
     int Parse(){
-        NodeInfo n = ParseOr();
+        NodeInfo n = ParseConditional();
         if(cur.type != TokType::End){
             throw std::runtime_error("unexpected token: " + cur.text);
         }
@@ -170,6 +170,9 @@ private:
         s.reserve(txt.size());
         for(char c : txt){
             if(c != '_') s.push_back(c);
+        }
+        while(!s.empty() && std::isalpha((unsigned char)s.back())){
+            s.pop_back();
         }
         if(s.size() >= 2 && (s[0] == '0') && (s[1] == 'x' || s[1] == 'X')){
             return std::stoull(s, nullptr, 16);
@@ -277,6 +280,28 @@ private:
         NodeInfo n;
         n.id = engine.NewCompare(op, lhs.id, rhs.id);
         n.width = 1;
+        return n;
+    }
+
+    NodeInfo ParseConditional(){
+        NodeInfo cond = ParseOr();
+        if(!IsOp("?")){
+            return cond;
+        }
+        Next();
+        NodeInfo when_true = ParseConditional();
+        if(!IsOp(":")){
+            throw std::runtime_error("expected ':' in conditional expression");
+        }
+        Next();
+        NodeInfo when_false = ParseConditional();
+        if(cond.is_const){
+            return cond.const_val ? when_true : when_false;
+        }
+        NodeInfo n;
+        n.id = engine.NewSelect(cond.id, when_true.id, when_false.id);
+        n.width = std::max(when_true.width, when_false.width);
+        n.is_signal = when_true.is_signal || when_false.is_signal;
         return n;
     }
 
@@ -536,7 +561,7 @@ private:
                     throw std::runtime_error("expected ',' in " + name);
                 }
                 Next();
-                NodeInfo child = ParseOr();
+                NodeInfo child = ParseConditional();
                 if(cur.type != TokType::RParen){
                     throw std::runtime_error("missing ')' in " + name);
                 }
@@ -555,7 +580,7 @@ private:
         }
         if(cur.type == TokType::LParen){
             Next();
-            NodeInfo n = ParseOr();
+            NodeInfo n = ParseConditional();
             if(cur.type != TokType::RParen){
                 throw std::runtime_error("missing ')'");
             }

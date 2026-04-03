@@ -4,6 +4,7 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/node.hpp"
 #include "xspcomm/xutil.h"
+#include <set>
 
 namespace xspcomm {
 typedef struct
@@ -16,10 +17,26 @@ typedef struct
     std::string type = "";
 } s_xsignal_cfg, *p_xsignal_cfg;
 
+typedef struct
+{
+    std::string kind = "native";
+    std::string type = "";
+    uint32_t rtl_width = 0;
+    std::string source = "";
+    std::string expr = "";
+    std::string value = "";
+    uint64_t const_value = 0;
+    bool bindable = false;
+    bool is_const = false;
+    std::vector<std::string> deps;
+} s_xsignal_meta, *p_xsignal_meta;
+
 class XSignalCFG {
     bool is_inited = false;
     std::string init_error_msg = "";
     std::map<std::string, s_xsignal_cfg> cfg_map;
+    std::map<std::string, s_xsignal_meta> signal_meta_map;
+    std::set<std::string> constructing_signals;
     public:
     std::string cfg_data;
     uint64_t cfg_base_address = 0;
@@ -43,10 +60,13 @@ class XSignalCFG {
     XData* new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return=false);
     void load_cfg();
     bool _set_cfg_data(fkyaml::node &var, std::string prefix="");
+    bool _set_signal_meta(fkyaml::node &signal);
     int _rec_set_cfg_data(fkyaml::node &var, std::string prefix);
+    void _register_native_meta(const std::string &name, const s_xsignal_cfg &cfg);
+    std::string _normalize_expr(std::string expr) const;
+    uint64_t _parse_const_value(const std::string &value) const;
 };
 
 } // namespace xspcomm
 
 #endif
-

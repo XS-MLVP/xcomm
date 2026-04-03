@@ -34,8 +34,9 @@ namespace xspcomm {
         GE = 19,
         LT = 20,
         LE = 21,
-        WITHIN = 22,
-        HOLD = 23,
+        SELECT = 22,
+        WITHIN = 23,
+        HOLD = 24,
     };
 
     struct ExprNode{
@@ -83,6 +84,7 @@ namespace xspcomm {
         int NewUnary(ExprOp op, int child);
         int NewBinary(ExprOp op, int lhs, int rhs);
         int NewCompare(ExprOp op, int lhs, int rhs);
+        int NewSelect(int cond, int lhs, int rhs);
         int NewCompareSigSig(ExprOp op, XData* lhs, XData* rhs);
         int NewCompareSigConst(ExprOp op, XData* lhs, uint64_t rhs);
         int NewCompareConstSig(ExprOp op, uint64_t lhs, XData* rhs);

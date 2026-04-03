@@ -6,6 +6,7 @@
 #include "xspcomm/xcallback.h"
 
 #include <cstdio>
+#include <memory>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -13,6 +14,8 @@
 
 
 namespace xspcomm {
+
+class ExprEngine;
 
 typedef unsigned char xsvLogic; /* scalar */
 
@@ -36,6 +39,15 @@ enum class WriteMode {
     Imme,
     Rise,
     Fall,
+};
+
+enum class XDataBackendKind {
+    Unknown,
+    DPI,
+    MemDirect,
+    VPI,
+    Expr,
+    Const,
 };
 
 #define bit32_one(tar, msk) tar = msk | tar
@@ -147,6 +159,8 @@ private:
     bool ignore_same_write        = true;
     u_int32_t sub_offset          = 0;       // for sub data
     xsvLogicVecVal * sub_pVecRef  = nullptr; // for sub data
+    XDataBackendKind backend_kind = XDataBackendKind::Unknown;
+    bool readonly_backend         = false;
 
     // For VPI
     func_vpi_get vpi_get             = nullptr;
@@ -172,6 +186,7 @@ private:
     void _sub_data_fake_dpirw(void *data, bool is_read);
     void _sub_data_fake_dpir(void * data);
     void _sub_data_fake_dpiw(void * data);
+    bool _check_writeable() const;
 
 public:
     // basic
@@ -201,6 +216,8 @@ public:
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
     void BindNativeData(uint64_t pdata);
+    void BindExpr(std::shared_ptr<ExprEngine> engine, int root_id);
+    void BindConst(uint64_t value);
     bool BindVPI(vpiHandle obj, func_vpi_get get,
                    func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name="");
     bool BindVPI(uint64_t obj, uint64_t get, uint64_t get_value, uint64_t put_value, std::string name=""){
@@ -213,6 +230,8 @@ public:
         return FromVPI((vpiHandle)obj, (func_vpi_get)get, (func_vpi_get_value)get_value, (func_vpi_put_value)put_value, name);
     }
     bool IsVPIBinded(){return this->vpi_obj_handle != nullptr;}
+    XDataBackendKind GetBackendKind() const { return this->backend_kind; }
+    bool IsReadonly() const { return this->readonly_backend; }
     uint32_t W();
     uint64_t U();
     int64_t S();
