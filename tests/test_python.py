@@ -22,6 +22,26 @@ def test_xdata():
     except AssertionError as _:
         print("test == assertion pass")
 
+    # test ImmSet export and write-mode restore
+    assert hasattr(XData, "ImmSet")
+    imm = XData(32, XData.InOut)
+    imm.AsFallWrite()
+    imm.ImmSet(0x1234)
+    assert imm.value == 0x1234
+    assert imm.GetWriteMode() == XData.Fall
+
+    imm_bytes = XData(64, XData.InOut)
+    imm_bytes.AsRiseWrite()
+    imm_bytes.ImmSet(b"\x78\x56\x34\x12")
+    assert imm_bytes.value == 0x12345678
+    assert imm_bytes.GetWriteMode() == XData.Rise
+
+    imm_wide = XData(129, XData.InOut)
+    imm_wide.AsRiseWrite()
+    imm_wide.ImmSet(-1)
+    assert imm_wide.S() == -1
+    assert imm_wide.GetWriteMode() == XData.Rise
+
     # test SubDataRef
     body = XData(200, XData.InOut)
     shadow_clones = [body.SubDataRef(i * 6, 6) for i in range(33)]
