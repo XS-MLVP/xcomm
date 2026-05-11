@@ -45,6 +45,24 @@ def XData__setattr__(self: XData, name, value):
     else:
         return self.Set(value)
 
+XData_old__ImmSet = XData.ImmSet
+def XData_ImmSet(self: XData, value):
+    if type(value) is bool:
+        return XData_old__ImmSet(self, 1 if value else 0)
+    if isinstance(value, bytes):
+        self.ImmSetBytes(value)
+        return self
+    bit_length = self.W()
+    if type(value) is int:
+        if bit_length <= 64:
+            return XData_old__ImmSet(self, value)
+        # add extra byte for python `to_bytes` method to contain sign bit
+        # the extra bits will be truncated in `ImmSetBytes` method
+        self.ImmSetBytes(value.to_bytes((self.W() + 15) // 8, byteorder='little', signed=True))
+        return self
+    else:
+        return XData_old__ImmSet(self, value)
+
 XData_old__getattribute__ = XData.__getattribute__
 XData_old_U = XData.U
 def XData__getattribute__(self: XData, name):
@@ -86,6 +104,12 @@ def XData_Set(self:XData, value):
     if isinstance(value, bytes):
         self.SetBytes(value)
         return self
+    bit_length = self.W()
+    if bit_length > 64 and type(value) is int:
+        # add extra byte for python `to_bytes` method to contain sign bit
+        # the extra bits will be truncated in `SetBytes` method
+        self.SetBytes(value.to_bytes((self.W() + 15) // 8, byteorder='little', signed=True))
+        return self
     return XData_old_Set(self, value)
 
 def XData__getitem__(self: XData, key):
@@ -106,6 +130,7 @@ def XData__eq__(self: XData, other):
 XData.__init__ = XData__init__
 XData.__str__ = XData__str__
 XData.__setattr__ = XData__setattr__
+XData.ImmSet = XData_ImmSet
 XData.__getattribute__ = XData__getattribute__
 XData.__getitem__ = XData__getitem__
 XData.__setitem__ = XData__setitem__

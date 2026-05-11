@@ -1202,6 +1202,53 @@ XData &XData::Set(uint64_t data)
     return this->operator=(data);
 }
 
+namespace {
+template <typename T>
+XData &imm_set_once(XData &self, T &&data)
+{
+    auto mode = self.GetWriteMode();
+    self.AsImmWrite();
+    self.Set(std::forward<T>(data));
+    self.SetWriteMode(mode);
+    return self;
+}
+} // namespace
+
+XData &XData::ImmSet(XData &data)
+{
+    return imm_set_once(*this, data);
+}
+
+XData &XData::ImmSet(const char *data)
+{
+    return imm_set_once(*this, data);
+}
+
+XData &XData::ImmSet(std::string &data)
+{
+    return imm_set_once(*this, data);
+}
+
+XData &XData::ImmSet(int data)
+{
+    return imm_set_once(*this, data);
+}
+
+XData &XData::ImmSet(unsigned int data)
+{
+    return imm_set_once(*this, data);
+}
+
+XData &XData::ImmSet(int64_t data)
+{
+    return imm_set_once(*this, data);
+}
+
+XData &XData::ImmSet(uint64_t data)
+{
+    return imm_set_once(*this, data);
+}
+
 PinBind &XData::At(int index)
 {
     return this->operator[](index);

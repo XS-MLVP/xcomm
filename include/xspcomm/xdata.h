@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <utility>
 
 
 namespace xspcomm {
@@ -227,8 +228,19 @@ public:
     XData &Set(int64_t data);
     XData &Set(uint64_t data);
     XData &Set(std::vector<unsigned char> &buffer){this->SetVU8(buffer); return *this;}
+    XData &ImmSet(XData &data);
+    XData &ImmSet(const char *data);
+    XData &ImmSet(std::string &data);
+    XData &ImmSet(int data);
+    XData &ImmSet(unsigned int data);
+    XData &ImmSet(int64_t data);
+    XData &ImmSet(uint64_t data);
+    XData &ImmSet(std::vector<unsigned char> &buffer){ this->ImmSetBytes(buffer); return *this; }
+    template <typename T>
+    XData &ImmSet(T &&data){ auto m = this->GetWriteMode(); this->AsImmWrite(); this->Set(std::forward<T>(data)); this->SetWriteMode(m); return *this; }
     std::vector<unsigned char> GetBytes(){return this->GetVU8();}
     void SetBytes(std::vector<unsigned char> &buffer){return this->SetVU8(buffer);}
+    void ImmSetBytes(std::vector<unsigned char> &buffer){ auto m = this->GetWriteMode(); this->AsImmWrite(); this->SetVU8(buffer); this->SetWriteMode(m); }
     bool IsInIO(){ return this->mIOType == IOType::Input; }
     bool IsOutIO(){ return this->mIOType == IOType::Output; }
     bool IsBiIO(){ return this->mIOType == IOType::InOut; }
