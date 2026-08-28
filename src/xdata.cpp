@@ -1532,15 +1532,25 @@ bool XData::BindVPI(vpiHandle obj, func_vpi_get get,
     }else{ // As vec
         auto fake_dpir = [this](void *data){
             t_vpi_value value;
-            value.format = vpiVectorVal;
-            value.value.vector = (s_vpi_vecval *)data;
             if((this->W() <= 32 && this->vpi_data_type == VPI_XDATA_AUTOCHECK) || this->vpi_data_type == VPI_XDATA_INTEGER){
                 value.format = vpiIntVal;
                 this->vpi_get_value(this->vpi_obj_handle, &value);
                 this->pVecData[0].aval = value.value.integer;
                 this->pVecData[0].bval = 0;
             }else{
+                value.format = vpiVectorVal;
+                value.value.vector = nullptr;
                 this->vpi_get_value(this->vpi_obj_handle, &value);
+                if(value.value.vector == nullptr){
+                    Error("VPI vector read returned nullptr for XData(%s)", this->mName.c_str());
+                    this->_zero_sv();
+                    return;
+                }
+                auto dst = (xsvLogicVecVal *)data;
+                for(uint32_t i = 0; i < this->vecSize; i++){
+                    dst[i].aval = value.value.vector[i].aval;
+                    dst[i].bval = value.value.vector[i].bval;
+                }
             }
         };
         auto fake_dpiw = [this](void *data){
@@ -1559,7 +1569,9 @@ bool XData::BindVPI(vpiHandle obj, func_vpi_get get,
             this->BindDPIRW(fake_dpir, (void(*)(void *))nullptr);
         }
     }
-    this->AsImmWrite();
+    if(writeable){
+        this->AsImmWrite();
+    }
     this->backend_kind = XDataBackendKind::VPI;
     this->readonly_backend = !writeable;
     return true;

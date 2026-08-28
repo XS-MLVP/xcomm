@@ -48,31 +48,8 @@ namespace xspcomm
 
     uint64_t XSignalCFG::_parse_const_value(const std::string &value) const{
         auto expr = this->_normalize_expr(value);
-        std::string s;
-        s.reserve(expr.size());
-        for(char ch : expr){
-            if(ch != '_'){
-                s.push_back(ch);
-            }
-        }
-        while(!s.empty() && std::isalpha((unsigned char)s.back())){
-            s.pop_back();
-        }
-        if(s.empty()){
-            return 0;
-        }
-        if(s.size() >= 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X')){
-            return std::stoull(s, nullptr, 16);
-        }
-        if(s.size() >= 2 && s[0] == '0' && (s[1] == 'b' || s[1] == 'B')){
-            uint64_t out = 0;
-            for(size_t i = 2; i < s.size(); i++){
-                Assert(s[i] == '0' || s[i] == '1', "invalid binary constant: %s", value.c_str());
-                out = (out << 1) | (uint64_t)(s[i] - '0');
-            }
-            return out;
-        }
-        return std::stoull(s, nullptr, 10);
+        ExprEngine engine;
+        return engine.Eval(engine.CompileExpr(expr, nullptr));
     }
 
     void XSignalCFG::load_cfg(){

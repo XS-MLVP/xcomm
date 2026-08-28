@@ -3,6 +3,7 @@
 
 #include "xspcomm/xexpr.h"
 #include "xspcomm/xdata.h"
+#include "xspcomm/xsignal_cfg.h"
 
 using namespace xspcomm;
 
@@ -21,6 +22,51 @@ TEST_CASE("ExprEngine arithmetic and precedence", "[xexpr]") {
 
     int root2 = eng.CompileExpr("(a + 2) * b", nullptr);
     REQUIRE(eng.Eval(root2) == 20);
+}
+
+TEST_CASE("ExprEngine parses hexadecimal integer literals", "[xexpr]") {
+    ExprEngine eng;
+
+    REQUIRE(eng.Eval(eng.CompileExpr("0xff", nullptr)) == 0xff);
+    REQUIRE(eng.Eval(eng.CompileExpr("0XDEAD_BEEFULL", nullptr)) == 0xdeadbeefULL);
+    REQUIRE(eng.Eval(eng.CompileExpr("0x10U + 1", nullptr)) == 0x11);
+    REQUIRE_THROWS(eng.CompileExpr("0x1G", nullptr));
+    REQUIRE_THROWS(eng.CompileExpr("0x1UUU", nullptr));
+    REQUIRE_THROWS(eng.CompileExpr("0b", nullptr));
+}
+
+TEST_CASE("XSignalCFG parses hexadecimal const signals", "[xexpr][xsignal_cfg]") {
+    const std::string cfg_text = R"yaml(
+variables: []
+signals:
+  - name: hex_const
+    kind: const
+    type: IData
+    rtl_width: 32
+    value: "0xDEAD_BEEFU"
+  - name: shifted_const
+    kind: const
+    type: IData
+    rtl_width: 32
+    value: "1U << 4U"
+  - name: verilator_macro_const
+    kind: const
+    type: QData
+    rtl_width: 64
+    value: "VL_ULL(0x1234_ABCDULL)"
+)yaml";
+
+    XSignalCFG cfg(cfg_text);
+    std::unique_ptr<XData> hex_signal(cfg.NewXData("hex_const"));
+    std::unique_ptr<XData> shifted_signal(cfg.NewXData("shifted_const"));
+    std::unique_ptr<XData> macro_signal(cfg.NewXData("verilator_macro_const"));
+
+    REQUIRE(hex_signal != nullptr);
+    REQUIRE(hex_signal->U() == 0xdeadbeefULL);
+    REQUIRE(shifted_signal != nullptr);
+    REQUIRE(shifted_signal->U() == 0x10);
+    REQUIRE(macro_signal != nullptr);
+    REQUIRE(macro_signal->U() == 0x1234abcdULL);
 }
 
 TEST_CASE("ExprEngine logical ops and keywords", "[xexpr]") {
