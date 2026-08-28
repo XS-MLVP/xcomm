@@ -1,6 +1,7 @@
 #include "xspcomm/xexpr.h"
 
 #include <cctype>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -171,25 +172,55 @@ private:
         for(char c : txt){
             if(c != '_') s.push_back(c);
         }
-        while(!s.empty() && std::isalpha((unsigned char)s.back())){
-            s.pop_back();
+        size_t suffix_begin = s.size();
+        while(suffix_begin > 0 &&
+              (s[suffix_begin - 1] == 'u' || s[suffix_begin - 1] == 'U' ||
+               s[suffix_begin - 1] == 'l' || s[suffix_begin - 1] == 'L')){
+            suffix_begin--;
         }
+        std::string suffix = s.substr(suffix_begin);
+        for(auto &c : suffix){
+            c = (char)std::tolower((unsigned char)c);
+        }
+        if(!(suffix.empty() || suffix == "u" || suffix == "l" || suffix == "ll" ||
+             suffix == "ul" || suffix == "lu" || suffix == "ull" || suffix == "llu")){
+            throw std::runtime_error("invalid integer suffix: " + txt);
+        }
+        s.resize(suffix_begin);
+        if(s.empty()){
+            throw std::runtime_error("invalid integer literal: " + txt);
+        }
+
+        auto parse_stoull = [&s, &txt](int base){
+            size_t parsed = 0;
+            uint64_t value = std::stoull(s, &parsed, base);
+            if(parsed != s.size()){
+                throw std::runtime_error("invalid integer literal: " + txt);
+            }
+            return value;
+        };
         if(s.size() >= 2 && (s[0] == '0') && (s[1] == 'x' || s[1] == 'X')){
-            return std::stoull(s, nullptr, 16);
+            return parse_stoull(16);
         }
         if(s.size() >= 2 && (s[0] == '0') && (s[1] == 'b' || s[1] == 'B')){
+            if(s.size() == 2){
+                throw std::runtime_error("invalid binary literal: " + txt);
+            }
             uint64_t v = 0;
             for(size_t i = 2; i < s.size(); i++){
                 char c = s[i];
                 if(c == '0' || c == '1'){
+                    if(v > (std::numeric_limits<uint64_t>::max() >> 1)){
+                        throw std::out_of_range("binary literal out of range: " + txt);
+                    }
                     v = (v << 1) | (uint64_t)(c - '0');
                 }else{
-                    throw std::runtime_error("invalid binary literal");
+                    throw std::runtime_error("invalid binary literal: " + txt);
                 }
             }
             return v;
         }
-        return std::stoull(s, nullptr, 10);
+        return parse_stoull(10);
     }
 
     NodeInfo FoldUnary(const std::string &op, const NodeInfo &child){

@@ -13,6 +13,10 @@ add_executable(test_xexpr test_xexpr.cpp)
 target_link_libraries(test_xexpr ${PROJECT_NAME})
 add_test(NAME test_xexpr COMMAND test_xexpr)
 
+add_executable(test_xvpi test_xvpi.cpp)
+target_link_libraries(test_xvpi ${PROJECT_NAME})
+add_test(NAME test_xvpi COMMAND test_xvpi)
+
 add_executable(test_xfsm test_xfsm.cpp)
 target_link_libraries(test_xfsm ${PROJECT_NAME})
 add_test(NAME test_xfsm COMMAND test_xfsm)
