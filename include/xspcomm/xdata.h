@@ -216,6 +216,7 @@ public:
     void BindDPIRW(void (*read)(void *), void (*write)(const void *));
     void BindDPIRW(void (*read)(void *), void (*write)(const unsigned char));
     void BindNativeData(uint64_t pdata);
+    void BindMixFromUvs(uint64_t pdata);
     void BindExpr(std::shared_ptr<ExprEngine> engine, int root_id);
     void BindConst(uint64_t value);
     bool BindVPI(vpiHandle obj, func_vpi_get get,
