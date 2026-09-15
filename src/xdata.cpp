@@ -677,6 +677,45 @@ void XData::BindNativeData(uint64_t pdata){
     this->readonly_backend = false;
     this->update_read();
 }
+void XData::BindMixFromUvs(uint64_t pdata)
+{
+    if (this->mWidth == 0) { // scalar and 1bit vector
+        this->bitRead = [pdata](void *d) {
+            *(xsvLogic *)d = *(uint8_t *)pdata;
+        };
+    } else {
+        if (this->mWidth <= 8) {
+            this->vecRead = [this, pdata](void *d) {
+                ((xsvLogicVecVal *)d)->aval = *(uint8_t *)pdata;
+                // ((xsvLogicVecVal *)d)->bval = 0;
+            };
+        } else if (this->mWidth <= 16) {
+            this->vecRead = [this, pdata](void *d) {
+                ((xsvLogicVecVal *)d)->aval = *(uint16_t *)pdata;
+                // ((xsvLogicVecVal *)d)->bval = 0;
+            };
+        } else if (this->mWidth <= 32) {
+            this->vecRead = [this, pdata](void *d) {
+                ((xsvLogicVecVal *)d)->aval = *(uint32_t *)pdata;
+                // ((xsvLogicVecVal *)d)->bval = 0;
+            };
+        } else if (this->mWidth <= 64) {
+            this->vecRead = [this, pdata](void *d) {
+                ((xsvLogicVecVal *)d)->aval = ((uint32_t *)pdata)[0];
+                // ((xsvLogicVecVal *)d)->bval = 0;
+                ((xsvLogicVecVal *)d)[1].aval = ((uint32_t *)pdata)[1];
+                // ((xsvLogicVecVal *)d)[1].bval = 0;
+            };
+        } else { // wider
+            this->vecRead = [this, pdata](void *d) {
+                for (int i = 0; i < this->vecSize; i++) {
+                    ((xsvLogicVecVal *)d)[i].aval = ((uint32_t *)pdata)[i];
+                    // ((xsvLogicVecVal *)d)[i].bval = 0;
+                }
+            };
+        }
+    }
+}
 void XData::BindExpr(std::shared_ptr<ExprEngine> engine, int root_id){
     Assert(engine != nullptr, "BindExpr engine is null");
     if (this->mWidth == 0) {
