@@ -5,6 +5,14 @@ add_executable(test_xdata test_xdata.cpp)
 target_link_libraries(test_xdata ${PROJECT_NAME})
 add_test(NAME test_xdata COMMAND test_xdata)
 
+add_executable(test_xclock test_xclock.cpp)
+target_link_libraries(test_xclock ${PROJECT_NAME})
+add_test(NAME test_xclock COMMAND test_xclock)
+
+add_executable(test_xtrigger test_xtrigger.cpp)
+target_link_libraries(test_xtrigger ${PROJECT_NAME})
+add_test(NAME test_xtrigger COMMAND test_xtrigger)
+
 add_executable(test_xcomuse_base test_xcomuse_base.cpp)
 target_link_libraries(test_xcomuse_base ${PROJECT_NAME})
 add_test(NAME test_xcomuse_base COMMAND test_xcomuse_base)

@@ -6,6 +6,7 @@
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xsignal_cfg.h"
 #include "xspcomm/xcomuse.h"
+#include "xspcomm/xtrigger.h"
 %}
 
 %feature("director") xfunction;
@@ -65,6 +66,13 @@ namespace std {
 %include "xspcomm/xexpr.h"
 %include "xspcomm/xfsm.h"
 %include "xspcomm/xcomuse.h"
+%include "xspcomm/xtrigger.h"
+
+namespace std {
+   %template(XBackendHitVector) vector<xspcomm::XBackendHit>;
+   %template(XSequenceStepVector) vector<xspcomm::XSequenceStep>;
+   %template(XFsmTransitionVector) vector<xspcomm::XFsmTransition>;
+}
 
 %constant void (*_TEST_DPI_LR)(xspcomm::xsvLogic *v) = xspcomm::TEST_DPI_LR;
 %constant void (*_TEST_DPI_LW)(xspcomm::xsvLogic v) = xspcomm::TEST_DPI_LW;

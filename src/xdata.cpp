@@ -171,10 +171,12 @@ void XData::_sv_to_local()
         }
         this->udata = *(uint64_t *)this->ubuff;
         this->xdata = *(uint64_t *)this->xbuff;
-        if (this->xdata != 0) {
-            this->udata_is_valid = false;
-        } else {
-            this->udata_is_valid = true;
+        this->udata_is_valid = true;
+        for (int i = 0; i < this->vecSize; i++) {
+            if (this->pVecData[i].bval != 0) {
+                this->udata_is_valid = false;
+                break;
+            }
         }
     }
 }
@@ -429,6 +431,7 @@ XData::XData(XData &t) :
     this->write_mode = t.write_mode;
     this->sub_offset = t.sub_offset;
     this->sub_pVecRef = t.sub_pVecRef;
+    this->sub_parent = t.sub_parent;
     // pointers
     if (this->vecSize > 0) {
         this->pVecData =
@@ -475,6 +478,7 @@ XData* XData::SubDataRefRaw(uint32_t start, uint32_t width, std::string name){
     if(sub->mIOType != IOType::Output)sub->SetWriteMode(WriteMode::Imme);
     sub->sub_offset = start;
     sub->sub_pVecRef = this->pVecData;
+    sub->sub_parent = this;
     sub->vecRead = [sub](void*data){return sub->_sub_data_fake_dpir(data);};
     if(sub->mIOType != IOType::Output)sub->vecWrite = [sub](void*data){return sub->_sub_data_fake_dpiw(data);};
     sub->update_read();
@@ -488,6 +492,9 @@ std::shared_ptr<XData> XData::SubDataRef(uint32_t start, uint32_t width, std::st
 
 void XData::_sub_data_fake_dpirw(void *data, bool is_read){
     DebugC(false, "_sub_data_fake_dpirw: %s", is_read ? "Read": "Write");
+    if (is_read && this->sub_parent != nullptr) {
+        this->sub_parent->update_read();
+    }
     // read data from ref
     uint32_t start_p = this->sub_offset / 32;
     uint32_t start_f = this->sub_offset % 32;
@@ -503,6 +510,11 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
             uint32_t maskb = ~mask;
             this->sub_pVecRef[start_p].aval = (maskb & this->sub_pVecRef[start_p].aval) | ((this->mLogicData & 1) << start_f);
             this->sub_pVecRef[start_p].bval = (maskb & this->sub_pVecRef[start_p].bval) | (((this->mLogicData >> 1) & 1) << start_f);
+            if (this->sub_parent != nullptr) {
+                this->sub_parent->_sv_to_local();
+                this->sub_parent->_dpi_write();
+                this->sub_parent->_update_shadow();
+            }
         }
         return;
     }
@@ -550,7 +562,9 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
         if (this->mWidth < first_mask_bits) {
             first_mask_bits = this->mWidth;
         }
-        uint32_t first_mask = (1 << first_mask_bits) - 1;
+        uint32_t first_mask = first_mask_bits == 32
+                                  ? 0xFFFFFFFFu
+                                  : (uint32_t(1) << first_mask_bits) - 1;
         temp_mask[0] = first_mask << start_f;
         // Create mask for the middle blocks (if any)
         for (int i = 1; i < secs - 1; i++) {
@@ -571,6 +585,11 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
         for (int i = 0; i < secs; i++) {
             p[start_p + i].aval = (p[start_p + i].aval & ~temp_mask[i]) | (temp_aval[i] & temp_mask[i]);
             p[start_p + i].bval = (p[start_p + i].bval & ~temp_mask[i]) | (temp_bval[i] & temp_mask[i]);
+        }
+        if (this->sub_parent != nullptr) {
+            this->sub_parent->_sv_to_local();
+            this->sub_parent->_dpi_write();
+            this->sub_parent->_update_shadow();
         }
     }
     // Update local data
@@ -889,6 +908,20 @@ std::vector<unsigned char> XData::GetVU8()
     return ret;
 }
 
+std::vector<unsigned char> XData::GetBvalBytes()
+{
+    std::vector<unsigned char> ret;
+    Assert(this->mWidth > 0, "only svVec support GetBvalBytes");
+    this->update_read();
+    for (int i = 0; i < this->vecSize; i++) {
+        ret.push_back(((unsigned char *)&this->pVecData[i].bval)[0]);
+        ret.push_back(((unsigned char *)&this->pVecData[i].bval)[1]);
+        ret.push_back(((unsigned char *)&this->pVecData[i].bval)[2]);
+        ret.push_back(((unsigned char *)&this->pVecData[i].bval)[3]);
+    }
+    return ret;
+}
+
 void XData::OnChange(xfunction<void, bool, XData *, u_int64_t, void *> func,
                      void *args, std::string desc)
 {
@@ -924,6 +957,11 @@ uint64_t XData::U()
 {
     this->update_read();
     return static_cast<uint64_t>(this->udata);
+}
+uint64_t XData::XMask()
+{
+    this->update_read();
+    return static_cast<uint64_t>(this->xdata);
 }
 int64_t XData::S()
 {
@@ -1062,7 +1100,9 @@ bool XData::Comp(XData &data, int opcode, int eq){
         return this->udata > data.udata;
     }
     Assert(this->mWidth == data.mWidth, "Need left.mWidth(%d) == right.mWidth(%d)", this->mWidth, data.mWidth);
-    for(int i = 0; i < this->vecSize; i++){
+    // Unsigned multi-word ordering is determined by the most significant
+    // differing word, not the first differing low word.
+    for(int i = this->vecSize - 1; i >= 0; i--){
         if(opcode == 1){
             if(this->pVecData[i].aval < data.pVecData[i].aval)return true;
             if(this->pVecData[i].aval > data.pVecData[i].aval)return false;

@@ -6,6 +6,11 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(xcomm)
 init_xspcomm()
 
+# Source headers must win over copies left in the build-tree install staging
+# directory.  Otherwise an incremental build can compile against yesterday's
+# public API before copy_xspcomm_include refreshes that directory.
+include_directories(BEFORE ${PROJECT_SOURCE_DIR}/include)
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 

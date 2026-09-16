@@ -4,12 +4,27 @@ find_package(Python3 REQUIRED COMPONENTS Development.Module)
 # Include headers
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_pyswig)
 
+# CMake's SWIG scanner does not reliably follow the nested %include chain in
+# python.i -> xcomm.i.  Track public headers explicitly so incremental builds
+# cannot leave a stale Python wrapper after an ABI change.
+file(GLOB XSPCOMM_SWIG_HEADERS CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../include/xspcomm/*.h")
+set_property(SOURCE python.i PROPERTY DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${XSPCOMM_SWIG_HEADERS}")
+# UseSWIG consumes this variable when it creates the SWIG custom command.
+# The source DEPENDS property alone is not propagated by every CMake generator
+# (notably Unix Makefiles when xcomm is a Picker subdirectory).
+set(SWIG_MODULE_pyxspcomm_EXTRA_DEPS
+        "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${XSPCOMM_SWIG_HEADERS}")
+
 # Add swig module
 string(TOLOWER "$ENV{BUILD_XSPCOMM_VCS_UVMPS}" swig_vcs_pubsub)
 if (NOT "${swig_vcs_pubsub}" STREQUAL "")
     set(VCS_HOME "$ENV{VCS_HOME}")
     set(UVMC_HOME "$ENV{UVMC_HOME}")
     set_property(SOURCE python_uvmps.i PROPERTY CPLUSPLUS ON)
+    set_property(SOURCE python_uvmps.i PROPERTY DEPENDS
+            "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${XSPCOMM_SWIG_HEADERS}")
     swig_add_library(pyxspcomm LANGUAGE python SOURCES
             python_uvmps.i
             thirdcall.cpp
@@ -88,7 +103,11 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/info.py
             ${XCOMM_LIB_DIR}/info.py
-        DEPENDS pyxspcomm ${STAGE_NATIVE_LIBRARY_SCRIPT}
+        DEPENDS
+            pyxspcomm
+            ${STAGE_NATIVE_LIBRARY_SCRIPT}
+            ${CMAKE_CURRENT_SOURCE_DIR}/xcomm.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/info.py
 )
 
 add_custom_target(

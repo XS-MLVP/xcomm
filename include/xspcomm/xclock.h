@@ -53,6 +53,12 @@ enum class FastMode {
     ONLY_STEP_FAL = -2,      // Only step on fall edges (half cycle)
 };
 
+enum class XPhase {
+    FallingStable = 0,
+    RisingStable = 1,
+    DriveStable = 2,
+};
+
 class XClock
 {
     xfunction<int, bool> step_fc;
@@ -64,9 +70,14 @@ class XClock
     bool in_callback = false;
     bool is_disable = false;
     int fast_mode_level = 0;
+    bool half_cycle_open = false;
+    bool next_half_is_rise = false;
+    uint64_t half_tick = 0;
+    XPhase phase = XPhase::RisingStable;
 
     virtual void _step(bool d);
     void _shchedule_await();
+    bool _step_half_impl(bool honor_disable);
     void _call_back(std::vector<XClockCallBack> &list);
     void _add_cb(std::vector<XClockCallBack> &cblist,
                  xfunction<void, u_int64_t, void *> func, void *args,
@@ -101,9 +112,19 @@ public:
     XClock& Add(xspcomm::XPort &d);
     XClock& AddPin(xspcomm::XData *d){return this->Add(d);}
     XClock& AddPin(xspcomm::XData &d){return this->Add(d);}
+    bool HasClockPin(xspcomm::XData &d) const
+    {
+        return std::find(this->clock_pins.begin(),
+                         this->clock_pins.end(), &d)
+               != this->clock_pins.end();
+    }
     void RefreshComb(){this->eval();}
     void RefreshCombT(){this->eval_t();}
     void Step(int s = 1);
+    bool StepHalf();
+    uint64_t GetHalfTick() const { return this->half_tick; }
+    XPhase GetPhase() const { return this->phase; }
+    bool IsAtCycleBoundary() const { return !this->half_cycle_open; }
     void Reset();
     void StepRis(xfunction<void, u_int64_t, void *> func, void *args = nullptr,
                  std::string desc = "");

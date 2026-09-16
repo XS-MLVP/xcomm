@@ -135,3 +135,18 @@ TEST_CASE("ExprEngine parser errors", "[xexpr]") {
     REQUIRE_THROWS(eng.CompileExpr("", nullptr));
     REQUIRE_THROWS(eng.CompileExpr("a @ b", nullptr));
 }
+
+TEST_CASE("ComUseExprCheck reports every expression hit in one call",
+          "[xexpr][trigger]") {
+    ComUseExprCheck checker;
+    checker.SetExpr("first", checker.ExprNewConst(1));
+    checker.SetExpr("second", checker.ExprNewConst(1));
+
+    checker.Call();
+    const auto keys = checker.GetTriggeredExprKeys();
+
+    REQUIRE(keys.size() == 2);
+    REQUIRE(keys[0] == "first");
+    REQUIRE(keys[1] == "second");
+    REQUIRE(checker.GetCbCount() == 1);
+}

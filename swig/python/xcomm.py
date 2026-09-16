@@ -365,34 +365,4 @@ async def sleep(delay: float):
     tick_timestamp()
 
 
-# XPin
-
-class XPin:
-    def __init__(self, xdata, event):
-        self.xdata = xdata
-        self.event = event
-
-    def __str__(self):
-        return f"XPin({self.xdata})"
-
-    def __getattribute__(self, name):
-        if name == "xdata" or name == "event":
-            return object.__getattribute__(self, name)
-        return self.xdata.__getattribute__(name)
-
-    def __setattr__(self, name, value):
-        if name == "xdata" or name == "event":
-            return object.__setattr__(self, name, value)
-        return self.xdata.__setattr__(name, value)
-
-    def __getitem__(self, key):
-        return self.xdata[key]
-
-    def __setitem__(self, key, value):
-        self.xdata[key] = value
-
-    def __eq__(self, other):
-        assert isinstance(other, XPin), "XPin Only support compare with XPin. Do you missed `.value`?"
-        return self.xdata == other.xdata
-
 __version__ = version()

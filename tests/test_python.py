@@ -1,4 +1,5 @@
 
+import xspcomm as xsp
 from xspcomm import *
 import sys
 from asyncio import run, create_task, sleep
@@ -12,6 +13,8 @@ def test_xdata():
     x = c.SubDataRef(1, 32)
     y = c.SubDataRef(5, 32)
     y.value = -1
+    assert not hasattr(xsp, "XPin")
+    assert not hasattr(a, "xdata")
     print("x:", x.value, "y:", y.value)
     print("a == b", a == b)
     a.value = 1
@@ -111,28 +114,17 @@ def test_xdata():
     clk.StepRis(lambda c, x, y: print("lambda ris: ", c, x, y), (1, 2))
     clk.StepRis(lambda c, x, y: print("lambda fal: ", c, x, y), (3, 4))
 
-    p1 = XPin(a, clk.getEvent())
-    p2 = XPin(b, clk.getEvent())
-    p3 = XPin(a, clk.getEvent())
-    print("p1 == p3", p1 == p3)
-    print("p1 == p2", p1 == p2)
-    try:
-        print("p1 == 2:", 2 == p1)
-        raise Exception("AssertionError not raised")
-    except AssertionError as _:
-        print("test == assertion pass")
-
-    echo = ComUseEcho(p1.CSelf(), p2.CSelf())
-    print("echo:", p1.value, p2.value)
-    p1.value = 1
-    p2.value = b'A'
+    echo = ComUseEcho(a.CSelf(), b.CSelf())
+    print("echo:", a.value, b.value)
+    a.value = 1
+    b.value = b'A'
     clk.StepRis(echo.GetCb(), echo.CSelf())
     clk.Step(1)
-    p1.value = 0
-    p2.value = b'B'
+    a.value = 0
+    b.value = b'B'
     clk.Step(1)
-    p1.value = 1
-    p2.value = b'C'
+    a.value = 1
+    b.value = b'C'
     clk.Step(1)
     print(clk)
     clk.RawStep(1)

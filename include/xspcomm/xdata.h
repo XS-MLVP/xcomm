@@ -159,6 +159,7 @@ private:
     bool ignore_same_write        = true;
     u_int32_t sub_offset          = 0;       // for sub data
     xsvLogicVecVal * sub_pVecRef  = nullptr; // for sub data
+    XData *sub_parent             = nullptr; // non-owning; parent outlives view
     XDataBackendKind backend_kind = XDataBackendKind::Unknown;
     bool readonly_backend         = false;
 
@@ -235,6 +236,7 @@ public:
     bool IsReadonly() const { return this->readonly_backend; }
     uint32_t W();
     uint64_t U();
+    uint64_t XMask();
     int64_t S();
     bool B();
     std::string String();
@@ -259,6 +261,7 @@ public:
     template <typename T>
     XData &ImmSet(T &&data){ auto m = this->GetWriteMode(); this->AsImmWrite(); this->Set(std::forward<T>(data)); this->SetWriteMode(m); return *this; }
     std::vector<unsigned char> GetBytes(){return this->GetVU8();}
+    std::vector<unsigned char> GetBvalBytes();
     void SetBytes(std::vector<unsigned char> &buffer){return this->SetVU8(buffer);}
     void ImmSetBytes(std::vector<unsigned char> &buffer){ auto m = this->GetWriteMode(); this->AsImmWrite(); this->SetVU8(buffer); this->SetWriteMode(m); }
     bool IsInIO(){ return this->mIOType == IOType::Input; }
