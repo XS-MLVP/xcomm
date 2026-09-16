@@ -74,7 +74,12 @@ void XClock::_add_cb(std::vector<XClockCallBack> &cblist,
 
 void XClock::default_stop_on_rise(bool rise)
 {
+    Assert(!this->half_cycle_open,
+           "Cannot change stop_on_rise in the middle of a clock cycle");
     this->stop_on_rise = rise;
+    this->next_half_is_rise = !rise;
+    this->phase = rise ? XPhase::RisingStable
+                       : XPhase::FallingStable;
 }
 
 XClock::XClock() : XClock(nullptr, {}, {}){};
@@ -172,16 +177,52 @@ void XClock::Step(int s)
     }
     for (int i = 0; i < s; i++) {
         if (unlikely(this->is_disable)) return;
+        Assert(!this->half_cycle_open,
+               "Cannot call XClock.Step in the middle of a clock cycle; "
+               "finish it with StepHalf first");
+        // Preserve the legacy contract: Disable raised by the first callback
+        // does not suppress the second half of the same complete cycle.
+        this->_step_half_impl(false);
+        this->_step_half_impl(false);
+    }
+}
+
+bool XClock::StepHalf()
+{
+    if (unlikely(this->in_callback == true)) {
+        Warn("Cannot call XClock.StepHalf in callbacks, Ignore!");
+        return false;
+    }
+    return this->_step_half_impl(true);
+}
+
+bool XClock::_step_half_impl(bool honor_disable)
+{
+    if (honor_disable && unlikely(this->is_disable)) return false;
+
+    const bool starts_cycle = !this->half_cycle_open;
+    if (starts_cycle) {
         this->clk += 1;
-        if (likely(this->stop_on_rise)) {
-            this->_step_fal();
-            this->_step_ris();
-        } else {
-            this->_step_ris();
-            this->_step_fal();
-        }
+        this->next_half_is_rise = !this->stop_on_rise;
+        this->half_cycle_open = true;
+    }
+
+    const bool stepping_rise = this->next_half_is_rise;
+    if (stepping_rise) {
+        this->_step_ris();
+        this->phase = XPhase::RisingStable;
+    } else {
+        this->_step_fal();
+        this->phase = XPhase::FallingStable;
+    }
+    this->half_tick += 1;
+    this->next_half_is_rise = !stepping_rise;
+
+    if (!starts_cycle) {
+        this->half_cycle_open = false;
         this->_shchedule_await();
     }
+    return true;
 }
 
 void XClock::RunStep(int s)
@@ -252,6 +293,11 @@ void XClock::eval_t()
 void XClock::Reset()
 {
     this->clk = 0;
+    this->half_tick = 0;
+    this->half_cycle_open = false;
+    this->next_half_is_rise = !this->stop_on_rise;
+    this->phase = this->stop_on_rise ? XPhase::RisingStable
+                                     : XPhase::FallingStable;
 }
 
 void XClock::StepRis(xfunction<void, u_int64_t, void *> func, void *args,

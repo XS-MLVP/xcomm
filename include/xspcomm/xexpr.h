@@ -70,9 +70,12 @@ namespace xspcomm {
         std::vector<uint64_t> eval_vals;
         uint64_t current_cycle = 0;
         uint64_t EvalNode(int id);
+        bool IsKnownNode(int id);
         bool EvalCompareNode(const ExprNode &node);
         static bool CompareXData(XData* lhs, XData* rhs, ExprOp op);
         XData* MakeConstXData(uint32_t width, uint64_t value);
+        XData* MakeConstXDataBytes(uint32_t width,
+                                  std::vector<unsigned char> &value);
         uint64_t EvalIterative(int root);
         int ComputeCost(int id, std::vector<int> &memo);
         int ComputeStateful(int id, std::vector<int> &memo);
@@ -88,6 +91,11 @@ namespace xspcomm {
         int NewCompareSigSig(ExprOp op, XData* lhs, XData* rhs);
         int NewCompareSigConst(ExprOp op, XData* lhs, uint64_t rhs);
         int NewCompareConstSig(ExprOp op, uint64_t lhs, XData* rhs);
+        int NewCompareSigConstBytes(ExprOp op, XData* lhs,
+                                    std::vector<unsigned char> &rhs);
+        int NewCompareConstBytesSig(ExprOp op,
+                                    std::vector<unsigned char> &lhs,
+                                    XData* rhs);
         int NewWithin(int child, uint64_t window);
         int NewHold(int child, uint64_t window);
         XData* GetOrCreateSignal(XSignalCFG* cfg, const std::string &name);
@@ -95,6 +103,7 @@ namespace xspcomm {
         void ResetState();
         int CompileExpr(std::string expr, XSignalCFG* cfg);
         uint64_t Eval(int root);
+        bool IsKnown(int root);
         void OptimizeShortCircuitOrder(int root);
         void SetCycle(uint64_t cycle){ this->current_cycle = cycle; }
         void Clear();
@@ -122,6 +131,11 @@ namespace xspcomm {
         int ExprNewCompareSigSig(int op, XData* lhs, XData* rhs);
         int ExprNewCompareSigConst(int op, XData* lhs, uint64_t rhs);
         int ExprNewCompareConstSig(int op, uint64_t lhs, XData* rhs);
+        int ExprNewCompareSigConstBytes(int op, XData* lhs,
+                                        std::vector<unsigned char> &rhs);
+        int ExprNewCompareConstBytesSig(int op,
+                                        std::vector<unsigned char> &lhs,
+                                        XData* rhs);
         int CompileExpr(std::string expr, XSignalCFG* cfg);
         void SetExpr(std::string name, int root);
         void RemoveExpr(std::string name);

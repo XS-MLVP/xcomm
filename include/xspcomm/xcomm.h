@@ -7,6 +7,7 @@
 #include "xspcomm/xport.h"
 #include "xspcomm/xdata.h"
 #include "xspcomm/xclock.h"
+#include "xspcomm/xtrigger.h"
 #include "xspcomm/xsignal_cfg.h"
 
 #endif
