@@ -15,6 +15,7 @@ int ExprEngine::NewConst(uint64_t v){
 }
 
 int ExprEngine::NewSignal(XData* sig){
+    if(sig && sig->W() > 64) return -1;
     ExprNode n;
     n.op = ExprOp::SIGNAL;
     n.sig = sig;
@@ -89,6 +90,30 @@ int ExprEngine::NewCompareConstSig(ExprOp op, uint64_t lhs, XData* rhs){
     return (int)this->nodes.size() - 1;
 }
 
+int ExprEngine::NewCompareSigConstBytes(
+    ExprOp op, XData* lhs, std::vector<unsigned char> &rhs){
+    if(!lhs) return -1;
+    ExprNode n;
+    n.op = op;
+    n.use_xdata_cmp = true;
+    n.lhs_xdata = lhs;
+    n.rhs_xdata = this->MakeConstXDataBytes(lhs->W(), rhs);
+    this->nodes.push_back(n);
+    return (int)this->nodes.size() - 1;
+}
+
+int ExprEngine::NewCompareConstBytesSig(
+    ExprOp op, std::vector<unsigned char> &lhs, XData* rhs){
+    if(!rhs) return -1;
+    ExprNode n;
+    n.op = op;
+    n.use_xdata_cmp = true;
+    n.lhs_xdata = this->MakeConstXDataBytes(rhs->W(), lhs);
+    n.rhs_xdata = rhs;
+    this->nodes.push_back(n);
+    return (int)this->nodes.size() - 1;
+}
+
 int ExprEngine::NewWithin(int child, uint64_t window){
     ExprNode n;
     n.op = ExprOp::WITHIN;
@@ -112,6 +137,36 @@ int ExprEngine::NewHold(int child, uint64_t window){
 
 uint64_t ExprEngine::Eval(int root){
     return this->EvalIterative(root);
+}
+
+bool ExprEngine::IsKnown(int root){
+    return this->IsKnownNode(root);
+}
+
+bool ExprEngine::IsKnownNode(int id){
+    if(id < 0 || id >= (int)this->nodes.size()) return false;
+    const ExprNode &n = this->nodes[id];
+    if(n.op == ExprOp::CONST) return true;
+    if(n.op == ExprOp::SIGNAL){
+        if(!n.sig) return false;
+        n.sig->U();
+        return n.sig->DataValid();
+    }
+    if(n.use_xdata_cmp){
+        if(!n.lhs_xdata || !n.rhs_xdata) return false;
+        n.lhs_xdata->U();
+        n.rhs_xdata->U();
+        return n.lhs_xdata->DataValid() && n.rhs_xdata->DataValid();
+    }
+    if(!IsKnownNode(n.lhs)) return false;
+    if(n.op == ExprOp::LNOT || n.op == ExprOp::BNOT ||
+       n.op == ExprOp::WITHIN || n.op == ExprOp::HOLD){
+        return true;
+    }
+    if(n.op == ExprOp::SELECT){
+        return IsKnownNode(n.rhs) && IsKnownNode((int)n.imm);
+    }
+    return IsKnownNode(n.rhs);
 }
 
 void ExprEngine::Clear(){
@@ -496,6 +551,15 @@ XData* ExprEngine::MakeConstXData(uint32_t width, uint64_t value){
     return this->const_xdata.back().get();
 }
 
+XData* ExprEngine::MakeConstXDataBytes(
+    uint32_t width, std::vector<unsigned char> &value){
+    auto data = std::make_unique<XData>(width, XData::InOut);
+    data->SetVU8(value);
+    XData *raw = data.get();
+    this->const_xdata.push_back(std::move(data));
+    return raw;
+}
+
 XData* ExprEngine::GetOrCreateSignal(XSignalCFG* cfg, const std::string &name){
     auto eit = this->external_signal_xdata.find(name);
     if(eit != this->external_signal_xdata.end()){
@@ -662,6 +726,16 @@ int ComUseExprCheck::ExprNewCompareConstSig(int op, uint64_t lhs, XData* rhs){
     return this->engine.NewCompareConstSig((ExprOp)op, lhs, rhs);
 }
 
+int ComUseExprCheck::ExprNewCompareSigConstBytes(
+    int op, XData* lhs, std::vector<unsigned char> &rhs){
+    return this->engine.NewCompareSigConstBytes((ExprOp)op, lhs, rhs);
+}
+
+int ComUseExprCheck::ExprNewCompareConstBytesSig(
+    int op, std::vector<unsigned char> &lhs, XData* rhs){
+    return this->engine.NewCompareConstBytesSig((ExprOp)op, lhs, rhs);
+}
+
 int ComUseExprCheck::CompileExpr(std::string expr, XSignalCFG* cfg){
     try{
         return this->engine.CompileExpr(expr, cfg);
@@ -741,7 +815,6 @@ void ComUseExprCheck::Call(){
                 triggered = true;
                 this->IncCbCount();
             }
-            break;
         }
     }
 }
