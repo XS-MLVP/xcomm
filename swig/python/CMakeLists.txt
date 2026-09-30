@@ -43,14 +43,20 @@ elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
     set(RPATH_PREFIX "$ORIGIN")
 endif ()
 # set rpath
-set(PYXSPCOMM_RPATH
-        "${RPATH_PREFIX}/"
-        "${RPATH_PREFIX}/../../lib"
-        "${RPATH_PREFIX}/../picker/share/picker/lib"
-        "${RPATH_PREFIX}/../picker/lib"
-        "$ENV{HOME}/.local/lib"
-        "/usr/local/lib"
-)
+if (SKBUILD OR NOT "$ENV{XSPCOMM_BUILD_WHEEL}" STREQUAL "")
+    # The wheel carries libxspcomm beside the SWIG extension. No build-host
+    # or user-specific search paths may leak into a distributable binary.
+    set(PYXSPCOMM_RPATH "${RPATH_PREFIX}/")
+else ()
+    set(PYXSPCOMM_RPATH
+            "${RPATH_PREFIX}/"
+            "${RPATH_PREFIX}/../../lib"
+            "${RPATH_PREFIX}/../picker/share/picker/lib"
+            "${RPATH_PREFIX}/../picker/lib"
+            "$ENV{HOME}/.local/lib"
+            "/usr/local/lib"
+    )
+endif ()
 
 set_target_properties(pyxspcomm
         PROPERTIES
@@ -76,6 +82,7 @@ add_custom_command(
             "-DTARGET_FILE=$<TARGET_FILE:xspcomm>"
             "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:xspcomm>"
             "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:xspcomm>"
+            "-DTARGET_SONAME_FILE_NAME=$<TARGET_SONAME_FILE_NAME:xspcomm>"
             "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
             "-DPROJECT_VERSION=${PROJECT_VERSION}"
             -P ${STAGE_NATIVE_LIBRARY_SCRIPT}
@@ -98,6 +105,6 @@ add_custom_target(
 
 install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/python USE_SOURCE_PERMISSIONS)
 
-if (NOT "$ENV{XSPCOMM_BUILD_WHEEL}" STREQUAL "")
+if (SKBUILD OR NOT "$ENV{XSPCOMM_BUILD_WHEEL}" STREQUAL "")
     install(DIRECTORY ${XCOMM_LIB_DIR} DESTINATION "." USE_SOURCE_PERMISSIONS)
 endif ()

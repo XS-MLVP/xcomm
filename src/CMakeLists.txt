@@ -10,7 +10,10 @@ add_definitions(-DFORCE_NO_EXECINFO_H)
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES})
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}" SOVERSION ${PROJECT_VERSION})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_NAME "${PROJECT_NAME}"
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${XSPCOMM_ABI_VERSION})
 
 string(TOLOWER "$ENV{BUILD_XSPCOMM_VCS_UVMPS}" swig_vcs_pubsub)
 if (NOT "${swig_vcs_pubsub}" STREQUAL "")

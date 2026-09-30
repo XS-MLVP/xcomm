@@ -118,6 +118,7 @@ enum class LogLevel {
 LogLevel get_log_level();
 void set_log_level(LogLevel val);
 std::string version();
+int abi_version();
 
 #define output(o, level, prefix, fmt, ...)                                     \
     {                                                                          \

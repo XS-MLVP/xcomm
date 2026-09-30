@@ -56,6 +56,7 @@ add_custom_command(
             "-DTARGET_FILE=$<TARGET_FILE:xspcomm>"
             "-DTARGET_FILE_NAME=$<TARGET_FILE_NAME:xspcomm>"
             "-DTARGET_LINKER_FILE_NAME=$<TARGET_LINKER_FILE_NAME:xspcomm>"
+            "-DTARGET_SONAME_FILE_NAME=$<TARGET_SONAME_FILE_NAME:xspcomm>"
             "-DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}"
             "-DPROJECT_VERSION=${PROJECT_VERSION}"
             -P ${STAGE_NATIVE_LIBRARY_SCRIPT}

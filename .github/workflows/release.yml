@@ -1,0 +1,83 @@
+name: Release Python wheel
+
+on:
+  repository_dispatch:
+    types: [version-tagged]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing version tag to publish (vX.Y.Z)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: xspcomm-release
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.client_payload.tag || inputs.tag }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate existing tag
+        id: version
+        env:
+          TAG: ${{ github.event.client_payload.tag || inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/${TAG}^{commit}")"
+          git fetch origin master:refs/remotes/origin/master --tags
+          python scripts/release/tag_policy.py verify HEAD
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: Build and verify release wheel
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build swig
+          python -m pip install 'build>=1,<2'
+          export CMAKE_BUILD_PARALLEL_LEVEL="$(nproc)"
+          python -m build --wheel
+          python -m venv /tmp/xspcomm-release-test
+          /tmp/xspcomm-release-test/bin/python -m pip install --no-index --find-links=dist "xspcomm==${VERSION}"
+          /tmp/xspcomm-release-test/bin/python -m pip check
+          /tmp/xspcomm-release-test/bin/python - <<'PY'
+          import os
+          from importlib.metadata import version
+          import xspcomm
+          assert version("xspcomm") == os.environ["VERSION"]
+          assert xspcomm.version() == version("xspcomm")
+          signal = xspcomm.XData(8, xspcomm.XData.InOut)
+          signal.Set(0xA5)
+          assert signal.U() == 0xA5
+          clock = xspcomm.XClock(lambda _: 0)
+          clock.Step(2)
+          assert clock.clk == 2
+          assert xspcomm.abi_version() > 0
+          from pathlib import Path
+          from subprocess import check_output
+          binary = Path(xspcomm.__file__).parent / "_pyxspcomm.so"
+          dynamic = check_output(["readelf", "-d", str(binary)], text=True)
+          assert "Library runpath: [$ORIGIN/]" in dynamic
+          assert "/home/" not in dynamic and "/usr/local/lib" not in dynamic
+          PY
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.client_payload.tag || inputs.tag }}
+          files: dist/*.whl
+          fail_on_unmatched_files: true
+          overwrite_files: true

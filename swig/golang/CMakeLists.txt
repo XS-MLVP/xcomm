@@ -57,6 +57,9 @@ add_custom_command(
             $<TARGET_FILE:xspcomm>
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_SONAME_FILE_NAME:xspcomm>
+    COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/go.mod
             ${XCOMM_LIB_DIR}/
     DEPENDS golangxspcomm ${STAGE_NATIVE_LIBRARY_SCRIPT}

@@ -50,3 +50,14 @@ if (NOT "${TARGET_LINKER_FILE_NAME}" STREQUAL "${stage_name}")
         COMMAND_ERROR_IS_FATAL ANY
     )
 endif ()
+
+if (DEFINED TARGET_SONAME_FILE_NAME AND
+    NOT "${TARGET_SONAME_FILE_NAME}" STREQUAL "${stage_name}" AND
+    NOT "${TARGET_SONAME_FILE_NAME}" STREQUAL "${TARGET_LINKER_FILE_NAME}")
+    file(REMOVE "${DEST_DIR}/${TARGET_SONAME_FILE_NAME}")
+    execute_process(
+        COMMAND "${CMAKE_COMMAND}" -E create_symlink "${stage_name}" "${TARGET_SONAME_FILE_NAME}"
+        WORKING_DIRECTORY "${DEST_DIR}"
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+endif ()
