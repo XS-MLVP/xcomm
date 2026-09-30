@@ -50,8 +50,10 @@ run: build
 
 rbuild: clean build run
 
-wheel: clean
-	XSPCOMM_INSTALL_PREFIX=picker/ XSPCOMM_BUILD_WHEEL=1 pipx run build
+PYTHON ?= python3
+
+wheel:
+	$(PYTHON) -m build --wheel
 
 build_all:
 	make BUILD_XSPCOMM_SWIG=python,scala,java,golang,lua

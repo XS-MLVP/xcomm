@@ -27,4 +27,7 @@ void set_log_level(LogLevel val)
 std::string version(){
     return XSPCOMM_VERSION;
 }
+int abi_version(){
+    return XSPCOMM_ABI_VERSION;
+}
 } // namespace xspcomm

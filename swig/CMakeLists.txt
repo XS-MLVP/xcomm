@@ -73,6 +73,9 @@ function(string_contains str substr result)
 endfunction(string_contains)
 
 string(TOLOWER "$ENV{BUILD_XSPCOMM_SWIG}" swig_target)
+if (SKBUILD AND "${swig_target}" STREQUAL "")
+    set(swig_target "python")
+endif ()
 
 # search languages to turn on
 string_contains("${swig_target}" "python" on_python)

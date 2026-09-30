@@ -69,6 +69,9 @@ add_custom_command(
             $<TARGET_FILE:xspcomm>
             ${XCOMM_LIB_DIR}/$<TARGET_LINKER_FILE_NAME:xspcomm>
     COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:xspcomm>
+            ${XCOMM_LIB_DIR}/$<TARGET_SONAME_FILE_NAME:xspcomm>
+    COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/*.scala
             ${XCOMM_LIB_DIR}/
     COMMAND ${CMAKE_COMMAND} -E copy
