@@ -7,6 +7,7 @@
 #include "xspcomm/xsignal_cfg.h"
 #include "xspcomm/xcomuse.h"
 #include "xspcomm/xtrigger.h"
+#include <stdexcept>
 %}
 
 %feature("director") xfunction;
@@ -66,10 +67,25 @@ namespace std {
 %include "xspcomm/xexpr.h"
 %include "xspcomm/xfsm.h"
 %include "xspcomm/xcomuse.h"
+%include exception.i
+%exception {
+    try { $action }
+    catch (const std::invalid_argument &error) {
+        SWIG_exception(SWIG_ValueError, error.what());
+    }
+    catch (const std::exception &error) {
+        SWIG_exception(SWIG_RuntimeError, error.what());
+    }
+}
 %include "xspcomm/xtrigger.h"
+%exception;
 
 namespace std {
    %template(XBackendHitVector) vector<xspcomm::XBackendHit>;
+   %template(XCoverageItemVector) vector<xspcomm::XCoverageItem>;
+   %template(XCoverageBinVector) vector<xspcomm::XCoverageBin>;
+   %template(XUInt32Vector) vector<unsigned int>;
+   %template(XUInt64Vector) vector<unsigned long long>;
    %template(XSequenceStepVector) vector<xspcomm::XSequenceStep>;
    %template(XFsmTransitionVector) vector<xspcomm::XFsmTransition>;
 }
