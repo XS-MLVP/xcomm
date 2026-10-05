@@ -49,6 +49,7 @@ namespace xspcomm {
         bool use_xdata_cmp = false;
         XData* lhs_xdata = nullptr;
         XData* rhs_xdata = nullptr;
+        XData* mask_xdata = nullptr; // optional full-width mask for equality
         uint32_t cost = 0;
         uint64_t window = 0;
         uint64_t last_true_cycle = (uint64_t)-1;
@@ -82,6 +83,7 @@ namespace xspcomm {
         void ReorderShortCircuit(int id, const std::vector<int> &memo,
                                  const std::vector<int> &stateful);
     public:
+        bool ValidRoot(int root) const { return root >= 0 && static_cast<size_t>(root) < nodes.size(); }
         int NewConst(uint64_t v);
         int NewSignal(XData* sig);
         int NewUnary(ExprOp op, int child);
@@ -96,6 +98,9 @@ namespace xspcomm {
         int NewCompareConstBytesSig(ExprOp op,
                                     std::vector<unsigned char> &lhs,
                                     XData* rhs);
+        int NewMaskedCompareSigConstBytes(XData* lhs,
+                                          std::vector<unsigned char> &value,
+                                          std::vector<unsigned char> &mask);
         int NewWithin(int child, uint64_t window);
         int NewHold(int child, uint64_t window);
         XData* GetOrCreateSignal(XSignalCFG* cfg, const std::string &name);

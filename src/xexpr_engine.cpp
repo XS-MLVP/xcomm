@@ -114,6 +114,26 @@ int ExprEngine::NewCompareConstBytesSig(
     return (int)this->nodes.size() - 1;
 }
 
+int ExprEngine::NewMaskedCompareSigConstBytes(
+    XData* lhs, std::vector<unsigned char> &value, std::vector<unsigned char> &mask){
+    if(!lhs) return -1;
+    const uint32_t width = std::max(1u, lhs->W());
+    const size_t size = (static_cast<size_t>(width) + 7) / 8;
+    // Reject malformed descriptors rather than silently truncating high bits.
+    if(value.size() != size || mask.size() != size) return -1;
+    const unsigned int last_mask = width % 8 ? (1u << (width % 8)) - 1 : 255;
+    if((value.back() | mask.back()) & ~last_mask) return -1;
+    for(size_t i = 0; i < size; ++i) if(value[i] & ~mask[i]) return -1;
+    ExprNode n;
+    n.op = ExprOp::EQ;
+    n.use_xdata_cmp = true;
+    n.lhs_xdata = lhs;
+    n.rhs_xdata = MakeConstXDataBytes(width, value);
+    n.mask_xdata = MakeConstXDataBytes(width, mask);
+    nodes.push_back(n);
+    return static_cast<int>(nodes.size()) - 1;
+}
+
 int ExprEngine::NewWithin(int child, uint64_t window){
     ExprNode n;
     n.op = ExprOp::WITHIN;
@@ -497,6 +517,18 @@ uint64_t ExprEngine::EvalIterative(int root){
 bool ExprEngine::EvalCompareNode(const ExprNode &node){
     if(node.use_xdata_cmp){
         if(!node.lhs_xdata || !node.rhs_xdata) return false;
+        if(node.mask_xdata){
+            // Refresh once, then compare native words without allocating per sample.
+            const auto low = node.lhs_xdata->U();
+            if(!node.lhs_xdata->DataValid()) return false;
+            if(node.lhs_xdata->W() == 0)
+                return (low & node.mask_xdata->U()) == node.rhs_xdata->U();
+            const size_t words = (static_cast<size_t>(node.lhs_xdata->W()) + 31) / 32;
+            for(size_t i = 0; i < words; ++i)
+                if((node.lhs_xdata->pVecData[i].aval & node.mask_xdata->pVecData[i].aval)
+                   != node.rhs_xdata->pVecData[i].aval) return false;
+            return true;
+        }
         return CompareXData(node.lhs_xdata, node.rhs_xdata, node.op);
     }
     uint64_t lv = EvalNode(node.lhs);

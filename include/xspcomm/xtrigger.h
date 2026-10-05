@@ -79,6 +79,7 @@ enum class XSequenceStepKind : uint8_t {
     Wait = 0,
     Within = 1,
     Hold = 2,
+    Next = 3,
 };
 
 struct XSequenceStep {
@@ -97,6 +98,40 @@ struct XFsmTransition {
     bool trigger = false;
 };
 
+// Coverage uses numeric IDs in the hot path. Human names live in the client.
+struct XCoverageItem {
+    int gate = -1;
+    XData *signal = nullptr; // direct source, any XData width; null for a cross
+    std::vector<unsigned int> dimensions; // point IDs; empty for a point
+};
+
+struct XCoverageBin {
+    uint32_t item = 0;
+    uint32_t kind = 0; // normal / ignore / illegal / default
+    int root = -1;
+    std::vector<XSequenceStep> steps;
+    bool overlap = true;
+    std::vector<unsigned int> dimensions; // normal bin IDs for a cross tuple
+};
+
+struct XCoverageSnapshot {
+    uint32_t generation = 0;
+    uint64_t epoch = 0;
+    uint64_t tick = 0;
+    // group samples/gated; samples/gated/ignored/unmatched/unknown per item;
+    // then bin counts in declaration order.
+    std::vector<unsigned long long> counters;
+    std::vector<unsigned int> illegal_bins;
+    std::vector<std::string> illegal_values; // full known value in hexadecimal, sampled at the hit
+    std::vector<unsigned long long> illegal_ticks;
+    // started/completed/failed/expired/aborted/cleared/peak_active for source,
+    // then each bin. Empty when summary diagnostics are disabled.
+    std::vector<unsigned long long> diagnostics;
+    // Optional rows: pattern ID (0=source, bin+1), step, age, held, FSM state.
+    std::vector<unsigned long long> progress;
+    bool incomplete = false;
+};
+
 class XTriggerEngine {
     enum class WatcherKind : uint8_t {
         Edge,
@@ -109,7 +144,16 @@ class XTriggerEngine {
         Fsm,
     };
 
-    struct Watcher {
+    struct CoverageState;
+    struct MatchState {
+        bool sequence_failed = false;
+        bool sequence_expired = false;
+        size_t sequence_index = 0;
+        uint64_t sequence_age = 0;
+        uint64_t sequence_held = 0;
+        uint32_t fsm_current_state = 0;
+    };
+    struct Watcher : MatchState {
         uint32_t generation = 0;
         bool occupied = false;
         bool armed = false;
@@ -128,13 +172,10 @@ class XTriggerEngine {
         bool last_condition = false;
         int expr_root = -1;
         std::vector<XSequenceStep> sequence_steps;
-        size_t sequence_index = 0;
-        uint64_t sequence_age = 0;
-        uint64_t sequence_held = 0;
         std::vector<XFsmTransition> fsm_transitions;
         uint32_t fsm_state_count = 0;
         uint32_t fsm_start_state = 0;
-        uint32_t fsm_current_state = 0;
+        std::shared_ptr<CoverageState> coverage;
     };
 
     XClock *clock = nullptr;
@@ -152,7 +193,13 @@ class XTriggerEngine {
     void AppendHit(uint32_t slot, Watcher &watcher, XHitKind kind,
                    uint64_t value, uint64_t event_id = 0,
                    uint64_t x_mask = 0);
-    bool AdvanceSequence(Watcher &watcher);
+    bool AdvanceSequence(const std::vector<XSequenceStep> &steps, MatchState &state);
+    bool AdvanceFsm(const Watcher &program, MatchState &state, uint32_t &terminal);
+    size_t AdvanceCoverageAttempts(Watcher &watcher, const std::vector<XSequenceStep> &steps,
+        std::vector<MatchState> &attempts, size_t pattern, bool overlap, size_t max_active);
+    void SampleCoverage(Watcher &watcher);
+    void ClearCoverageHistory(Watcher &watcher, bool aborted = false);
+    Watcher &CoverageWatcher(XRegistrationHandle handle);
 
 public:
     explicit XTriggerEngine(XClock *clock, size_t capacity = 1024);
@@ -187,6 +234,8 @@ public:
         int op, XData *lhs, std::vector<unsigned char> &rhs);
     int ExprNewCompareConstBytesSig(
         int op, std::vector<unsigned char> &lhs, XData *rhs);
+    int ExprNewMaskedCompareSigConstBytes(
+        XData *lhs, std::vector<unsigned char> &value, std::vector<unsigned char> &mask);
     XRegistrationHandle ArmExpr(
         int root, XPhase phase = XPhase::RisingStable,
         XConditionMode mode = XConditionMode::Enter,
@@ -198,6 +247,15 @@ public:
         uint32_t state_count, uint32_t start_state,
         const std::vector<XFsmTransition> &transitions,
         XPhase phase = XPhase::RisingStable, uint64_t source_id = 0);
+    static uint32_t CoverageVersion() { return 3; }
+    void AttachCoverage(XRegistrationHandle handle,
+                        const std::vector<XCoverageItem> &items,
+                        const std::vector<XCoverageBin> &bins,
+                        int gate = -1, int abort = -1,
+                        bool raise_illegal = true, size_t diagnostic_capacity = 1024,
+                        bool overlap = false, size_t max_active = 1, bool diagnostics = false);
+    XCoverageSnapshot CoverageSnapshot(XRegistrationHandle handle, bool progress = false) const;
+    void ResetCoverage(XRegistrationHandle handle, bool counters = true);
     bool Disarm(XRegistrationHandle handle);
     bool Rearm(XRegistrationHandle handle);
     bool RearmSample(XRegistrationHandle handle);

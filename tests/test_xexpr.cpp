@@ -150,3 +150,30 @@ TEST_CASE("ComUseExprCheck reports every expression hit in one call",
     REQUIRE(keys[1] == "second");
     REQUIRE(checker.GetCbCount() == 1);
 }
+
+
+TEST_CASE("ExprEngine masked comparison preserves wide bits and unknowns", "[xexpr]") {
+    ExprEngine engine;
+    XData signal(65, XData::InOut);
+    std::vector<unsigned char> value(9, 0), mask(9, 0);
+    value[0] = 1; value[8] = 1;
+    mask[0] = 3; mask[8] = 1;
+    const int root = engine.NewMaskedCompareSigConstBytes(&signal, value, mask);
+    REQUIRE(root >= 0);
+    signal = "0x10000000000000005";
+    REQUIRE(engine.IsKnown(root));
+    REQUIRE(engine.Eval(root) == 1);
+    signal = "0x5";
+    REQUIRE(engine.Eval(root) == 0);
+    signal = "0x10000000000000006";
+    REQUIRE(engine.Eval(root) == 0);
+    signal = "0bx0000000000000000000000000000000000000000000000000000000000000001";
+    REQUIRE_FALSE(engine.IsKnown(root));
+    REQUIRE(engine.Eval(root) == 0);
+    mask[8] = 2;
+    REQUIRE(engine.NewMaskedCompareSigConstBytes(&signal, value, mask) == -1);
+    mask.pop_back();
+    REQUIRE(engine.NewMaskedCompareSigConstBytes(&signal, value, mask) == -1);
+    engine.Clear();
+    REQUIRE_FALSE(engine.ValidRoot(root));
+}
