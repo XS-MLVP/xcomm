@@ -52,3 +52,19 @@ SONAME. Increase it only for an incompatible native ABI change. The library
 also exports `xspcomm.abi_version()`, so wheel tests can check the loaded ABI.
 If it changes, update Picker's supported xcomm range and rebuild generated DUT
 extensions; a Python version specifier alone cannot verify C++ ABI identity.
+
+## Migrating to the native trigger engine
+
+The native trigger engine changes the C++ layouts of `XClock`, `XData`, and
+`ExprNode`, so this release uses native ABI 2 (`libxspcomm.so.2`). Rebuild
+Picker-generated DUT extensions and other native bindings against the new
+headers and library. Keep each generated DUT and its runtime on a matching
+native ABI; changing a library symlink does not make an ABI 1 binary compatible.
+
+`XTriggerEngine.CoverageVersion() == 3` identifies the coverage snapshot
+protocol. It is separate from the native library ABI and the Python package
+version. The Python `XPin` wrapper is removed; use `XData` directly instead.
+
+Picker 2.0.1 restricts xspcomm to `<0.2`. Before releasing Picker with an
+xspcomm `0.2.x` package, update its supported dependency range and rebuild its
+bundled native runtime.
