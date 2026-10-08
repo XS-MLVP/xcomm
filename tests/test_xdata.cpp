@@ -1,5 +1,6 @@
 #include "xspcomm/xcomm.h"
 #include "xspcomm/xinstance.h"
+#include <limits>
 
 using namespace xspcomm;
 
@@ -28,11 +29,89 @@ static void test_optimized_signal_buffers()
     }
 }
 
+static void test_native_storage()
+{
+    auto check = [](unsigned width, auto value) {
+        auto storage = std::make_unique<decltype(value)>(value);
+        XData signal(width, XData::InOut);
+        signal.BindNativeData(reinterpret_cast<uint64_t>(storage.get()));
+        Assert(signal.U() == value, "XData(%u) native read failed", width);
+        signal.AsImmWrite();
+        signal.Set(0x5A);
+        const auto expected = width == 1 ? 0 : 0x5A;
+        Assert(*storage == expected, "XData(%u) native write failed", width);
+        *storage = value;
+        Assert(signal.U() == value, "XData(%u) native refresh failed", width);
+    };
+    check(1, uint8_t(1));
+    check(8, uint8_t(0xA5));
+    check(9, uint16_t(0x1A5));
+    check(16, uint16_t(0xBEEF));
+    check(32, uint32_t(0xDEADBEEF));
+    check(64, uint64_t(0x89ABCDEF01234567));
+}
+
+static void test_signed_values_and_slices()
+{
+    XData full(64, XData::InOut);
+    for (int64_t value : {INT64_MIN, INT64_MIN + 1, int64_t(-123),
+                          int64_t(-1), int64_t(0), INT64_MAX}) {
+        full.Set(value);
+        Assert(full.S() == value, "64-bit signed round-trip failed");
+    }
+    for (unsigned width : {8U, 31U, 32U, 63U}) {
+        XData signal(width, XData::InOut);
+        signal.Set(-123);
+        Assert(signal.S() == -123, "XData(%u) sign extension failed", width);
+    }
+    full.Set(uint64_t(0x8000000000000001));
+    auto slice = full.SubDataRef(1, 62);
+    slice->Set(UINT64_MAX);
+    Assert(full.U() == UINT64_MAX, "slice ending at bit 63 lost bits");
+    slice->Set(0);
+    Assert(full.U() == UINT64_C(0x8000000000000001), "slice overwrote adjacent bits");
+}
+
+static void test_bit_buffer_boundaries()
+{
+    XData signal(32, XData::InOut);
+    uint32_t values[] = {0xA5, 0x5A};
+    uint32_t mask = 0xFFFF;
+    signal.Set(0x12345678);
+    for (uint32_t start : {uint32_t(1), uint32_t(2), UINT32_MAX}) {
+        signal.SetBits(values, 1, nullptr, start);
+        signal.SetBits(values, 1, &mask, start);
+        Assert(signal.U() == 0x12345678, "out-of-range SetBits changed the signal");
+    }
+    signal.SetBits(static_cast<uint32_t *>(nullptr), uint32_t(0), nullptr, UINT32_MAX);
+    signal.SetBits(values, 1, &mask);
+    Assert(signal.U() == 0x123400A5, "masked SetBits failed");
+    signal.SetBits(values, 2);
+    Assert(signal.U() == 0xA5, "SetBits did not clip to the signal size");
+
+    const uint64_t initial = UINT64_C(0x89ABCDEF01234567);
+    for (int shift : {0, 1, 31, 32, 33, 63, 64, 65, 95, 96,
+                      -1, -31, -32, -33, -63, -64, -65, -95, -96,
+                      std::numeric_limits<int>::min(), std::numeric_limits<int>::max()}) {
+        int words[] = {int(uint32_t(initial)), int(uint32_t(initial >> 32))};
+        big_shift(words, 2, shift);
+        const uint64_t actual = uint32_t(words[0]) | (uint64_t(uint32_t(words[1])) << 32);
+        uint64_t expected = 0;
+        if (shift >= 0 && shift < 64) expected = initial >> shift;
+        if (shift < 0 && shift > -64) expected = initial << -shift;
+        Assert(actual == expected, "big_shift failed for shift %d", shift);
+    }
+    big_shift(nullptr, 0, std::numeric_limits<int>::min());
+}
+
 int main(int argsc, const char **argsv)
 {
     Debug("version: %s", version().c_str());
     checkVersion();
     test_optimized_signal_buffers();
+    test_native_storage();
+    test_signed_values_and_slices();
+    test_bit_buffer_boundaries();
     test_xdata();
     return 0;
 }

@@ -220,9 +220,43 @@ namespace xspcomm {
     class ComUseRangeCheck {
         int bytes;
         int range;
+        template <typename T>
+        static uint64_t Read(uint64_t address){
+            T value;
+            std::memcpy(&value, (const void *)address, sizeof(value));
+            return value;
+        }
+        template <size_t Bytes>
+        static uint64_t Load(uint64_t address){
+            if constexpr(Bytes == 1) return Read<uint8_t>(address);
+            else if constexpr(Bytes == 2) return Read<uint16_t>(address);
+            else if constexpr(Bytes == 4) return Read<uint32_t>(address);
+            else if constexpr(Bytes == 8) return Read<uint64_t>(address);
+            // Overlapping loads cover 3/5/6/7 bytes without reading past the end.
+            else if constexpr(Bytes == 3) return Read<uint16_t>(address) | (Read<uint16_t>(address + 1) << 8);
+            else return Read<uint32_t>(address) | (Read<uint32_t>(address + Bytes - 4) << ((Bytes - 4) * 8));
+        }
+        template <size_t Bytes>
+        static bool Compare(uint64_t a, uint64_t b, uint64_t self){
+            return cmp(Load<Bytes>(a), Load<Bytes>(b), ((ComUseRangeCheck*)self)->range);
+        }
+        using ArrayCompare = bool (*)(uint64_t, uint64_t, uint64_t);
+        static ArrayCompare Select(int bytes){
+            switch(bytes){
+            case 1: return Compare<1>;
+            case 2: return Compare<2>;
+            case 3: return Compare<3>;
+            case 4: return Compare<4>;
+            case 5: return Compare<5>;
+            case 6: return Compare<6>;
+            case 7: return Compare<7>;
+            case 8: return Compare<8>;
+            default: return nullptr;
+            }
+        }
     public:
         ComUseRangeCheck(int range, int bytes):bytes(bytes), range(range){
-            Assert(bytes <= 8, "FIXME: bytes more than 8 is not supported!");
+            Assert(bytes >= 1 && bytes <= 8, "Need 1 <= bytes <= 8");
         }
         static bool cmp(uint64_t t, uint64_t c, int r){
             if(r >= 0){
@@ -232,17 +266,17 @@ namespace xspcomm {
         }
         static bool ArrayCmp(uint64_t a, uint64_t b, uint64_t self){
             ComUseRangeCheck * p = (ComUseRangeCheck*)self;
-            uint64_t vamask = p->bytes == 8 ? -1 : (((uint64_t)1 << (8*p->bytes)) - 1);
-            uint64_t target = vamask & (*(uint64_t*)a);
-            uint64_t cvalue = vamask & (*(uint64_t*)b);
-            return cmp(target, cvalue, p->range);
+            if(p->bytes == 8) return Compare<8>(a, b, self);
+            auto compare = Select(p->bytes);
+            return compare && compare(a, b, self);
         }
         static bool XDataCmp(XData *a, XData *b, uint64_t self){
             return cmp(a->U(), b->U(), ((ComUseRangeCheck*)self)->range);
         }
         uint64_t CSelf(){return (uint64_t)this;}
         xfunction<bool, uint64_t, uint64_t, uint64_t> GetArrayCmp(){
-            return (bool (*)(uint64_t, uint64_t, uint64_t))ArrayCmp;
+            // Select once when creating the callback, outside the hot path.
+            return Select(this->bytes);
         }
         xfunction<bool, XData*, XData*, uint64_t> GetXDataCmp(){
             return (bool (*)(XData*, XData*, uint64_t))XDataCmp;

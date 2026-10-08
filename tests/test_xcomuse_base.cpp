@@ -141,6 +141,29 @@ TEST_CASE("ComUseRangeCheck", "[xcomuse_base]") {
     REQUIRE(fn((uint64_t)&a, (uint64_t)&b, rc.CSelf()) == true);
 }
 
+TEST_CASE("ComUseRangeCheck reads exactly its byte count", "[xcomuse_base]") {
+    for (int bytes = 1; bytes <= 8; ++bytes) {
+        // Exact allocations expose overreads; the offset also tests alignment.
+        auto a = std::make_unique<unsigned char[]>(bytes + 1);
+        auto b = std::make_unique<unsigned char[]>(bytes + 1);
+        std::memset(a.get(), 0x80, bytes + 1);
+        std::memset(b.get(), 0x80, bytes + 1);
+        a[1] = 4;
+        b[1] = 6;
+        auto lhs = reinterpret_cast<uint64_t>(a.get() + 1);
+        auto rhs = reinterpret_cast<uint64_t>(b.get() + 1);
+        ComUseRangeCheck rc(2, bytes);
+        auto compare = rc.GetArrayCmp();
+        REQUIRE(compare(lhs, rhs, rc.CSelf()));
+        REQUIRE(ComUseRangeCheck::ArrayCmp(lhs, rhs, rc.CSelf()));
+        b[1] = 7;
+        REQUIRE_FALSE(compare(lhs, rhs, rc.CSelf()));
+        REQUIRE_FALSE(ComUseRangeCheck::ArrayCmp(lhs, rhs, rc.CSelf()));
+        b[1] = 4;
+        REQUIRE(compare(lhs, rhs, rc.CSelf()));
+    }
+}
+
 TEST_CASE("CString basic", "[xcomuse_base]") {
     CString s("abc");
     REQUIRE(s.Get() == "abc");
