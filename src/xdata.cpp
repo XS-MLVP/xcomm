@@ -578,7 +578,7 @@ void XData::_sub_data_fake_dpirw(void *data, bool is_read){
                 temp_mask[secs - 1] = 0xFFFFFFFF;
             } else {
                 // Otherwise, set only the required bits
-                temp_mask[secs - 1] = (1 << last_bits) - 1;
+                temp_mask[secs - 1] = bit32_msk(last_bits);
             }
         }
         // Apply the mask and update the data
@@ -668,23 +668,32 @@ void XData::BindNativeData(uint64_t pdata){
             *(unsigned char *)pdata = d;
         };
     }else{
-        this->vecRead = [this, pdata](void *d){
-            for(int i = 0; i < this->vecSize; i++){
-                ((xsvLogicVecVal *)d)[i].aval = ((uint32_t *)pdata)[i];
-            }
-        };
         // 1 - 8
         if(this->mWidth <=8){
-            this->vecWrite = [this, pdata](void *d){
-                *(unsigned char *)pdata = *(unsigned char *)(&(((xsvLogicVecVal *)d)[0].aval));
+            this->vecRead = [pdata](void *d){
+                ((xsvLogicVecVal *)d)->aval = *(uint8_t *)pdata;
+            };
+            this->vecWrite = [pdata](void *d){
+                *(uint8_t *)pdata = (uint8_t)((xsvLogicVecVal *)d)->aval;
             };
         // 9 - 16
         }else if (this->mWidth <= 16){
-            this->vecWrite = [this, pdata](void *d){
-                *(unsigned short *)pdata = *(unsigned short *)(&(((xsvLogicVecVal *)d)[0].aval));
+            this->vecRead = [pdata](void *d){
+                uint16_t value;
+                std::memcpy(&value, (const void *)pdata, sizeof(value));
+                ((xsvLogicVecVal *)d)->aval = value;
+            };
+            this->vecWrite = [pdata](void *d){
+                uint16_t value = (uint16_t)((xsvLogicVecVal *)d)->aval;
+                std::memcpy((void *)pdata, &value, sizeof(value));
             };
         // 17 +
         }else{
+            this->vecRead = [this, pdata](void *d){
+                for(int i = 0; i < this->vecSize; i++){
+                    ((xsvLogicVecVal *)d)[i].aval = ((uint32_t *)pdata)[i];
+                }
+            };
             this->vecWrite = [this, pdata](const void *d){
                 for(int i = 0; i < this->vecSize; i++){
                     ((uint32_t *)pdata)[i] = ((xsvLogicVecVal *)d)[i].aval;
@@ -829,7 +838,7 @@ void XData::SetBits(u_int32_t *buffer, u_int32_t count, u_int32_t *mask,
                this->mName.c_str());
     }
     Assert(this->mWidth > 0, "only svVec support SetBits");
-    auto range = std::min(count, this->vecSize - start);
+    auto range = start < this->vecSize ? std::min(count, this->vecSize - start) : 0;
     for (int i = 0; i < range; i++) {
         if (mask == nullptr) {
             this->pVecData[i + start].aval = buffer[i];
@@ -966,8 +975,8 @@ uint64_t XData::XMask()
 int64_t XData::S()
 {
     this->update_read();
-    // less 2 bit or more than 64 bit, ignore cast
-    if (this->mWidth == 0 || this->mWidth > 64) {
+    // A full native word already has its sign bit in the correct position.
+    if (this->mWidth == 0 || this->mWidth >= 64) {
         return static_cast<int64_t>(this->udata);
     }
 

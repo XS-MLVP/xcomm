@@ -167,7 +167,7 @@ bool eq = (a == "000000ff");
 | `std::shared_ptr<XData> SubDataRef(uint32_t start, uint32_t width, std::string name = "")` | 创建引用原对象 `[start, start+width)` 的切片。写切片会同步回原对象。 |
 | `XData *SubDataRefRaw(...)` | 与 `SubDataRef` 相同，但返回裸指针。主要用于 Go 包装。 |
 | `void SetBits(uint8_t *buffer, int count, uint8_t *mask = nullptr, int start = 0)` | 以 byte 为单位写入，`start` 是 byte 偏移。 |
-| `void SetBits(uint32_t *buffer, uint32_t count, uint32_t *mask = nullptr, uint32_t start = 0)` | 以 32-bit word 为单位写入，`start` 是 word 偏移。 |
+| `void SetBits(uint32_t *buffer, uint32_t count, uint32_t *mask = nullptr, uint32_t start = 0)` | 以 32-bit word 为单位写入，`start` 是 word 偏移；超出信号容量的部分忽略，起点在容量外时不写入。 |
 | `bool GetBits(uint8_t *buffer, uint32_t count)` | 读出 byte 数据；如果读取范围含 X/Z 返回 false。 |
 | `bool GetBits(uint32_t *buffer, uint32_t count)` | 读出 32-bit word 数据；如果读取范围含 X/Z 返回 false。 |
 
@@ -675,7 +675,7 @@ state S2:
 
 | API | 说明 |
 | --- | --- |
-| `ComUseRangeCheck(int range, int bytes)` | `bytes <= 8`。 |
+| `ComUseRangeCheck(int range, int bytes)` | `1 <= bytes <= 8`；pointer 比较只读取指定的字节数，支持未对齐地址。 |
 | `static bool cmp(uint64_t t, uint64_t c, int r)` | 当 `r >= 0` 时检查 `c-r <= t <= c`；当 `r < 0` 时检查 `c <= t <= c-r`。 |
 | `uint64_t CSelf()` | 返回自身地址，用作 callback arg。 |
 | `GetArrayCmp()` | 返回 pointer 比较 callback。 |
