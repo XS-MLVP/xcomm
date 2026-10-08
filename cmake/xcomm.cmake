@@ -32,7 +32,9 @@ if(DEFINED CMAKE_BUILD_PARALLEL)
 set(INNER_CMAKE_BUILD_PARALLEL "=${CMAKE_BUILD_PARALLEL}")
 endif()
 
-set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -ftree-vectorize -mtune=native -funroll-loops -funswitch-loops -fomit-frame-pointer")
+# Native signal buffers are accessed through both 32-bit and 64-bit views.
+# Keep those accesses dependent under optimization, including wheel builds.
+set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -fno-strict-aliasing -ftree-vectorize -mtune=native -funroll-loops -funswitch-loops -fomit-frame-pointer")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
