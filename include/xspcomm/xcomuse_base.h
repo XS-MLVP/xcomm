@@ -240,6 +240,7 @@ namespace xspcomm {
         static bool Compare(uint64_t a, uint64_t b, uint64_t self){
             return cmp(Load<Bytes>(a), Load<Bytes>(b), ((ComUseRangeCheck*)self)->range);
         }
+        static bool ArrayWideCmp(uint64_t a, uint64_t b, uint64_t self);
         using ArrayCompare = bool (*)(uint64_t, uint64_t, uint64_t);
         static ArrayCompare Select(int bytes){
             switch(bytes){
@@ -251,18 +252,18 @@ namespace xspcomm {
             case 6: return Compare<6>;
             case 7: return Compare<7>;
             case 8: return Compare<8>;
-            default: return nullptr;
+            default: return ArrayWideCmp;
             }
         }
     public:
         ComUseRangeCheck(int range, int bytes):bytes(bytes), range(range){
-            Assert(bytes >= 1 && bytes <= 8, "Need 1 <= bytes <= 8");
+            Assert(bytes >= 1, "Need bytes >= 1");
         }
         static bool cmp(uint64_t t, uint64_t c, int r){
             if(r >= 0){
-                return (c - r <= t) && (c >= t);
+                return t <= c && c - t <= (uint32_t)r;
             }
-            return (c - r >= t) && (c <= t);
+            return t >= c && t - c <= (uint64_t)(-(int64_t)r);
         }
         static bool ArrayCmp(uint64_t a, uint64_t b, uint64_t self){
             ComUseRangeCheck * p = (ComUseRangeCheck*)self;
@@ -270,9 +271,7 @@ namespace xspcomm {
             auto compare = Select(p->bytes);
             return compare && compare(a, b, self);
         }
-        static bool XDataCmp(XData *a, XData *b, uint64_t self){
-            return cmp(a->U(), b->U(), ((ComUseRangeCheck*)self)->range);
-        }
+        static bool XDataCmp(XData *a, XData *b, uint64_t self);
         uint64_t CSelf(){return (uint64_t)this;}
         xfunction<bool, uint64_t, uint64_t, uint64_t> GetArrayCmp(){
             // Select once when creating the callback, outside the hot path.
