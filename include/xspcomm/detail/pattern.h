@@ -23,6 +23,8 @@ struct PatternView {
     const std::vector<XSequenceStep> *sequence = nullptr;
     const std::vector<XFsmTransition> *fsm = nullptr;
     uint32_t start_state = 0;
+    int root = -1;
+    XConditionMode mode = XConditionMode::Enter;
 };
 
 bool AdvanceSequence(const std::vector<XSequenceStep> &steps,

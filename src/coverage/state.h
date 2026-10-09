@@ -2,7 +2,7 @@
 #define XSPCOMM_COVERAGE_STATE_H
 
 #include "xspcomm/xcoverage.h"
-#include "xspcomm/detail/pattern.h"
+#include "../trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 #include <algorithm>
 #include <limits>
@@ -10,7 +10,7 @@
 
 namespace xspcomm::detail {
 
-// Coverage owns its sampling history and counters. No trigger types are needed.
+// Coverage applies statistical policies to executions provided by trigger matchers.
 class CoverageState {
 public:
     enum class SampleStatus { Ready, Skip, Aborted };
@@ -31,19 +31,20 @@ public:
         return SampleStatus::Ready;
     }
     void Sample(ExprEngine &expr, uint64_t tick);
-    void SamplePattern(ExprEngine &expr, const PatternView &source, uint64_t tick);
+    void SamplePattern(ExprEngine &expr, uint64_t tick);
+    size_t ExecutionCount() const;
     void ClearHistory(bool aborted = false);
     void ResetCounters();
     XCoverageSnapshot Snapshot(uint64_t tick, bool progress) const;
 
 private:
-    size_t AdvanceAttempts(ExprEngine &expr, const PatternView &program,
-                           std::vector<PatternState> &attempts, size_t pattern,
-                           bool overlap, size_t max_active);
+    size_t Advance(ExprEngine &expr, PatternMatcher &matcher,
+                   size_t pattern, bool overlap, size_t max_active);
     std::vector<XCoverageItem> items;
     std::vector<XCoverageBin> bins;
-    std::vector<std::vector<PatternState>> attempts;
-    std::vector<PatternState> source_attempts;
+    PatternMatcher source_matcher;
+    std::vector<PatternMatcher> matchers;
+    std::vector<size_t> owners;
     bool overlap = false;
     size_t max_active = 1;
     enum { Started, Completed, Failed, Expired, Aborted, Cleared, PeakActive, DiagnosticCount };
@@ -57,9 +58,9 @@ private:
         }
         count += amount;
     }
-    void ClearAttempts(size_t pattern, std::vector<PatternState> &states, size_t reason) {
-        Bump(pattern, reason, states.size());
-        states.clear();
+    void ClearMatcher(size_t pattern, PatternMatcher &matcher, size_t reason) {
+        Bump(pattern, reason, matcher.States().size());
+        matcher.Clear();
     }
     std::vector<uint64_t> delta, normal_counts;
     std::vector<bool> matched;

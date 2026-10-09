@@ -11,7 +11,7 @@ else()
 endif()
 
 # Increment only when the native C++ ABI becomes incompatible.
-set(XSPCOMM_ABI_VERSION 2)
+set(XSPCOMM_ABI_VERSION 3)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
