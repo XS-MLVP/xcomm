@@ -1,5 +1,5 @@
 if(NOT XSPCOMM_WASM_LIB)
-    foreach(component IN ITEMS xdata xclock xtrigger xcoverage xcomuse xexpr xvpi xfsm)
+    foreach(component IN ITEMS xdata xclock xtrigger xcoverage xcomuse xexpr xvpi xfsm trigger_matcher)
         add_executable(test_${component} unit/test_${component}.cpp)
         target_include_directories(test_${component} PRIVATE
             ${PROJECT_SOURCE_DIR}/third_party/catch2

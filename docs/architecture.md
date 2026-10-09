@@ -8,15 +8,19 @@ headers (`xdata.h`, `xclock.h`, `xexpr.h`, `xtrigger.h`) describe their own modu
   algorithms depend only on standard headers, so XData and checkers share them.
 - `xcomuse/`: clock callbacks, condition/range checkers, expression checkers and
   the text-program FSM adapter. `ExprEngine` itself belongs to `xexpr.h`.
-- `xpattern.h`: shared sequence/FSM descriptors. `detail/pattern.h` holds the
-  matching state required by registrations; `src/pattern.cpp` implements the
-  shared matching algorithms.
-- `xcoverage.h`: coverage descriptors and snapshots. The independent coverage
-  component in `src/coverage` owns sampling history, bins, crosses, counters and
-  diagnostics, and has no dependency on trigger types.
+- `xpattern.h`: shared event modes and sequence/FSM descriptors.
+  `detail/pattern.h` holds borrowed program views and matching state;
+  `src/pattern.cpp` implements sequence/FSM advancement. The common execution
+  component in `src/trigger/matcher.*` manages expression events, overlapping
+  attempts, completion counts and FSM terminal results for native consumers.
+- `xcoverage.h`: coverage descriptors and snapshots. The component in
+  `src/coverage` organizes points and bins, selects completion results, and owns
+  crosses, counters and statistical policies. It uses the common trigger
+  matcher for execution history and advancement.
 - `src/trigger`: trigger registration/execution and a small coverage adapter.
-  Both consumers use the same expression and pattern implementations. Coverage
-  runs in the native sampling phase, with no event queue or language callback.
+  Ordinary triggers and coverage use the same expression events and pattern
+  advancement. Coverage runs in the native sampling phase, with no event queue
+  or language callback.
 - `src/core`: signal storage/value operations, backend bindings, ports, clocks,
   coroutines and configuration. YAML parsing stays in the configuration source;
   third-party YAML headers are not part of the public header dependency graph.
@@ -42,9 +46,36 @@ Update includes directly; removed paths do not have forwarding headers:
 
 `xinstance.h` and its `test_xdata()` helper are removed from the production SDK;
 that test implementation is compiled into `test_xdata` instead. Python-only
-third-call declarations live beside the Python wrapper. Existing runtime class
-layouts and Python public methods are retained; source clients must update the
-includes above and rebuild bindings as needed.
+third-call declarations live beside the Python wrapper. Existing signal/clock
+layouts and callable interfaces are retained. Coverage
+descriptors have expanded, so native clients must rebuild against ABI 3;
+source clients must also update the includes above.
+
+## Trigger programs and coverage
+
+Language frontends lower declarations to expression roots, sequence steps or
+FSM transitions. A value point observes an XData signal; a pattern point sets
+`XCoverageItem.pattern` and organizes complete trigger programs without a
+synthetic signal. Pattern bins select Expr, Sequence or FSM with
+`XCoverageBin.program_kind` (0, 1 or 2), and specify event mode, bounded overlap
+and optional FSM terminals. `CoverageVersion() == 4` identifies this descriptor
+protocol; the native library ABI is independently versioned as 3.
+
+Equivalent programs within one point share an execution when their roots,
+steps/transitions, event mode and overlap capacity agree. Terminal selection,
+bin kind and coverage thresholds do not change execution. Each bin retains its
+own count, and different points or registrations retain independent history.
+`CoverageExecutionCount(handle)` counts these point-local pattern executions.
+
+Each group is registered on one clock/phase. Pattern completion counts are
+preserved, including multiple terminals completing in one sample. Unselected
+FSM terminals still end their attempts. Closing a gate clears the affected bin
+history; abort clears source and bin history. Reset can preserve counters while
+clearing execution history. Pattern ignore/illegal bins affect their own
+completion results; value points retain their classification priority rules.
+Crosses containing pattern points are rejected until completion correlation
+semantics are defined. Program reclamation during a long execution and complete
+expression width/signed/cast/four-state semantics remain separate work.
 
 ## TLM source SDK
 

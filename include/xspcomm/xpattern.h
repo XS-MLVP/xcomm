@@ -5,6 +5,12 @@
 
 namespace xspcomm {
 
+enum class XConditionMode : uint8_t {
+    Enter = 0,
+    EachSample = 1,
+    Change = 2,
+};
+
 enum class XSequenceStepKind : uint8_t {
     Wait = 0,
     Within = 1,

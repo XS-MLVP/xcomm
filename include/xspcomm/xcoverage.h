@@ -14,7 +14,8 @@ namespace detail { class CoverageState; }
 // Coverage uses numeric IDs in the hot path. Human names live in the client.
 struct XCoverageItem {
     int gate = -1;
-    XData *signal = nullptr; // direct source, any XData width; null for a cross
+    bool pattern = false; // event point; no synthetic XData source
+    XData *signal = nullptr; // direct value source; null for a cross or pattern point
     std::vector<unsigned int> dimensions; // point IDs; empty for a point
 };
 
@@ -24,6 +25,12 @@ struct XCoverageBin {
     int root = -1;
     std::vector<XSequenceStep> steps;
     bool overlap = true;
+    uint32_t program_kind = 0; // Expr=0, Sequence=1, FSM=2 (pattern points)
+    XConditionMode mode = XConditionMode::Enter;
+    uint32_t max_active = 1;
+    uint32_t state_count = 0, start_state = 0;
+    std::vector<XFsmTransition> transitions;
+    std::vector<unsigned int> terminals; // empty selects all
     std::vector<unsigned int> dimensions; // normal bin IDs for a cross tuple
 };
 

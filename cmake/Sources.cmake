@@ -21,5 +21,6 @@ set(XSPCOMM_SOURCES
     pattern.cpp
     trigger/coverage.cpp
     trigger/engine.cpp
+    trigger/matcher.cpp
 )
 list(TRANSFORM XSPCOMM_SOURCES PREPEND "${CMAKE_CURRENT_LIST_DIR}/../src/")

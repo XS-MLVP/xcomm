@@ -1,6 +1,7 @@
 #include "xspcomm/xtrigger.h"
 #include "xspcomm/xexpr.h"
 #include "../coverage/state.h"
+#include "matcher.h"
 
 #include <chrono>
 #include <algorithm>
@@ -400,7 +401,7 @@ inline bool XTriggerEngine::EvaluateCoverage(Watcher &watcher)
     }
     const auto source = CoverageSource(watcher);
     if (source.sequence || source.fsm) {
-        coverage.SamplePattern(*expr_engine, source, clock->GetHalfTick());
+        coverage.SamplePattern(*expr_engine, clock->GetHalfTick());
         return true;
     }
     return false;
@@ -444,13 +445,8 @@ void XTriggerEngine::EvaluatePhase(XPhase phase)
                 (watcher.expected_wide
                      ? watcher.signal->Equal(*watcher.expected_wide)
                      : value == watcher.expected);
-            const bool emit = known && (
-                watcher.condition_mode == XConditionMode::EachSample
-                    ? current
-                    : watcher.condition_mode == XConditionMode::Enter
-                          ? current && !watcher.last_condition
-                          : current != watcher.last_condition);
-            if (known) watcher.last_condition = current;
+            const bool emit = detail::MatchCondition(known, current,
+                                                     watcher.condition_mode, watcher.last_condition);
             if (emit) {
                 AppendHit(slot, watcher, XHitKind::Value, value);
             }
@@ -486,26 +482,22 @@ void XTriggerEngine::EvaluatePhase(XPhase phase)
             const bool known = expr_engine->IsKnown(watcher.expr_root);
             const bool current = known &&
                                  expr_engine->Eval(watcher.expr_root) != 0;
-            const bool emit = known && (
-                watcher.condition_mode == XConditionMode::EachSample
-                    ? current
-                    : watcher.condition_mode == XConditionMode::Enter
-                          ? current && !watcher.last_condition
-                          : current != watcher.last_condition);
-            if (known) watcher.last_condition = current;
+            const bool emit = detail::MatchCondition(known, current,
+                                                     watcher.condition_mode, watcher.last_condition);
             if (emit) {
                 AppendHit(slot, watcher, XHitKind::Condition, current ? 1 : 0);
             }
             break;
         }
         case WatcherKind::Sequence:
-            if (detail::AdvanceSequence(watcher.sequence_steps, watcher, *expr_engine)) {
+            if (detail::AdvancePattern({&watcher.sequence_steps}, watcher, *expr_engine).completed) {
                 AppendHit(slot, watcher, XHitKind::Fsm, 1);
             }
             break;
         case WatcherKind::Fsm: {
-            uint32_t terminal = 0;
-            if (detail::AdvanceFsm(watcher.fsm_transitions, watcher, *expr_engine, terminal)) AppendHit(slot, watcher, XHitKind::Fsm, terminal);
+            const auto result = detail::AdvancePattern(
+                {nullptr, &watcher.fsm_transitions, watcher.fsm_start_state}, watcher, *expr_engine);
+            if (result.completed) AppendHit(slot, watcher, XHitKind::Fsm, result.terminal);
             break;
         }
         }

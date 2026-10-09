@@ -45,4 +45,10 @@ XCoverageSnapshot XTriggerEngine::CoverageSnapshot(XRegistrationHandle handle, b
     return watcher.coverage->Snapshot(clock->GetHalfTick(), progress);
 }
 
+size_t XTriggerEngine::CoverageExecutionCount(XRegistrationHandle handle) const
+{
+    CheckCoverageHandle(handle);
+    return watchers[handle.slot].coverage->ExecutionCount();
+}
+
 } // namespace xspcomm

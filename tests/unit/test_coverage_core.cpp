@@ -62,7 +62,7 @@ TEST_CASE("Coverage abort clears overlapping pattern history", "[coverage][patte
     for (uint64_t tick = 1; tick <= 2; ++tick) {
         expr.SetCycle(tick);
         REQUIRE(coverage.BeginSample(expr, tick) == CoverageState::SampleStatus::Ready);
-        coverage.SamplePattern(expr, source, tick);
+        coverage.SamplePattern(expr, tick);
     }
     REQUIRE(coverage.Snapshot(2, true).progress.size() == 10);
     abort = 1;
@@ -75,6 +75,6 @@ TEST_CASE("Coverage abort clears overlapping pattern history", "[coverage][patte
     done = 1;
     abort = 0;
     REQUIRE(coverage.BeginSample(expr, 4) == CoverageState::SampleStatus::Ready);
-    coverage.SamplePattern(expr, source, 4);
+    coverage.SamplePattern(expr, 4);
     REQUIRE(coverage.Snapshot(4, true).counters[0] == 0);
 }

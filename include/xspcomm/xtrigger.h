@@ -38,12 +38,6 @@ enum class XStopReason : uint8_t {
     BackendError = 8,
 };
 
-enum class XConditionMode : uint8_t {
-    Enter = 0,
-    EachSample = 1,
-    Change = 2,
-};
-
 struct XRegistrationHandle {
     uint32_t slot = std::numeric_limits<uint32_t>::max();
     uint32_t generation = 0;
@@ -190,7 +184,7 @@ public:
         uint32_t state_count, uint32_t start_state,
         const std::vector<XFsmTransition> &transitions,
         XPhase phase = XPhase::RisingStable, uint64_t source_id = 0);
-    static uint32_t CoverageVersion() { return 3; }
+    static uint32_t CoverageVersion() { return 4; }
     void AttachCoverage(XRegistrationHandle handle,
                         const std::vector<XCoverageItem> &items,
                         const std::vector<XCoverageBin> &bins,
@@ -199,6 +193,7 @@ public:
                         bool overlap = false, size_t max_active = 1, bool diagnostics = false);
     XCoverageSnapshot CoverageSnapshot(XRegistrationHandle handle, bool progress = false) const;
     void ResetCoverage(XRegistrationHandle handle, bool counters = true);
+    size_t CoverageExecutionCount(XRegistrationHandle handle) const;
     bool Disarm(XRegistrationHandle handle);
     bool Rearm(XRegistrationHandle handle);
     bool RearmSample(XRegistrationHandle handle);
