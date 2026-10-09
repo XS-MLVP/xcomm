@@ -3,7 +3,7 @@
 本文档基于当前项目源码整理，主要对应以下文件：
 
 - 核心 C++ API：`include/xspcomm/xdata.h`、`xport.h`、`xclock.h`、`xsignal_cfg.h`
-- 组合检查与表达式/FSM：`include/xspcomm/xcomuse.h`、`xcomuse/`、`xexpr.h`、`xfsm.h`
+- 组合检查与表达式/FSM：`include/xspcomm/xcomuse.h`、`xcomuse/`、`xexpr.h`、`xcomuse/expr.h`、`xcomuse/fsm.h`
 - 多语言封装：`swig/python/xcomm.py`、`swig/java/java.i`、`swig/scala/xsp.scala`、`swig/golang/golang.i`、`swig/lua/lua.i`、`swig/javascript/xspcomm.js`
 
 xspcomm 的核心抽象是：
@@ -25,7 +25,7 @@ C++ API 位于 `xspcomm` 命名空间。常用头文件：
 #include "xspcomm/xcomuse.h"     // ComUse、Expr、FSM 汇总
 ```
 
-ComUse 组件位于 `xspcomm/xcomuse/`，可以按需包含 `callback.h`、`condition.h`、`range.h`、`utils.h`，分别提供回调、条件检查、范围比较和数组/字符串工具。
+ComUse 组件位于 `xspcomm/xcomuse/`，可以按需包含 `callback.h`、`condition.h`、`range.h`、`expr.h` 和 `fsm.h`。独立的表达式引擎位于 `xexpr.h`。`common/compare.h` 提供 XData、表达式和检查器共用的比较算法；`common/memory.h` 提供数组、指针及字符串工具。
 
 多语言 SWIG 包通常复用 C++ 名称，部分语言会增加更符合本语言习惯的包装方法，见“多语言差异”。
 
@@ -418,7 +418,7 @@ variables:
 
 ```c++
 uint64_t mem[16] = {};
-XSignalCFG cfg("tests/test_signal_cfg.yaml", (uint64_t)mem);
+XSignalCFG cfg("tests/fixtures/signal_cfg.yaml", (uint64_t)mem);
 
 auto clk = cfg.NewXData("Cache_top.clock");
 auto rst = cfg.NewXData("Cache_top.reset");

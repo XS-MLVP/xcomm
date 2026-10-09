@@ -3,6 +3,8 @@
 
 #include "xspcomm/xclock.h"
 #include "xspcomm/xdata.h"
+#include "xspcomm/xcoverage.h"
+#include "xspcomm/detail/pattern.h"
 
 #include <cstdint>
 #include <limits>
@@ -75,63 +77,6 @@ struct XRunResult {
     }
 };
 
-enum class XSequenceStepKind : uint8_t {
-    Wait = 0,
-    Within = 1,
-    Hold = 2,
-    Next = 3,
-};
-
-struct XSequenceStep {
-    XSequenceStepKind kind = XSequenceStepKind::Wait;
-    int root = -1;
-    uint64_t minimum = 0;
-    uint64_t maximum = 0;
-    uint64_t cycles = 0;
-};
-
-struct XFsmTransition {
-    uint32_t from_state = 0;
-    int root = -1;
-    uint32_t next_state = 0;
-    uint32_t terminal_id = 0;
-    bool trigger = false;
-};
-
-// Coverage uses numeric IDs in the hot path. Human names live in the client.
-struct XCoverageItem {
-    int gate = -1;
-    XData *signal = nullptr; // direct source, any XData width; null for a cross
-    std::vector<unsigned int> dimensions; // point IDs; empty for a point
-};
-
-struct XCoverageBin {
-    uint32_t item = 0;
-    uint32_t kind = 0; // normal / ignore / illegal / default
-    int root = -1;
-    std::vector<XSequenceStep> steps;
-    bool overlap = true;
-    std::vector<unsigned int> dimensions; // normal bin IDs for a cross tuple
-};
-
-struct XCoverageSnapshot {
-    uint32_t generation = 0;
-    uint64_t epoch = 0;
-    uint64_t tick = 0;
-    // group samples/gated; samples/gated/ignored/unmatched/unknown per item;
-    // then bin counts in declaration order.
-    std::vector<unsigned long long> counters;
-    std::vector<unsigned int> illegal_bins;
-    std::vector<std::string> illegal_values; // full known value in hexadecimal, sampled at the hit
-    std::vector<unsigned long long> illegal_ticks;
-    // started/completed/failed/expired/aborted/cleared/peak_active for source,
-    // then each bin. Empty when summary diagnostics are disabled.
-    std::vector<unsigned long long> diagnostics;
-    // Optional rows: pattern ID (0=source, bin+1), step, age, held, FSM state.
-    std::vector<unsigned long long> progress;
-    bool incomplete = false;
-};
-
 class XTriggerEngine {
     enum class WatcherKind : uint8_t {
         Edge,
@@ -144,16 +89,7 @@ class XTriggerEngine {
         Fsm,
     };
 
-    struct CoverageState;
-    struct MatchState {
-        bool sequence_failed = false;
-        bool sequence_expired = false;
-        size_t sequence_index = 0;
-        uint64_t sequence_age = 0;
-        uint64_t sequence_held = 0;
-        uint32_t fsm_current_state = 0;
-    };
-    struct Watcher : MatchState {
+    struct Watcher : detail::PatternState {
         uint32_t generation = 0;
         bool occupied = false;
         bool armed = false;
@@ -175,7 +111,13 @@ class XTriggerEngine {
         std::vector<XFsmTransition> fsm_transitions;
         uint32_t fsm_state_count = 0;
         uint32_t fsm_start_state = 0;
-        std::shared_ptr<CoverageState> coverage;
+        std::shared_ptr<detail::CoverageState> coverage;
+
+        void ResetPattern() {
+            sequence_index = sequence_age = sequence_held = 0;
+            fsm_current_state = fsm_start_state;
+            remaining = initial_count;
+        }
     };
 
     XClock *clock = nullptr;
@@ -193,13 +135,14 @@ class XTriggerEngine {
     void AppendHit(uint32_t slot, Watcher &watcher, XHitKind kind,
                    uint64_t value, uint64_t event_id = 0,
                    uint64_t x_mask = 0);
-    bool AdvanceSequence(const std::vector<XSequenceStep> &steps, MatchState &state);
-    bool AdvanceFsm(const Watcher &program, MatchState &state, uint32_t &terminal);
-    size_t AdvanceCoverageAttempts(Watcher &watcher, const std::vector<XSequenceStep> &steps,
-        std::vector<MatchState> &attempts, size_t pattern, bool overlap, size_t max_active);
-    void SampleCoverage(Watcher &watcher);
-    void ClearCoverageHistory(Watcher &watcher, bool aborted = false);
-    Watcher &CoverageWatcher(XRegistrationHandle handle);
+    bool EvaluateCoverage(Watcher &watcher);
+    detail::PatternView CoverageSource(const Watcher &watcher) const
+    {
+        if (watcher.kind == WatcherKind::Sequence) return {&watcher.sequence_steps};
+        if (watcher.kind == WatcherKind::Fsm) return {nullptr, &watcher.fsm_transitions, watcher.fsm_start_state};
+        return {};
+    }
+    void CheckCoverageHandle(XRegistrationHandle handle) const;
 
 public:
     explicit XTriggerEngine(XClock *clock, size_t capacity = 1024);

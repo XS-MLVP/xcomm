@@ -74,8 +74,8 @@ message(STATUS "GIT_BRANCH: ${GIT_BRANCH}")
 message(STATUS "GIT_HASH: ${GIT_HASH}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/xspcomm/xconfig.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/include/xspcomm/xconfig.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+               ${CMAKE_CURRENT_BINARY_DIR}/generated/xspcomm/xconfig.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 if (NOT "$ENV{XSPCOMM_INSTALL_PREFIX}" STREQUAL "")
   set(XSPCOMM_INSTALL_PREFIX "$ENV{XSPCOMM_INSTALL_PREFIX}" PARENT_SCOPE)

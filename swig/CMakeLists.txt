@@ -72,7 +72,13 @@ function(string_contains str substr result)
     endif()
 endfunction(string_contains)
 
-string(TOLOWER "$ENV{BUILD_XSPCOMM_SWIG}" swig_target)
+set(XSPCOMM_SWIG_LANGUAGES "$ENV{BUILD_XSPCOMM_SWIG}" CACHE STRING
+    "Comma-separated SWIG binding languages")
+if(NOT "$ENV{BUILD_XSPCOMM_SWIG}" STREQUAL "")
+    set(XSPCOMM_SWIG_LANGUAGES "$ENV{BUILD_XSPCOMM_SWIG}" CACHE STRING
+        "Comma-separated SWIG binding languages" FORCE)
+endif()
+string(TOLOWER "${XSPCOMM_SWIG_LANGUAGES}" swig_target)
 if (SKBUILD AND "${swig_target}" STREQUAL "")
     set(swig_target "python")
 endif ()

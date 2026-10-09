@@ -1,0 +1,25 @@
+set(XSPCOMM_SOURCES
+    common/memory.cpp
+    comuse/callback.cpp
+    comuse/condition.cpp
+    comuse/expr.cpp
+    comuse/fsm.cpp
+    comuse/range.cpp
+    core/clock.cpp
+    core/coroutine.cpp
+    core/data.cpp
+    core/data_backends.cpp
+    core/data_value.cpp
+    core/data_vpi.cpp
+    core/pin.cpp
+    core/port.cpp
+    core/signal_cfg.cpp
+    core/util.cpp
+    coverage/engine.cpp
+    expr/engine.cpp
+    expr/parser.cpp
+    pattern.cpp
+    trigger/coverage.cpp
+    trigger/engine.cpp
+)
+list(TRANSFORM XSPCOMM_SOURCES PREPEND "${CMAKE_CURRENT_LIST_DIR}/../src/")

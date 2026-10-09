@@ -1,0 +1,41 @@
+string(TOLOWER "$ENV{BUILD_XSPCOMM_VCS_UVMPS}" swig_vcs_pubsub)
+if (NOT "${swig_vcs_pubsub}" STREQUAL "")
+
+execute_process(COMMAND bash -c "syscan -h|grep \"SystemC version\"|awk '{print $NF}'|xargs"
+                OUTPUT_VARIABLE sysc_version
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(SYSC_VERSION "${sysc_version}")
+message("The systemc version is: ${SYSC_VERSION}")
+
+set(VCS_HOME "$ENV{VCS_HOME}")
+set(UVMC_HOME "$ENV{UVMC_HOME}")
+
+if (NOT EXISTS "${VCS_HOME}")
+message(FATAL_ERROR "VCS_HOME not set")
+endif()
+
+if (NOT EXISTS "${UVMC_HOME}")
+message(FATAL_ERROR "UVMC_HOME not set")
+endif()
+
+
+set(SYSCAN syscan -cpp g++ -cc gcc -full64 -cflags -g -cflags -DVCS -tlm2 -cflags -I${VCS_HOME}/include/systemc${SYSC_VERSION}/tlm_utils -cflags -I${UVMC_HOME}/src/connect/sc)
+set(VCS vcs -q -e VcsMain -sysc=deltasync -lca  -sysc -cpp g++ -cc gcc -timescale=1ns/1ps -CFLAGS -DVCS ${VCS_HOME}/etc/uvm/src/dpi/uvm_dpi.cc -slave -full64
+${VCS_HOME}/linux64/lib/vcs_tls.o
+)
+
+add_custom_target(
+    uvmps_vcs ALL
+    COMMAND ${SYSCAN} -cflags -I${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src/uvm_pbsb.cpp  ${UVMC_HOME}/src/connect/sc/uvmc.cpp
+    COMMAND ${VCS} sc_main
+    COMMAND cp simv ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libuvmps_vcs.so.${PROJECT_VERSION}
+    COMMAND cd ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} && ln -s libuvmps_vcs.so.${PROJECT_VERSION} libuvmps_vcs.so
+)
+
+endif()
+
+# Standalone simulator builds consume this source SDK, outside public includes.
+foreach(destination IN ITEMS share/xspcomm/tlm share/picker/share/xspcomm/tlm)
+    install(FILES pubsub.cpp uvmc_bridge.h python.i
+            DESTINATION "${XSPCOMM_INSTALL_PREFIX}${destination}")
+endforeach()

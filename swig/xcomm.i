@@ -45,7 +45,7 @@
 %include std_string.i
 %include std_map.i
 %include std_vector.i
-#if !defined(SWIGGO) && !defined(SWIGLUA)
+#if !defined(SWIGGO) && !defined(SWIGLUA) && !defined(SWIGJAVASCRIPT)
 %include std_shared_ptr.i
 %shared_ptr(xspcomm::XData)
 #endif
@@ -66,9 +66,10 @@ namespace std {
 %include "xspcomm/xcomuse/callback.h"
 %include "xspcomm/xcomuse/condition.h"
 %include "xspcomm/xcomuse/range.h"
-%include "xspcomm/xcomuse/utils.h"
+%include "xspcomm/common/memory.h"
 %include "xspcomm/xexpr.h"
-%include "xspcomm/xfsm.h"
+%include "xspcomm/xcomuse/expr.h"
+%include "xspcomm/xcomuse/fsm.h"
 %include "xspcomm/xcomuse.h"
 %include exception.i
 %exception {
@@ -80,6 +81,8 @@ namespace std {
         SWIG_exception(SWIG_RuntimeError, error.what());
     }
 }
+%include "xspcomm/xpattern.h"
+%include "xspcomm/xcoverage.h"
 %include "xspcomm/xtrigger.h"
 %exception;
 

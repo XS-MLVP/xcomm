@@ -2,6 +2,7 @@
 #define XSPCOMM_XCOMUSE_CONDITION_H
 
 #include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/common/compare.h"
 #include "xspcomm/xdata.h"
 #include <map>
 #include <string>
@@ -24,18 +25,17 @@ namespace xspcomm {
     class ComUseCondCheck: public ComUseStepCb{
         using XDataCmpFn = bool (*)(XData*, XData*);
         using PtrCmpFn = bool (*)(ComUseCondCheck*, uint64_t, uint64_t, int);
-        static bool XDataCmpEq(XData* a, XData* b){ return *a == *b; }
-        static bool XDataCmpNe(XData* a, XData* b){ return *a != *b; }
-        static bool XDataCmpGt(XData* a, XData* b){ return *a > *b; }
-        static bool XDataCmpGe(XData* a, XData* b){ return *a >= *b; }
-        static bool XDataCmpLt(XData* a, XData* b){ return *a < *b; }
-        static bool XDataCmpLe(XData* a, XData* b){ return *a <= *b; }
-        static bool PtrCmpEq(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) == 0; }
-        static bool PtrCmpNe(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) != 0; }
-        static bool PtrCmpGt(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) > 0; }
-        static bool PtrCmpGe(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) >= 0; }
-        static bool PtrCmpLt(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) < 0; }
-        static bool PtrCmpLe(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) <= 0; }
+        template <ComUseCondCmp Op>
+        static bool XDataCmp(XData* a, XData* b) {
+            return compare::Compare<Op>(*a, *b);
+        }
+        template <ComUseCondCmp Op>
+        static bool PtrCmp(ComUseCondCheck*, uint64_t a, uint64_t b, int bytes) {
+            const int order = compare::CompareSignedBytes(
+                reinterpret_cast<const unsigned char*>(a),
+                reinterpret_cast<const unsigned char*>(b), bytes);
+            return compare::Compare<Op>(order, 0);
+        }
         static XDataCmpFn SelectXDataCmpFn(ComUseCondCmp cmp);
         static PtrCmpFn SelectPtrCmpFn(ComUseCondCmp cmp);
         std::vector<XClock*> clk_list;
@@ -79,7 +79,6 @@ namespace xspcomm {
         static bool RemoveUint64Cond(std::unordered_map<std::string, size_t> &idx,
                                      std::vector<CondUint64Entry> &vec,
                                      const std::string &name);
-        int _valcmp(uint64_t a, u_int64_t b, int bytes);
     public:
         ComUseCondCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
         void BindXClock(XClock *clk);
