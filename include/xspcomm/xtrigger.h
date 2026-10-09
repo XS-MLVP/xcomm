@@ -204,7 +204,7 @@ class XTriggerEngine {
     bool AdvanceFsm(const Watcher &program, MatchState &state, uint32_t &terminal);
     size_t AdvanceCoverageAttempts(Watcher &watcher, const std::vector<XSequenceStep> &steps,
         std::vector<MatchState> &attempts, size_t pattern, bool overlap, size_t max_active,
-        const Watcher *program = nullptr, const std::vector<unsigned int> *terminals = nullptr);
+        const Watcher *program = nullptr, std::vector<uint64_t> *results = nullptr, const std::vector<unsigned int> *result_ids = nullptr);
     void SampleCoverage(Watcher &watcher);
     void ClearCoverageHistory(Watcher &watcher, bool aborted = false);
     Watcher &CoverageWatcher(XRegistrationHandle handle);
@@ -263,6 +263,8 @@ public:
                         bool raise_illegal = true, size_t diagnostic_capacity = 1024,
                         bool overlap = false, size_t max_active = 1, bool diagnostics = false);
     XCoverageSnapshot CoverageSnapshot(XRegistrationHandle handle, bool progress = false) const;
+    // Distinct pattern-bin executions; excludes the group source and value bins.
+    size_t CoverageExecutionCount(XRegistrationHandle handle) const;
     void ResetCoverage(XRegistrationHandle handle, bool counters = true);
     bool Disarm(XRegistrationHandle handle);
     bool Rearm(XRegistrationHandle handle);

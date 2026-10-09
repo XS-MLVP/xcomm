@@ -4,6 +4,7 @@
 #include <chrono>
 #include <algorithm>
 #include <stdexcept>
+#include <tuple>
 
 namespace xspcomm {
 
@@ -13,6 +14,10 @@ struct XTriggerEngine::CoverageState {
     std::vector<std::vector<MatchState>> attempts;
     std::vector<MatchState> source_attempts;
     std::vector<Watcher> programs;
+    std::vector<size_t> owners; // bin -> first bin running the same observation
+    std::vector<std::vector<unsigned int>> result_ids;
+    std::vector<std::vector<uint64_t>> result_counts;
+    std::vector<size_t> completions;
     std::vector<bool> last_conditions;
     bool overlap = false;
     size_t max_active = 1;
@@ -40,6 +45,24 @@ struct XTriggerEngine::CoverageState {
     bool sampled = false;
     uint64_t evaluated_tick = 0;
 };
+
+// The item fixes the gate; clock, phase, abort and binding belong to the group.
+// Terminal selection, kind and thresholds do not change the observed process.
+static bool SameCoverageExecution(const XCoverageBin &a, const XCoverageBin &b)
+{
+    if (std::tie(a.item, a.program_kind, a.root, a.mode, a.overlap, a.max_active,
+                 a.state_count, a.start_state) !=
+        std::tie(b.item, b.program_kind, b.root, b.mode, b.overlap, b.max_active,
+                 b.state_count, b.start_state)) return false;
+    if (a.steps.size() != b.steps.size() || a.transitions.size() != b.transitions.size()) return false;
+    return std::equal(a.steps.begin(), a.steps.end(), b.steps.begin(), [](const auto &x, const auto &y) {
+        return std::tie(x.kind, x.root, x.minimum, x.maximum, x.cycles) ==
+               std::tie(y.kind, y.root, y.minimum, y.maximum, y.cycles);
+    }) && std::equal(a.transitions.begin(), a.transitions.end(), b.transitions.begin(), [](const auto &x, const auto &y) {
+        return std::tie(x.from_state, x.root, x.next_state, x.terminal_id, x.trigger) ==
+               std::tie(y.from_state, y.root, y.next_state, y.terminal_id, y.trigger);
+    });
+}
 
 XTriggerEngine::XTriggerEngine(XClock *clock, size_t capacity)
     : clock(clock), capacity(capacity), expr_engine(std::make_unique<ExprEngine>())
@@ -476,14 +499,25 @@ bool XTriggerEngine::AdvanceFsm(const Watcher &program, MatchState &state, uint3
 size_t XTriggerEngine::AdvanceCoverageAttempts(Watcher &watcher,
     const std::vector<XSequenceStep> &steps, std::vector<MatchState> &attempts,
     size_t pattern, bool overlap, size_t max_active,
-    const Watcher *program, const std::vector<unsigned int> *terminals)
+    const Watcher *program, std::vector<uint64_t> *results, const std::vector<unsigned int> *result_ids)
 {
     auto &c = *watcher.coverage;
     const Watcher &code = program ? *program : watcher;
     const bool fsm = (program || pattern == 0) && code.kind == WatcherKind::Fsm;
     uint32_t terminal = 0;
-    auto selected = [&]() { return !terminals || terminals->empty() ||
-        std::find(terminals->begin(), terminals->end(), terminal) != terminals->end(); };
+    auto record = [&]() {
+        if (results) {
+            const auto found = std::find(result_ids->begin(), result_ids->end(), terminal);
+            if (found == result_ids->end()) throw std::logic_error("unknown coverage completion terminal");
+            auto &count = (*results)[found - result_ids->begin()];
+            if (count == std::numeric_limits<uint64_t>::max()) {
+                c.snapshot.incomplete = true;
+                throw std::overflow_error("coverage terminal count overflow");
+            }
+            ++count;
+        }
+        c.Bump(pattern, CoverageState::Completed);
+    };
     const bool had_active = !attempts.empty();
     auto advance = [&](MatchState &state) {
         return fsm ? AdvanceFsm(code, state, terminal) : AdvanceSequence(steps, state);
@@ -495,7 +529,7 @@ size_t XTriggerEngine::AdvanceCoverageAttempts(Watcher &watcher,
         const bool done = advance(state);
         const bool failed = fsm ? (!done && state.fsm_current_state == code.fsm_start_state)
                                 : state.sequence_failed;
-        if (done) { if (selected()) ++completed; c.Bump(pattern, CoverageState::Completed); }
+        if (done) { ++completed; record(); }
         else if (failed) c.Bump(pattern, state.sequence_expired ? CoverageState::Expired : CoverageState::Failed);
         if (!done && !failed) {
             if (kept != i) attempts[kept] = state;
@@ -516,7 +550,7 @@ size_t XTriggerEngine::AdvanceCoverageAttempts(Watcher &watcher,
             }
             c.Bump(pattern, CoverageState::Started);
             c.Bump(pattern, CoverageState::PeakActive, attempts.size() + 1);
-            if (done) { if (selected()) ++completed; c.Bump(pattern, CoverageState::Completed); }
+            if (done) { ++completed; record(); }
             else attempts.push_back(candidate);
         }
     }
@@ -826,14 +860,40 @@ void XTriggerEngine::AttachCoverage(XRegistrationHandle handle,
     c->matched.resize(bins.size()); c->normal_counts.resize(items.size());
     c->attempts.resize(bins.size());
     c->programs.resize(bins.size());
+    c->owners.resize(bins.size());
+    c->result_ids.resize(bins.size());
+    c->result_counts.resize(bins.size());
+    c->completions.resize(bins.size());
     c->last_conditions.resize(bins.size());
     for (size_t i = 0; i < bins.size(); ++i) {
+        c->owners[i] = i;
+        if (items[bins[i].item].pattern) {
+            for (size_t previous = 0; previous < i; ++previous) {
+                if (c->owners[previous] == previous && SameCoverageExecution(bins[i], bins[previous])) {
+                    c->owners[i] = previous;
+                    break;
+                }
+            }
+        }
+        if (c->owners[i] != i) {
+            // The shared owner retains the executable descriptor and history.
+            c->bins[i].steps.clear();
+            c->bins[i].transitions.clear();
+            continue;
+        }
         auto &p = c->programs[i];
         p.kind = bins[i].program_kind == 2 ? WatcherKind::Fsm : WatcherKind::Sequence;
         p.fsm_state_count = bins[i].state_count; p.fsm_start_state = bins[i].start_state;
         p.fsm_transitions = bins[i].transitions;
+        auto &ids = c->result_ids[i];
+        if (items[bins[i].item].pattern && bins[i].program_kind == 2) {
+            for (const auto &t : bins[i].transitions)
+                if (t.trigger && std::find(ids.begin(), ids.end(), t.terminal_id) == ids.end())
+                    ids.push_back(t.terminal_id);
+        } else ids.push_back(0);
+        c->result_counts[i].resize(ids.size());
+        c->attempts[i].reserve(bins[i].steps.size());
     }
-    for (size_t i = 0; i < bins.size(); ++i) c->attempts[i].reserve(bins[i].steps.size());
     c->snapshot.illegal_bins.reserve(diagnostic_capacity);
     c->snapshot.illegal_values.reserve(diagnostic_capacity);
     c->snapshot.illegal_ticks.reserve(diagnostic_capacity);
@@ -872,15 +932,30 @@ XCoverageSnapshot XTriggerEngine::CoverageSnapshot(XRegistrationHandle handle, b
     auto &c = *const_cast<XTriggerEngine *>(this)->CoverageWatcher(handle).coverage;
     auto snapshot = c.snapshot;
     snapshot.tick = clock->GetHalfTick();
+    if (!snapshot.diagnostics.empty()) {
+        for (size_t b = 0; b < c.bins.size(); ++b) if (c.owners[b] != b)
+            std::copy_n(snapshot.diagnostics.begin() + (c.owners[b] + 1) * CoverageState::DiagnosticCount,
+                        CoverageState::DiagnosticCount,
+                        snapshot.diagnostics.begin() + (b + 1) * CoverageState::DiagnosticCount);
+    }
     if (progress) {
         auto append = [&](size_t id, const std::vector<MatchState> &states) {
             for (const auto &s : states) snapshot.progress.insert(snapshot.progress.end(), {
                 id, s.sequence_index, s.sequence_age, s.sequence_held, s.fsm_current_state});
         };
         append(0, c.source_attempts);
-        for (size_t b = 0; b < c.attempts.size(); ++b) append(b + 1, c.attempts[b]);
+        for (size_t b = 0; b < c.attempts.size(); ++b) append(b + 1, c.attempts[c.owners[b]]);
     }
     return snapshot;
+}
+
+size_t XTriggerEngine::CoverageExecutionCount(XRegistrationHandle handle) const
+{
+    const auto &c = *const_cast<XTriggerEngine *>(this)->CoverageWatcher(handle).coverage;
+    size_t count = 0;
+    for (size_t b = 0; b < c.bins.size(); ++b)
+        count += c.items[c.bins[b].item].pattern && c.owners[b] == b;
+    return count;
 }
 
 void XTriggerEngine::SampleCoverage(Watcher &watcher)
@@ -939,15 +1014,29 @@ void XTriggerEngine::SampleCoverage(Watcher &watcher)
                 for (size_t b = 0; b < c.bins.size(); ++b) {
                     const auto &bin = c.bins[b];
                     if (bin.item != i) continue;
-                    size_t completed = 0;
-                    if (bin.program_kind == 0) {
-                        const bool known = expr_engine->IsKnown(bin.root);
-                        const bool current = known && expr_engine->Eval(bin.root) != 0;
-                        completed = known && (bin.mode == XConditionMode::EachSample ? current :
-                            bin.mode == XConditionMode::Enter ? current && !c.last_conditions[b] : current != c.last_conditions[b]);
-                        if (known) c.last_conditions[b] = current;
-                    } else completed = AdvanceCoverageAttempts(watcher, bin.steps, c.attempts[b],
-                        b + 1, bin.overlap, bin.max_active, &c.programs[b], &bin.terminals);
+                    const auto owner = c.owners[b];
+                    if (owner == b) {
+                        if (bin.program_kind == 0) {
+                            const bool known = expr_engine->IsKnown(bin.root);
+                            const bool current = known && expr_engine->Eval(bin.root) != 0;
+                            c.completions[b] = known && (bin.mode == XConditionMode::EachSample ? current :
+                                bin.mode == XConditionMode::Enter ? current && !c.last_conditions[b] : current != c.last_conditions[b]);
+                            if (known) c.last_conditions[b] = current;
+                        } else {
+                            auto &results = c.result_counts[b];
+                            std::fill(results.begin(), results.end(), 0);
+                            c.completions[b] = AdvanceCoverageAttempts(watcher, bin.steps, c.attempts[b],
+                                b + 1, bin.overlap, bin.max_active, &c.programs[b], &results, &c.result_ids[b]);
+                        }
+                    }
+                    size_t completed = c.completions[owner];
+                    if (!bin.terminals.empty()) {
+                        completed = 0;
+                        const auto &ids = c.result_ids[owner];
+                        for (size_t t = 0; t < ids.size(); ++t)
+                            if (std::find(bin.terminals.begin(), bin.terminals.end(), ids[t]) != bin.terminals.end())
+                                completed += c.result_counts[owner][t];
+                    }
                     delta[offset + b] = completed;
                     any = any || completed;
                     if (bin.kind == 1 && completed) delta[base + 2] = 1;

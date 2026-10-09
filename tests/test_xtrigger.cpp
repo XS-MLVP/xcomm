@@ -640,3 +640,97 @@ TEST_CASE("Coverage rejects malformed pattern descriptors atomically", "[xtrigge
     REQUIRE(engine.CoverageSnapshot(h).counters.back() == 1); // ENTER, not EACH_SAMPLE.
     REQUIRE(engine.Disarm(h));
 }
+
+TEST_CASE("Coverage shares an FSM and routes every terminal to its bins", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    XData request(1, XData::InOut), response(1, XData::InOut), correct(1, XData::InOut);
+    const auto req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
+    const auto good = engine.ExprNewSignal(&correct);
+    const auto ok = engine.ExprNewBinary(static_cast<int>(ExprOp::LAND), rsp, good);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin first; first.program_kind = 2; first.state_count = 2; first.overlap = false;
+    first.transitions = {{0, req, 1, 0, false}, {1, ok, 0, 7, true}, {1, rsp, 0, 8, true}};
+    first.terminals = {7};
+    auto second = first; second.terminals = {8}; second.kind = 2;
+    auto all = first; all.terminals.clear();
+    const auto handle = engine.ArmSample(XPhase::RisingStable);
+    engine.AttachCoverage(handle, {item}, {first, second, all}, -1, -1, false, 1024, false, 1, true);
+    REQUIRE(engine.ActiveCount() == 1);
+    REQUIRE(engine.CoverageExecutionCount(handle) == 1);
+    request = 1; engine.RunUntil(2);
+    auto pending = engine.CoverageSnapshot(handle, true);
+    REQUIRE(pending.progress.size() == 15); // Three bin views of the same pending observation.
+    request = 0; response = 1; correct = 1; engine.RunUntil(2);
+    auto success = engine.CoverageSnapshot(handle);
+    REQUIRE(success.counters[7] == 1);
+    REQUIRE(success.counters[8] == 0);
+    REQUIRE(success.counters[9] == 1);
+    request = 1; response = 0; engine.RunUntil(2);
+    request = 0; response = 1; correct = 0; engine.RunUntil(2);
+    auto failure = engine.CoverageSnapshot(handle, true);
+    REQUIRE(failure.counters[7] == 1);
+    REQUIRE(failure.counters[8] == 1);
+    REQUIRE(failure.counters[9] == 2);
+    REQUIRE(failure.illegal_bins.size() == 1);
+    REQUIRE(failure.illegal_bins[0] == 1);
+    REQUIRE(failure.progress.empty());
+    for (size_t bin = 0; bin < 3; ++bin) {
+        REQUIRE(failure.diagnostics[(bin + 1) * 7] == 2);
+        REQUIRE(failure.diagnostics[(bin + 1) * 7 + 1] == 2);
+    }
+    REQUIRE(engine.Disarm(handle));
+}
+
+TEST_CASE("Shared coverage FSM retains simultaneous counts for different terminals", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    XData request(1, XData::InOut), response(1, XData::InOut);
+    const auto req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin fast; fast.program_kind = 2; fast.state_count = 3;
+    fast.overlap = true; fast.max_active = 3;
+    fast.transitions = {{0, req, 1, 0, false}, {1, rsp, 0, 7, true},
+                        {1, -1, 2, 0, false}, {2, rsp, 0, 8, true}};
+    fast.terminals = {7};
+    auto slow = fast; slow.terminals = {8};
+    auto all = fast; all.terminals.clear();
+    const auto handle = engine.ArmSample(XPhase::RisingStable);
+    engine.AttachCoverage(handle, {item}, {fast, slow, all}, -1, -1, true, 1024, false, 1, true);
+    REQUIRE(engine.CoverageExecutionCount(handle) == 1);
+    request = 1; REQUIRE(engine.RunUntil(6).hits.empty());
+    request = 0; response = 1; REQUIRE(engine.RunUntil(2).hits.empty());
+    const auto snapshot = engine.CoverageSnapshot(handle);
+    REQUIRE(snapshot.counters[7] == 1);
+    REQUIRE(snapshot.counters[8] == 2);
+    REQUIRE(snapshot.counters[9] == 3);
+    for (size_t bin = 0; bin < 3; ++bin) {
+        REQUIRE(snapshot.diagnostics[(bin + 1) * 7] == 3);
+        REQUIRE(snapshot.diagnostics[(bin + 1) * 7 + 1] == 3);
+        REQUIRE(snapshot.diagnostics[(bin + 1) * 7 + 6] == 3);
+    }
+    REQUIRE(engine.Disarm(handle));
+}
+
+TEST_CASE("Coverage shares only identical execution policies in the same point", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    XData request(1, XData::InOut), response(1, XData::InOut);
+    const auto req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin original; original.program_kind = 1; original.overlap = false;
+    original.steps = {{XSequenceStepKind::Wait, req}, {XSequenceStepKind::Within, rsp, 1, 4}};
+    auto alias = original;
+    auto other_point = original; other_point.item = 1;
+    auto short_window = original; short_window.steps[1].maximum = 2;
+    auto overlapping = original; overlapping.overlap = true; overlapping.max_active = 3;
+    auto h = engine.ArmSample(XPhase::RisingStable);
+    engine.AttachCoverage(h, {item, item}, {original, alias, other_point, short_window, overlapping});
+    REQUIRE(engine.CoverageExecutionCount(h) == 4);
+    request = 1; engine.RunUntil(2);
+    engine.ResetCoverage(h, false);
+    request = 0; response = 1; engine.RunUntil(2);
+    const auto snapshot = engine.CoverageSnapshot(h);
+    for (size_t bin = 0; bin < 5; ++bin) REQUIRE(snapshot.counters[12 + bin] == 0);
+    REQUIRE(engine.Disarm(h));
+}
