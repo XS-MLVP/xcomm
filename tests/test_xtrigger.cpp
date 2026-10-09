@@ -554,3 +554,89 @@ TEST_CASE("Coverage overlap capacity failure preserves pending state for cleanup
     engine.ClearExecutionState();
     REQUIRE(engine.ActiveCount() == 0);
 }
+
+TEST_CASE("Coverage bins run full independent temporal programs", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    XData start(1, XData::InOut), done(1, XData::InOut), stable(1, XData::InOut);
+    const auto req = engine.ExprNewSignal(&start), ack = engine.ExprNewSignal(&done);
+    const auto ready = engine.ExprNewSignal(&stable);
+    auto handle = engine.ArmSample(XPhase::RisingStable);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin long_bin; long_bin.program_kind = 1; long_bin.overlap = false;
+    long_bin.steps = {{XSequenceStepKind::Wait, req}, {XSequenceStepKind::Within, ack, 1, 4},
+                      {XSequenceStepKind::Hold, ready, 0, 0, 2}};
+    auto short_bin = long_bin; short_bin.steps[1].maximum = 1;
+    engine.AttachCoverage(handle, {item}, {long_bin, short_bin});
+    start = 1; REQUIRE(engine.RunUntil(2).hits.empty());
+    start = 0; REQUIRE(engine.RunUntil(2).hits.empty());
+    done = 1; REQUIRE(engine.RunUntil(2).hits.empty());
+    done = 0; stable = 1;
+    REQUIRE(engine.RunUntil(4).hits.empty());
+    const auto snapshot = engine.CoverageSnapshot(handle);
+    REQUIRE(snapshot.counters[0] == 5);
+    REQUIRE(snapshot.counters[7] == 1);
+    REQUIRE(snapshot.counters[8] == 0);
+    REQUIRE(engine.Disarm(handle));
+}
+
+TEST_CASE("Coverage FSM terminal filtering ends every terminal attempt", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    XData start(1, XData::InOut), success(1, XData::InOut), failure(1, XData::InOut);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin bin; bin.program_kind = 2; bin.overlap = false; bin.state_count = 2;
+    bin.transitions = {{0, engine.ExprNewSignal(&start), 1, 0, false},
+                       {1, engine.ExprNewSignal(&success), 0, 7, true},
+                       {1, engine.ExprNewSignal(&failure), 0, 8, true}};
+    bin.terminals = {7};
+    auto h = engine.ArmSample(XPhase::RisingStable);
+    engine.AttachCoverage(h, {item}, {bin}, -1, -1, true, 1024, false, 1, true);
+    start = 1; engine.RunUntil(2);
+    start = 0; failure = 1; engine.RunUntil(2);
+    auto failed = engine.CoverageSnapshot(h, true);
+    REQUIRE(failed.counters.back() == 0);
+    REQUIRE(failed.progress.empty());
+    REQUIRE(failed.diagnostics[8] == 1); // Bin completed even though its terminal was unselected.
+    failure = 0; success = 1; engine.RunUntil(2);
+    REQUIRE(engine.CoverageSnapshot(h).counters.back() == 0);
+    start = 1; success = 0; engine.RunUntil(2);
+    start = 0; success = 1; engine.RunUntil(2);
+    REQUIRE(engine.CoverageSnapshot(h).counters.back() == 1);
+    REQUIRE(engine.Disarm(h));
+}
+
+TEST_CASE("Coverage pattern overlap preserves simultaneous completion counts", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    XData start(1, XData::InOut), done(1, XData::InOut);
+    auto h = engine.ArmSample(XPhase::RisingStable);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin bin; bin.program_kind = 1; bin.overlap = true; bin.max_active = 3;
+    bin.steps = {{XSequenceStepKind::Wait, engine.ExprNewSignal(&start)},
+                 {XSequenceStepKind::Within, engine.ExprNewSignal(&done), 1, 5}};
+    engine.AttachCoverage(h, {item}, {bin});
+    start = 1; REQUIRE(engine.RunUntil(6).hits.empty());
+    start = 0; done = 1; REQUIRE(engine.RunUntil(2).hits.empty());
+    REQUIRE(engine.CoverageSnapshot(h).counters.back() == 3);
+    REQUIRE(engine.Disarm(h));
+}
+
+TEST_CASE("Coverage rejects malformed pattern descriptors atomically", "[xtrigger][coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock);
+    auto h = engine.ArmSample(XPhase::RisingStable);
+    XCoverageItem item; item.pattern = true;
+    XCoverageBin bin; bin.overlap = false; bin.root = engine.ExprNewConst(1);
+    auto invalid = bin; invalid.mode = static_cast<XConditionMode>(99);
+    REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {invalid}));
+    invalid = bin; invalid.max_active = 0;
+    REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {invalid}));
+    invalid = bin; invalid.program_kind = 2; invalid.state_count = 1;
+    invalid.root = -1; invalid.terminals = {99};
+    REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {invalid}));
+    engine.AttachCoverage(h, {item}, {bin});
+    engine.RunUntil(4);
+    REQUIRE(engine.CoverageSnapshot(h).counters.back() == 1); // ENTER, not EACH_SAMPLE.
+    REQUIRE(engine.Disarm(h));
+}

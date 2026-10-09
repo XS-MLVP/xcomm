@@ -12,6 +12,8 @@ struct XTriggerEngine::CoverageState {
     std::vector<XCoverageBin> bins;
     std::vector<std::vector<MatchState>> attempts;
     std::vector<MatchState> source_attempts;
+    std::vector<Watcher> programs;
+    std::vector<bool> last_conditions;
     bool overlap = false;
     size_t max_active = 1;
     enum { Started, Completed, Failed, Expired, Aborted, Cleared, PeakActive, DiagnosticCount };
@@ -473,23 +475,27 @@ bool XTriggerEngine::AdvanceFsm(const Watcher &program, MatchState &state, uint3
 
 size_t XTriggerEngine::AdvanceCoverageAttempts(Watcher &watcher,
     const std::vector<XSequenceStep> &steps, std::vector<MatchState> &attempts,
-    size_t pattern, bool overlap, size_t max_active)
+    size_t pattern, bool overlap, size_t max_active,
+    const Watcher *program, const std::vector<unsigned int> *terminals)
 {
     auto &c = *watcher.coverage;
-    const bool fsm = pattern == 0 && watcher.kind == WatcherKind::Fsm;
+    const Watcher &code = program ? *program : watcher;
+    const bool fsm = (program || pattern == 0) && code.kind == WatcherKind::Fsm;
+    uint32_t terminal = 0;
+    auto selected = [&]() { return !terminals || terminals->empty() ||
+        std::find(terminals->begin(), terminals->end(), terminal) != terminals->end(); };
     const bool had_active = !attempts.empty();
     auto advance = [&](MatchState &state) {
-        uint32_t terminal = 0;
-        return fsm ? AdvanceFsm(watcher, state, terminal) : AdvanceSequence(steps, state);
+        return fsm ? AdvanceFsm(code, state, terminal) : AdvanceSequence(steps, state);
     };
     size_t completed = 0;
     size_t kept = 0;
     for (size_t i = 0; i < attempts.size(); ++i) {
         auto &state = attempts[i];
         const bool done = advance(state);
-        const bool failed = fsm ? (!done && state.fsm_current_state == watcher.fsm_start_state)
+        const bool failed = fsm ? (!done && state.fsm_current_state == code.fsm_start_state)
                                 : state.sequence_failed;
-        if (done) { ++completed; c.Bump(pattern, CoverageState::Completed); }
+        if (done) { if (selected()) ++completed; c.Bump(pattern, CoverageState::Completed); }
         else if (failed) c.Bump(pattern, state.sequence_expired ? CoverageState::Expired : CoverageState::Failed);
         if (!done && !failed) {
             if (kept != i) attempts[kept] = state;
@@ -499,9 +505,9 @@ size_t XTriggerEngine::AdvanceCoverageAttempts(Watcher &watcher,
     attempts.resize(kept);
     if (overlap || !had_active) {
         MatchState candidate;
-        candidate.fsm_current_state = watcher.fsm_start_state;
+        candidate.fsm_current_state = code.fsm_start_state;
         const bool done = advance(candidate);
-        const bool active = fsm ? candidate.fsm_current_state != watcher.fsm_start_state
+        const bool active = fsm ? candidate.fsm_current_state != code.fsm_start_state
                                 : candidate.sequence_index || candidate.sequence_age || candidate.sequence_held;
         if (done || active) {
             if (attempts.size() >= max_active) {
@@ -510,7 +516,7 @@ size_t XTriggerEngine::AdvanceCoverageAttempts(Watcher &watcher,
             }
             c.Bump(pattern, CoverageState::Started);
             c.Bump(pattern, CoverageState::PeakActive, attempts.size() + 1);
-            if (done) { ++completed; c.Bump(pattern, CoverageState::Completed); }
+            if (done) { if (selected()) ++completed; c.Bump(pattern, CoverageState::Completed); }
             else attempts.push_back(candidate);
         }
     }
@@ -755,19 +761,51 @@ void XTriggerEngine::AttachCoverage(XRegistrationHandle handle,
     check(gate); check(abort);
     for (size_t i = 0; i < items.size(); ++i) {
         check(items[i].gate);
-        if (items[i].dimensions.empty() != (items[i].signal != nullptr))
+        if (items[i].pattern && (items[i].signal || !items[i].dimensions.empty()))
+            throw std::invalid_argument("pattern point cannot have a signal or dimensions");
+        if (!items[i].pattern && items[i].dimensions.empty() != (items[i].signal != nullptr))
             throw std::invalid_argument("coverage point requires a signal; cross must not have one");
         for (auto d : items[i].dimensions)
-            if (d >= i || !items[d].dimensions.empty()) throw std::invalid_argument("invalid cross point");
+            if (d >= i || !items[d].dimensions.empty() || items[d].pattern) throw std::invalid_argument("invalid cross point");
     }
     for (const auto &bin : bins) {
         if (bin.item >= items.size() || bin.kind > 3) throw std::invalid_argument("invalid coverage bin");
         check(bin.root);
+        const bool pattern = items[bin.item].pattern;
+        if (pattern) {
+            if (bin.kind == 3 || bin.program_kind > 2 || static_cast<unsigned>(bin.mode) > 2 ||
+                !bin.max_active || (!bin.overlap && bin.max_active != 1))
+                throw std::invalid_argument("invalid pattern bin options");
+            if (bin.program_kind == 0 && (bin.root < 0 || !bin.steps.empty() || !bin.transitions.empty() || !bin.terminals.empty() || bin.overlap))
+                throw std::invalid_argument("invalid expression pattern");
+            if (bin.program_kind == 1 && (bin.root != -1 || bin.steps.empty() || !bin.transitions.empty() || !bin.terminals.empty()))
+                throw std::invalid_argument("invalid sequence pattern");
+            if (bin.program_kind != 0 && bin.mode != XConditionMode::Enter)
+                throw std::invalid_argument("condition modes apply only to expression patterns");
+            if (bin.program_kind == 2) {
+                if (bin.root != -1 || !bin.state_count || bin.start_state >= bin.state_count || !bin.steps.empty())
+                    throw std::invalid_argument("invalid FSM pattern");
+                for (const auto &t : bin.transitions) {
+                    check(t.root);
+                    if (t.from_state >= bin.state_count || (!t.trigger && t.next_state >= bin.state_count))
+                        throw std::invalid_argument("invalid FSM transition");
+                }
+                for (auto terminal : bin.terminals)
+                    if (std::none_of(bin.transitions.begin(), bin.transitions.end(), [&](const auto &t) { return t.trigger && t.terminal_id == terminal; }))
+                        throw std::invalid_argument("unknown FSM terminal");
+            }
+        }
         for (const auto &step : bin.steps) {
-            if (step.root < 0 || (step.kind != XSequenceStepKind::Wait && step.kind != XSequenceStepKind::Next))
+            if (step.root < 0 || (!pattern && step.kind != XSequenceStepKind::Wait && step.kind != XSequenceStepKind::Next))
                 throw std::invalid_argument("coverage transition requires adjacent steps");
+            if (static_cast<unsigned>(step.kind) > 3 ||
+                (step.kind == XSequenceStepKind::Within && step.minimum > step.maximum) ||
+                (step.kind == XSequenceStepKind::Hold && !step.cycles))
+                throw std::invalid_argument("invalid coverage sequence step");
             check(step.root);
         }
+        if (pattern && bin.overlap && bin.program_kind == 1 && bin.steps.front().kind != XSequenceStepKind::Wait)
+            throw std::invalid_argument("overlapping Sequence must start with Wait");
         const auto &dims = items[bin.item].dimensions;
         if (bin.dimensions.size() != dims.size()) throw std::invalid_argument("invalid cross tuple");
         for (size_t j = 0; j < dims.size(); ++j) {
@@ -787,6 +825,14 @@ void XTriggerEngine::AttachCoverage(XRegistrationHandle handle,
     c->delta.resize(c->snapshot.counters.size());
     c->matched.resize(bins.size()); c->normal_counts.resize(items.size());
     c->attempts.resize(bins.size());
+    c->programs.resize(bins.size());
+    c->last_conditions.resize(bins.size());
+    for (size_t i = 0; i < bins.size(); ++i) {
+        auto &p = c->programs[i];
+        p.kind = bins[i].program_kind == 2 ? WatcherKind::Fsm : WatcherKind::Sequence;
+        p.fsm_state_count = bins[i].state_count; p.fsm_start_state = bins[i].start_state;
+        p.fsm_transitions = bins[i].transitions;
+    }
     for (size_t i = 0; i < bins.size(); ++i) c->attempts[i].reserve(bins[i].steps.size());
     c->snapshot.illegal_bins.reserve(diagnostic_capacity);
     c->snapshot.illegal_values.reserve(diagnostic_capacity);
@@ -804,6 +850,7 @@ void XTriggerEngine::ClearCoverageHistory(Watcher &watcher, bool aborted)
     const auto reason = aborted ? CoverageState::Aborted : CoverageState::Cleared;
     c.ClearAttempts(0, c.source_attempts, reason);
     for (size_t b = 0; b < c.attempts.size(); ++b) c.ClearAttempts(b + 1, c.attempts[b], reason);
+    std::fill(c.last_conditions.begin(), c.last_conditions.end(), false);
 }
 
 void XTriggerEngine::ResetCoverage(XRegistrationHandle handle, bool counters)
@@ -847,6 +894,7 @@ void XTriggerEngine::SampleCoverage(Watcher &watcher)
     auto enabled = [&](int r) { return r < 0 || (expr_engine->IsKnown(r) && expr_engine->Eval(r)); };
     if (!enabled(c.gate)) {
         delta[1] = 1;
+        std::fill(c.last_conditions.begin(), c.last_conditions.end(), false);
         for (size_t b = 0; b < c.attempts.size(); ++b) c.ClearAttempts(b + 1, c.attempts[b], CoverageState::Cleared);
     } else {
         delta[0] = 1;
@@ -859,8 +907,10 @@ void XTriggerEngine::SampleCoverage(Watcher &watcher)
             if (!gate || !known) {
                 delta[base + 1] = 1;
                 if (gate && !known) delta[base + 4] = 1;
-                for (size_t b = 0; b < c.bins.size(); ++b) if (c.bins[b].item == i)
+                for (size_t b = 0; b < c.bins.size(); ++b) if (c.bins[b].item == i) {
                     c.ClearAttempts(b + 1, c.attempts[b], CoverageState::Cleared);
+                    c.last_conditions[b] = false;
+                }
                 continue;
             }
             delta[base] = 1;
@@ -882,6 +932,27 @@ void XTriggerEngine::SampleCoverage(Watcher &watcher)
                     if (bin.kind == 1) ++delta[base + 2];
                 }
                 delta[base + 3] = combinations ? combinations - hits : 1;
+                continue;
+            }
+            if (item.pattern) {
+                bool any = false;
+                for (size_t b = 0; b < c.bins.size(); ++b) {
+                    const auto &bin = c.bins[b];
+                    if (bin.item != i) continue;
+                    size_t completed = 0;
+                    if (bin.program_kind == 0) {
+                        const bool known = expr_engine->IsKnown(bin.root);
+                        const bool current = known && expr_engine->Eval(bin.root) != 0;
+                        completed = known && (bin.mode == XConditionMode::EachSample ? current :
+                            bin.mode == XConditionMode::Enter ? current && !c.last_conditions[b] : current != c.last_conditions[b]);
+                        if (known) c.last_conditions[b] = current;
+                    } else completed = AdvanceCoverageAttempts(watcher, bin.steps, c.attempts[b],
+                        b + 1, bin.overlap, bin.max_active, &c.programs[b], &bin.terminals);
+                    delta[offset + b] = completed;
+                    any = any || completed;
+                    if (bin.kind == 1 && completed) delta[base + 2] = 1;
+                }
+                if (!any) delta[base + 3] = 1;
                 continue;
             }
             int priority = -1;

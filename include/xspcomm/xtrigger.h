@@ -101,7 +101,8 @@ struct XFsmTransition {
 // Coverage uses numeric IDs in the hot path. Human names live in the client.
 struct XCoverageItem {
     int gate = -1;
-    XData *signal = nullptr; // direct source, any XData width; null for a cross
+    bool pattern = false; // event point; no synthetic XData source
+    XData *signal = nullptr; // direct value source; null for a cross or pattern point
     std::vector<unsigned int> dimensions; // point IDs; empty for a point
 };
 
@@ -111,6 +112,12 @@ struct XCoverageBin {
     int root = -1;
     std::vector<XSequenceStep> steps;
     bool overlap = true;
+    uint32_t program_kind = 0; // Expr=0, Sequence=1, FSM=2 (pattern points)
+    XConditionMode mode = XConditionMode::Enter;
+    uint32_t max_active = 1;
+    uint32_t state_count = 0, start_state = 0;
+    std::vector<XFsmTransition> transitions;
+    std::vector<unsigned int> terminals; // empty selects all
     std::vector<unsigned int> dimensions; // normal bin IDs for a cross tuple
 };
 
@@ -196,7 +203,8 @@ class XTriggerEngine {
     bool AdvanceSequence(const std::vector<XSequenceStep> &steps, MatchState &state);
     bool AdvanceFsm(const Watcher &program, MatchState &state, uint32_t &terminal);
     size_t AdvanceCoverageAttempts(Watcher &watcher, const std::vector<XSequenceStep> &steps,
-        std::vector<MatchState> &attempts, size_t pattern, bool overlap, size_t max_active);
+        std::vector<MatchState> &attempts, size_t pattern, bool overlap, size_t max_active,
+        const Watcher *program = nullptr, const std::vector<unsigned int> *terminals = nullptr);
     void SampleCoverage(Watcher &watcher);
     void ClearCoverageHistory(Watcher &watcher, bool aborted = false);
     Watcher &CoverageWatcher(XRegistrationHandle handle);
@@ -247,7 +255,7 @@ public:
         uint32_t state_count, uint32_t start_state,
         const std::vector<XFsmTransition> &transitions,
         XPhase phase = XPhase::RisingStable, uint64_t source_id = 0);
-    static uint32_t CoverageVersion() { return 3; }
+    static uint32_t CoverageVersion() { return 4; }
     void AttachCoverage(XRegistrationHandle handle,
                         const std::vector<XCoverageItem> &items,
                         const std::vector<XCoverageBin> &bins,
