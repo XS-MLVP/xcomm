@@ -3,7 +3,7 @@
 本文档基于当前项目源码整理，主要对应以下文件：
 
 - 核心 C++ API：`include/xspcomm/xdata.h`、`xport.h`、`xclock.h`、`xsignal_cfg.h`
-- 组合检查与表达式/FSM：`include/xspcomm/xcomuse_base.h`、`xexpr.h`、`xfsm.h`
+- 组合检查与表达式/FSM：`include/xspcomm/xcomuse.h`、`xcomuse/`、`xexpr.h`、`xfsm.h`
 - 多语言封装：`swig/python/xcomm.py`、`swig/java/java.i`、`swig/scala/xsp.scala`、`swig/golang/golang.i`、`swig/lua/lua.i`、`swig/javascript/xspcomm.js`
 
 xspcomm 的核心抽象是：
@@ -24,6 +24,8 @@ C++ API 位于 `xspcomm` 命名空间。常用头文件：
 #include "xspcomm/xcomm.h"       // 常用核心 API 汇总
 #include "xspcomm/xcomuse.h"     // ComUse、Expr、FSM 汇总
 ```
+
+ComUse 组件位于 `xspcomm/xcomuse/`，可以按需包含 `callback.h`、`condition.h`、`range.h`、`utils.h`，分别提供回调、条件检查、范围比较和数组/字符串工具。
 
 多语言 SWIG 包通常复用 C++ 名称，部分语言会增加更符合本语言习惯的包装方法，见“多语言差异”。
 
@@ -199,14 +201,6 @@ auto sub = full.SubDataRef(30, 64, "sub");
 绑定结束时读取一次初始值；实际写回时机由 `WriteMode` 决定。回调在代码中的注册顺序不表示每次写入前都会读取。
 
 原生 vector 读写的访问粒度为 `uint8_t`（1～8 bit）、`uint16_t`（9～16 bit）和连续的 32-bit word（17 bit 及以上，64-bit 存储按两个 word 访问）。每个 word 对应 XData 的一个 `aval`，不包含 `bval`；读写支持未对齐的原生地址。
-
-**BindNativeData TODO（当前保留行为）**
-
-- [ ] 明确二态原生内存读取遇到已有 X/Z 状态时，绑定及每次刷新是否清理 `bval`。当前 vector 读取只更新 `aval`，保留 `bval`。
-- [ ] 明确 X/Z 写回二态存储的规则，并核对 scalar/vector 的语义。当前 vector 写回只保存 `aval`。
-- [ ] 补充重绑定、绑定后写入 X/Z，以及 scalar/vector 的回归覆盖。
-
-新对象的 `bval` 由 `calloc` 初始化为零，但已有 X/Z 状态可能残留。已复现：先将 8-bit XData 设为全 X，再绑定值为 `0x5A` 的 `uint8_t`，读回 `U() == 0x5A`，却仍有 `XMask() == 0xFF`、`DataValid() == false`；16/64 bit 也有相同现象。
 
 ### 连接、比较、回调
 

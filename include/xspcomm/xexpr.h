@@ -1,7 +1,9 @@
 #ifndef __xspcomm_xexpr_h__
 #define __xspcomm_xexpr_h__
 
-#include "xspcomm/xcomuse_base.h"
+#include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/xclock.h"
+#include "xspcomm/xsignal_cfg.h"
 #include <vector>
 #include <map>
 #include <unordered_map>

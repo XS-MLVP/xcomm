@@ -1,60 +1,9 @@
-
-#include "xspcomm/xcomuse_base.h"
-
-#include <algorithm>
-#include <cctype>
-#include <stdexcept>
-
+#include "xspcomm/xclock.h"
+#include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/xcomuse/condition.h"
+#include "xspcomm/xcomuse/utils.h"
 
 namespace xspcomm {
-
-namespace {
-template <typename ReadA, typename ReadB>
-bool range_compare(size_t words, int range, ReadA a, ReadB b){
-    const uint32_t limit = range >= 0 ? (uint32_t)range : (uint32_t)(-(int64_t)range);
-    uint64_t borrow = 0;
-    for(size_t i = 0; i < words; ++i){
-        const uint64_t lhs = range >= 0 ? b(i) : a(i);
-        const uint64_t rhs = (range >= 0 ? a(i) : b(i)) + borrow;
-        const uint32_t difference = (uint32_t)(lhs - rhs);
-        borrow = lhs < rhs;
-        // The tolerance fits in the low word; all higher difference words must be zero.
-        if(difference > (i == 0 ? limit : 0U)) return false;
-    }
-    return borrow == 0;
-}
-}
-
-bool ComUseRangeCheck::ArrayWideCmp(uint64_t a, uint64_t b, uint64_t self){
-    auto *check = (ComUseRangeCheck*)self;
-    const size_t bytes = check->bytes;
-    auto word = [bytes](uint64_t address, size_t i) -> uint32_t {
-        const size_t offset = i * 4;
-        if(bytes - offset >= 4) return (uint32_t)Read<uint32_t>(address + offset);
-        switch(bytes - offset){
-        case 1: return (uint32_t)Load<1>(address + offset);
-        case 2: return (uint32_t)Load<2>(address + offset);
-        default: return (uint32_t)Load<3>(address + offset);
-        }
-    };
-    return range_compare((bytes + 3) / 4, check->range,
-                         [=](size_t i){ return word(a, i); },
-                         [=](size_t i){ return word(b, i); });
-}
-
-bool ComUseRangeCheck::XDataCmp(XData *a, XData *b, uint64_t self){
-    // Refresh each signal once; subsequent word reads use its existing cache.
-    const uint64_t av = a->U();
-    const uint64_t bv = b->U();
-    if(!a->DataValid() || !b->DataValid()) return false;
-    const int range = ((ComUseRangeCheck*)self)->range;
-    if(a->W() <= 64 && b->W() <= 64) return cmp(av, bv, range);
-    const size_t awords = ((uint64_t)a->W() + 31) / 32;
-    const size_t bwords = ((uint64_t)b->W() + 31) / 32;
-    return range_compare(std::max(awords, bwords), range,
-                         [=](size_t i){ return i == 0 ? (uint32_t)av : (i < awords ? a->pVecData[i].aval : 0U); },
-                         [=](size_t i){ return i == 0 ? (uint32_t)bv : (i < bwords ? b->pVecData[i].aval : 0U); });
-}
 
 u_int64_t ComUseStepCb::GetCb(){
     return (u_int64_t)ComUseStepCb::Cb;

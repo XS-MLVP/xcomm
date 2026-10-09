@@ -1,6 +1,9 @@
 include_directories(../include)
 
-set(SRC_FILES xclock.cpp xdata.cpp xport.cpp xutil.cpp xcoroutine.cpp xsignal_cfg.cpp xinstance.cpp xcomuse_base.cpp xexpr_engine.cpp xexpr_parser.cpp xfsm_trigger.cpp xtrigger.cpp)
+set(SRC_FILES
+    xclock.cpp xdata.cpp xport.cpp xutil.cpp xcoroutine.cpp xsignal_cfg.cpp xinstance.cpp
+    xcomuse_base.cpp xcomuse_range.cpp
+    xexpr_engine.cpp xexpr_parser.cpp xfsm_trigger.cpp xtrigger.cpp)
 
 if(${XSPCOMM_WASM_LIB})
 set(CMAKE_C_COMPILER emcc)

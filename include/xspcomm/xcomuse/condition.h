@@ -1,0 +1,103 @@
+#ifndef XSPCOMM_XCOMUSE_CONDITION_H
+#define XSPCOMM_XCOMUSE_CONDITION_H
+
+#include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/xdata.h"
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace xspcomm {
+
+    class XClock;
+
+    // Condition Checker
+    enum class ComUseCondCmp{
+        EQ = 0,
+        NE = 1,
+        GT = 2,
+        GE = 3,
+        LT = 4,
+        LE = 5,
+    };
+    class ComUseCondCheck: public ComUseStepCb{
+        using XDataCmpFn = bool (*)(XData*, XData*);
+        using PtrCmpFn = bool (*)(ComUseCondCheck*, uint64_t, uint64_t, int);
+        static bool XDataCmpEq(XData* a, XData* b){ return *a == *b; }
+        static bool XDataCmpNe(XData* a, XData* b){ return *a != *b; }
+        static bool XDataCmpGt(XData* a, XData* b){ return *a > *b; }
+        static bool XDataCmpGe(XData* a, XData* b){ return *a >= *b; }
+        static bool XDataCmpLt(XData* a, XData* b){ return *a < *b; }
+        static bool XDataCmpLe(XData* a, XData* b){ return *a <= *b; }
+        static bool PtrCmpEq(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) == 0; }
+        static bool PtrCmpNe(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) != 0; }
+        static bool PtrCmpGt(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) > 0; }
+        static bool PtrCmpGe(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) >= 0; }
+        static bool PtrCmpLt(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) < 0; }
+        static bool PtrCmpLe(ComUseCondCheck* self, uint64_t a, uint64_t b, int bytes){ return self->_valcmp(a, b, bytes) <= 0; }
+        static XDataCmpFn SelectXDataCmpFn(ComUseCondCmp cmp);
+        static PtrCmpFn SelectPtrCmpFn(ComUseCondCmp cmp);
+        std::vector<XClock*> clk_list;
+        struct CondXDataEntry {
+            std::string name;
+            XData* pin = nullptr;
+            XData* val = nullptr;
+            ComUseCondCmp cmp = ComUseCondCmp::EQ;
+            XData* valid = nullptr;
+            XData* valid_value = nullptr;
+            xfunction<bool, XData*, XData*, uint64_t> func = nullptr;
+            int triggered = 0;
+            uint64_t arg = 0;
+            ComUseCondCmp valid_cmp = ComUseCondCmp::EQ;
+            XDataCmpFn cmp_fn = nullptr;
+            XDataCmpFn valid_cmp_fn = nullptr;
+        };
+        struct CondUint64Entry {
+            std::string name;
+            uint64_t pin_ptr = 0;
+            uint64_t val_ptr = 0;
+            ComUseCondCmp cmp = ComUseCondCmp::EQ;
+            int bytes = 0;
+            uint64_t valid_ptr = 0;
+            uint64_t valid_value_ptr = 0;
+            int valid_bytes = 1;
+            xfunction<bool, uint64_t, uint64_t, uint64_t> func = nullptr;
+            int triggered = 0;
+            uint64_t arg = 0;
+            ComUseCondCmp valid_cmp = ComUseCondCmp::EQ;
+            PtrCmpFn cmp_fn = nullptr;
+            PtrCmpFn valid_cmp_fn = nullptr;
+        };
+        std::unordered_map<std::string, size_t> cond_idx_xdata;
+        std::unordered_map<std::string, size_t> cond_idx_uint64;
+        std::vector<CondXDataEntry> cond_vec_xdata;
+        std::vector<CondUint64Entry> cond_vec_uint64;
+        static bool RemoveXDataCond(std::unordered_map<std::string, size_t> &idx,
+                                    std::vector<CondXDataEntry> &vec,
+                                    const std::string &name);
+        static bool RemoveUint64Cond(std::unordered_map<std::string, size_t> &idx,
+                                     std::vector<CondUint64Entry> &vec,
+                                     const std::string &name);
+        int _valcmp(uint64_t a, u_int64_t b, int bytes);
+    public:
+        ComUseCondCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
+        void BindXClock(XClock *clk);
+        void SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid = nullptr, XData *valid_value = nullptr, xfunction<bool, XData*, XData*, uint64_t> func = nullptr, uint64_t arg=0);
+        void SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr = 0, uint64_t valid_value_ptr = 0, int valid_bytes = 1, xfunction<bool, uint64_t, uint64_t, uint64_t> func = nullptr, uint64_t arg=0);
+        ComUseCondCmp GetValidCmpMode(std::string unique_name);
+        void SetValidCmpMode(std::string unique_name, ComUseCondCmp cmp);
+        void RemoveCondition(std::string unique_name);
+        std::map<std::string, bool> ListCondition();
+        std::vector<std::string> GetTriggeredConditionKeys();
+        void ClearClock();
+        void ClearCondition();
+        void ClearAll(){this->ClearClock(); this->ClearCondition();};
+        virtual void Call();
+        xfunction<bool, XData*, XData*, uint64_t> AsXDataXFunc(uint64_t func);
+        xfunction<bool, uint64_t, uint64_t, uint64_t> AsPtrXFunc(uint64_t func);
+    };
+
+} // namespace xspcomm
+
+#endif
