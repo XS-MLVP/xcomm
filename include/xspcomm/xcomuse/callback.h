@@ -1,0 +1,53 @@
+#ifndef XSPCOMM_XCOMUSE_CALLBACK_H
+#define XSPCOMM_XCOMUSE_CALLBACK_H
+
+#include "xspcomm/xutil.h"
+#include <string>
+
+namespace xspcomm {
+
+    class XData;
+
+    class ComUseStepCb{
+        int cb_maxcts = -1;
+        int cb_counts = 0;
+        bool cb_enable = true;
+    public:
+        uint64_t cycle;
+        ComUseStepCb(){}
+        void Disable();
+        void Enable();
+        bool IsDisable();
+        void SetMaxCbs(int c);
+        int GetCbCount();
+        int IncCbCount();
+        int DecCbCount();
+        void Reset();
+        static u_int64_t GetCb();
+        u_int64_t CSelf(){return (u_int64_t)this;};
+        static void Cb(uint64_t c, void *self);
+        virtual void Call();
+    };
+
+    // Echo data when valid != 0
+    class ComUseEcho: public ComUseStepCb{
+    public:
+        bool stderr_echo;
+        XData* valid = NULL;
+        XData* data  = NULL;
+        std::string fmt;
+        int convert; // 0 (char), 1 (int), 2 (float), 3 (double), 4 (string)
+        ComUseEcho(u_int64_t valid, u_int64_t data,
+                   bool stderr_echo = true,
+                   std::string fmt="%c",
+                   int convert = 0):
+            stderr_echo(stderr_echo), fmt(fmt), convert(convert){
+                this->valid = (XData*) valid;
+                this->data = (XData*) data;
+            }
+        virtual void Call();
+    };
+
+} // namespace xspcomm
+
+#endif

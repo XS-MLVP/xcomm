@@ -734,7 +734,7 @@ void XData::BindDPIRW(void (*read)(void *), void (*write)(const unsigned char)) 
 }
 // TODO: Define how native two-state reads handle an existing X/Z mask and how
 // X/Z writes map to native storage. Preserve bval until that policy is settled;
-// see docs/APIs.cn.md (BindNativeData TODO).
+// see docs/xdata_xclock_optimizations.md (BindNativeData X/Z semantics).
 void XData::BindNativeData(uint64_t pdata){
     if (this->mWidth == 0){
         auto* native = reinterpret_cast<xsvLogic*>(pdata);

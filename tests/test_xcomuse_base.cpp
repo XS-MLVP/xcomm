@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include "xspcomm/xcomuse_base.h"
+#include "xspcomm/xcomuse.h"
 #include "xspcomm/xclock.h"
 #include "xspcomm/xdata.h"
 #include <limits>

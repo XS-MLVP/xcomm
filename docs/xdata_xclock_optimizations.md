@@ -110,3 +110,26 @@ Fix:
 - Check pVecData[i].bval in the loop; any nonzero makes validate=false.
 Behavior impact:
 - Callback validity flag becomes correct for wide vectors.
+
+---
+
+## Follow-up: BindNativeData X/Z semantics
+
+Location: src/xdata.cpp : XData::BindNativeData
+
+Current behavior:
+
+- Native vector reads update only `aval` and preserve `bval`; writes store only `aval`.
+- Fresh buffers have zeroed `bval` from `calloc`, but existing X/Z masks can survive binding and refresh.
+
+Reproducer:
+
+- Set an 8-bit XData to all X, then bind a `uint8_t` containing `0x5A`.
+- `U() == 0x5A`, but `XMask() == 0xFF` and `DataValid() == false`.
+- The same stale-mask behavior was reproduced at 16 and 64 bits.
+
+TODO:
+
+- [ ] Decide whether binding and refreshing two-state native storage should clear an existing `bval` mask.
+- [ ] Define how X/Z writes map to two-state storage and check scalar/vector consistency.
+- [ ] Add regressions for rebinding, X/Z writes after binding, and scalar/vector behavior.

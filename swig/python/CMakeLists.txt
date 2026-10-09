@@ -5,9 +5,9 @@ find_package(Python3 REQUIRED COMPONENTS Development.Module)
 set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_pyswig)
 
 # CMake's SWIG scanner does not reliably follow the nested %include chain in
-# python.i -> xcomm.i.  Track public headers explicitly so incremental builds
-# cannot leave a stale Python wrapper after an ABI change.
-file(GLOB XSPCOMM_SWIG_HEADERS CONFIGURE_DEPENDS
+# python.i -> xcomm.i.  Track public headers recursively, including component
+# subdirectories, so incremental builds cannot leave a stale Python wrapper.
+file(GLOB_RECURSE XSPCOMM_SWIG_HEADERS CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/../../include/xspcomm/*.h")
 set_property(SOURCE python.i PROPERTY DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${XSPCOMM_SWIG_HEADERS}")
