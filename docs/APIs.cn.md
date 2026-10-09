@@ -195,6 +195,19 @@ auto sub = full.SubDataRef(30, 64, "sub");
 | `XData &SetVPIWriteFlag(int flag)` | 设置自定义 VPI write flag。 |
 | `XData &AsVPIAuto()` / `AsVPIScale()` / `AsVPIInt()` / `AsVPIVector()` | 设置 VPI 读写格式选择。`AsVPIScale` 为源码中现有拼写，语义是 scalar。 |
 
+`BindNativeData` 注册两个独立回调：read 从原生内存读取到 XData，write 从 XData 写回原生内存。
+绑定结束时读取一次初始值；实际写回时机由 `WriteMode` 决定。回调在代码中的注册顺序不表示每次写入前都会读取。
+
+原生 vector 读写的访问粒度为 `uint8_t`（1～8 bit）、`uint16_t`（9～16 bit）和连续的 32-bit word（17 bit 及以上，64-bit 存储按两个 word 访问）。每个 word 对应 XData 的一个 `aval`，不包含 `bval`；读写支持未对齐的原生地址。
+
+**BindNativeData TODO（当前保留行为）**
+
+- [ ] 明确二态原生内存读取遇到已有 X/Z 状态时，绑定及每次刷新是否清理 `bval`。当前 vector 读取只更新 `aval`，保留 `bval`。
+- [ ] 明确 X/Z 写回二态存储的规则，并核对 scalar/vector 的语义。当前 vector 写回只保存 `aval`。
+- [ ] 补充重绑定、绑定后写入 X/Z，以及 scalar/vector 的回归覆盖。
+
+新对象的 `bval` 由 `calloc` 初始化为零，但已有 X/Z 状态可能残留。已复现：先将 8-bit XData 设为全 X，再绑定值为 `0x5A` 的 `uint8_t`，读回 `U() == 0x5A`，却仍有 `XMask() == 0xFF`、`DataValid() == false`；16/64 bit 也有相同现象。
+
 ### 连接、比较、回调
 
 | API | 说明 |
@@ -675,11 +688,15 @@ state S2:
 
 | API | 说明 |
 | --- | --- |
-| `ComUseRangeCheck(int range, int bytes)` | `1 <= bytes <= 8`；pointer 比较只读取指定的字节数，支持未对齐地址。 |
-| `static bool cmp(uint64_t t, uint64_t c, int r)` | 当 `r >= 0` 时检查 `c-r <= t <= c`；当 `r < 0` 时检查 `c <= t <= c-r`。 |
+| `ComUseRangeCheck(int range, int bytes)` | `bytes >= 1`；pointer 比较按 little-endian 读取指定的字节数，支持未对齐地址和超过 64 bit 的值。 |
+| `static bool cmp(uint64_t t, uint64_t c, int r)` | 当 `r >= 0` 时检查 `c-r <= t <= c`；当 `r < 0` 时检查 `c <= t <= c-r`。按数学整数判断，不在零或最大值处回绕。 |
 | `uint64_t CSelf()` | 返回自身地址，用作 callback arg。 |
 | `GetArrayCmp()` | 返回 pointer 比较 callback。 |
-| `GetXDataCmp()` | 返回 XData 比较 callback。 |
+| `GetXDataCmp()` | 返回 XData 比较 callback，使用信号的完整位宽；不同位宽按无符号零扩展，含 X/Z 时返回 false。`bytes` 不截断 XData。 |
+
+`range` 是有符号 `int` 容差，比较值的位宽不受其限制。例如 `ComUseRangeCheck(1, 16)`
+可以比较两个 128-bit buffer；`0xffffffffffffffff` 位于 `0x10000000000000000` 下方 1 的范围内。
+宽比较直接逐 32-bit word 计算差值，不分配临时大整数；每个 XData 操作数只刷新一次，不写回。
 
 ### CString
 

@@ -1,6 +1,8 @@
 #include "xspcomm/xcomm.h"
 #include "xspcomm/xinstance.h"
+#include <algorithm>
 #include <limits>
+#include <utility>
 
 using namespace xspcomm;
 
@@ -49,6 +51,88 @@ static void test_native_storage()
     check(16, uint16_t(0xBEEF));
     check(32, uint32_t(0xDEADBEEF));
     check(64, uint64_t(0x89ABCDEF01234567));
+}
+
+static void test_native_vector_boundaries()
+{
+    std::vector<unsigned> widths = {1, 8, 9, 16, 17, 31, 32, 33, 63, 64};
+    for (unsigned words = 3; words <= 18; ++words) {
+        widths.push_back(words * 32 - 1);
+        widths.push_back(words * 32);
+    }
+    widths.push_back(1024);
+    for (unsigned width : widths) {
+        const unsigned words = (width + 31) / 32;
+        const unsigned bytes = width <= 8 ? 1 : width <= 16 ? 2 : words * 4;
+        // Leave exactly the native storage size after an unaligned address.
+        auto storage = std::make_unique<unsigned char[]>(bytes + 1);
+        storage[0] = 0xA5;
+        auto* native = storage.get() + 1;
+        std::vector<uint32_t> expected(words), actual(words);
+        const uint32_t last_mask = width % 32 ? (uint32_t(1) << (width % 32)) - 1 : UINT32_MAX;
+        for (unsigned i = 0; i < words; ++i) expected[i] = 0x9E3779B9U * (i + 1);
+        expected.back() &= last_mask;
+        auto store_native = [&](unsigned char* dst) {
+            if (width <= 8) {
+                *dst = static_cast<uint8_t>(expected[0]);
+            } else if (width <= 16) {
+                const auto value = static_cast<uint16_t>(expected[0]);
+                std::memcpy(dst, &value, sizeof(value));
+            } else {
+                std::memcpy(dst, expected.data(), bytes);
+            }
+        };
+        store_native(native);
+        XData signal(width, XData::InOut);
+        signal.BindNativeData(reinterpret_cast<uint64_t>(native));
+        signal.AsImmWrite();
+        Assert(signal.GetBits(actual.data(), words) && actual == expected,
+               "XData(%u) native vector read failed", width);
+
+        for (unsigned i = 0; i < words; ++i) {
+            signal.pVecData[i].bval = 1;
+            expected[i] = ~expected[i];
+        }
+        expected.back() &= last_mask;
+        store_native(native);
+        Assert(!signal.GetBits(actual.data(), words) && actual == expected,
+               "XData(%u) native refresh changed the X/Z mask", width);
+        for (unsigned i = 0; i < words; ++i)
+            Assert(signal.pVecData[i].bval == 1, "native read changed bval[%u]", i);
+
+        for (auto& word : expected) word ^= 0xA5A5A5A5U;
+        expected.back() &= last_mask;
+        signal.SetBits(expected.data(), words);
+        std::vector<unsigned char> packed(bytes);
+        store_native(packed.data());
+        Assert(std::memcmp(native, packed.data(), bytes) == 0 && storage[0] == 0xA5,
+               "XData(%u) native vector write crossed a boundary", width);
+    }
+}
+
+static void test_native_reinit()
+{
+    for (auto widths : {std::make_pair(128U, 32U), std::make_pair(32U, 544U),
+                        std::make_pair(544U, 64U), std::make_pair(512U, 513U)}) {
+        std::vector<uint32_t> native(18, 0x12345678);
+        XData signal(widths.first, XData::InOut);
+        signal.BindNativeData(reinterpret_cast<uint64_t>(native.data()));
+        signal.ReInit(widths.second, XData::InOut);
+        signal.AsImmWrite();
+        const unsigned words = (widths.second + 31) / 32;
+        const uint32_t last_mask = widths.second % 32 ?
+            (uint32_t(1) << (widths.second % 32)) - 1 : UINT32_MAX;
+        std::vector<uint32_t> actual(words), expected(words, 0x12345678);
+        expected.back() &= last_mask;
+        Assert(signal.GetBits(actual.data(), words) && actual == expected,
+               "native read used the old width after ReInit");
+        expected.assign(words, 0x89ABCDEF);
+        expected.back() &= last_mask;
+        signal.SetBits(expected.data(), words);
+        Assert(std::equal(expected.begin(), expected.end(), native.begin()) &&
+               native[words] == 0x12345678,
+               "native write used the old width after ReInit");
+    }
 }
 
 static void test_signed_values_and_slices()
@@ -110,6 +194,8 @@ int main(int argsc, const char **argsv)
     checkVersion();
     test_optimized_signal_buffers();
     test_native_storage();
+    test_native_vector_boundaries();
+    test_native_reinit();
     test_signed_values_and_slices();
     test_bit_buffer_boundaries();
     test_xdata();
