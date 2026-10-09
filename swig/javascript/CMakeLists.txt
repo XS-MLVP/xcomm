@@ -4,13 +4,10 @@ setup_swig_javascript_env()
 set_property(SOURCE javascript.i PROPERTY CPLUSPLUS ON)
 add_compile_options(-fexceptions -sMODULARIZE=1 -sEXPORT_NAME=xspcomm)
 
-swig_add_library(jsxspcomm LANGUAGE javascript SOURCES 
-javascript.i
-../../src/xclock.cpp
-../../src/xport.cpp
-../../src/xdata.cpp
-../../src/xcoroutine.cpp
-../../src/xutil.cpp)
+include(${PROJECT_SOURCE_DIR}/cmake/Sources.cmake)
+swig_add_library(jsxspcomm LANGUAGE javascript SOURCES
+    javascript.i ${XSPCOMM_SOURCES})
+target_include_directories(jsxspcomm PRIVATE ${PROJECT_SOURCE_DIR}/third_party)
 
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../javascript/xspcomm)

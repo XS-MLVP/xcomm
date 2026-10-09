@@ -2,7 +2,7 @@
 #define __xspcomm_xcallback__
 
 //#include "xspcomm/xutil.h"
-#include "xspcomm/_not_export.h"
+#include "xspcomm/detail/function.h"
 #include <cstdio>
 #include <cstddef>
 #include <type_traits>

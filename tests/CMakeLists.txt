@@ -1,31 +1,16 @@
-include_directories(../include)
-enable_testing()
-if(NOT "${XSPCOMM_WASM_LIB}" STREQUAL "TRUE")
-add_executable(test_xdata test_xdata.cpp)
-target_link_libraries(test_xdata ${PROJECT_NAME})
-add_test(NAME test_xdata COMMAND test_xdata)
-
-add_executable(test_xclock test_xclock.cpp)
-target_link_libraries(test_xclock ${PROJECT_NAME})
-add_test(NAME test_xclock COMMAND test_xclock)
-
-add_executable(test_xtrigger test_xtrigger.cpp)
-target_link_libraries(test_xtrigger ${PROJECT_NAME})
-add_test(NAME test_xtrigger COMMAND test_xtrigger)
-
-add_executable(test_xcomuse_base test_xcomuse_base.cpp)
-target_link_libraries(test_xcomuse_base ${PROJECT_NAME})
-add_test(NAME test_xcomuse_base COMMAND test_xcomuse_base)
-
-add_executable(test_xexpr test_xexpr.cpp)
-target_link_libraries(test_xexpr ${PROJECT_NAME})
-add_test(NAME test_xexpr COMMAND test_xexpr)
-
-add_executable(test_xvpi test_xvpi.cpp)
-target_link_libraries(test_xvpi ${PROJECT_NAME})
-add_test(NAME test_xvpi COMMAND test_xvpi)
-
-add_executable(test_xfsm test_xfsm.cpp)
-target_link_libraries(test_xfsm ${PROJECT_NAME})
-add_test(NAME test_xfsm COMMAND test_xfsm)
+if(NOT XSPCOMM_WASM_LIB)
+    foreach(component IN ITEMS xdata xclock xtrigger xcoverage xcomuse xexpr xvpi xfsm)
+        add_executable(test_${component} unit/test_${component}.cpp)
+        target_include_directories(test_${component} PRIVATE
+            ${PROJECT_SOURCE_DIR}/third_party/catch2
+            ${PROJECT_SOURCE_DIR}/src)
+        target_link_libraries(test_${component} PRIVATE ${PROJECT_NAME})
+        add_test(NAME test_${component} COMMAND test_${component})
+    endforeach()
+    add_executable(test_coverage_core unit/test_coverage_core.cpp)
+    target_include_directories(test_coverage_core PRIVATE
+        ${PROJECT_SOURCE_DIR}/third_party/catch2 ${PROJECT_SOURCE_DIR}/src)
+    target_link_libraries(test_coverage_core PRIVATE ${PROJECT_NAME})
+    add_test(NAME test_coverage_core COMMAND test_coverage_core)
+    target_sources(test_xdata PRIVATE unit/xdata_cases.cpp)
 endif()

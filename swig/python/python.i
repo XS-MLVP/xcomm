@@ -18,9 +18,9 @@
 }
 
 %{
-    #include "xspcomm/thirdcall.h"
+    #include "thirdcall.h"
 %}
-%include "xspcomm/thirdcall.h"
+%include "thirdcall.h"
 %include ../xcomm.i
 
 %constant void (*DPI_TEST_LR)(void *v) = xspcomm::TEST_DPI_LR;

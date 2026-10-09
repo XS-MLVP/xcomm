@@ -11,7 +11,7 @@ Compile using the make command. Enable support for Python and other languages by
 
 make BUILD_XSPCOMM_SWIG=python,scala,java,golang,lua
 
-# results 
+# results
 build/python/
 └── xspcomm             # python module
     ├── __init__.py
@@ -37,7 +37,7 @@ build/golang/
 The example above shows Linux artifact names. On macOS, native shared libraries and extension modules keep the platform-native filename (for example `.dylib`, `.jnilib`, or the module's actual filename) instead of appending an extra Linux-style `.${PROJECT_VERSION}` suffix.
 
 **Testing:**
-The make command compiles and executes tests/test_xdata.cpp by default. To run tests/tests_python.py, execute the following commands:
+The make command compiles and executes tests/unit/test_xdata.cpp by default. To run tests/bindings/python/test_python.py, execute the following commands:
 ```bash
 $make BUILD_XSPCOMM_SWIG=python
 $make test_python
@@ -92,7 +92,7 @@ XData(uint32_t width, IOType itype, std::string name = "");
 
 Bind DPI
 ```c++
-void BindDPIRW(xfunction<void, void *> read, 
+void BindDPIRW(xfunction<void, void *> read,
                xfunction<void, void *> write);
 void BindDPIRW(xfunction<void, void *> read,
                xfunction<void, unsigned char> write);
@@ -158,7 +158,7 @@ bool Del(std::string pin);                            // Delete pin
 bool Connect(XPort &target);                          // Connect with another port
 XPort &NewSubPort(std::string subprefix);             // Create subport
 xspcomm::XData &operator[](std::string key);          // Get pin by key
-xspcomm::XData &Get(std::string key, 
+xspcomm::XData &Get(std::string key,
                     bool raw_key = false); // Same as above
 XPort &Flip();            // Flip all pin values in the port
 XPort &AsBiIO();          // Set all pins in the port to BiIO mode
@@ -290,11 +290,11 @@ Taking VCS as an example, the compilation steps of the DUT example are as follow
 ...
 # 1 Generate python wrapper through swig
 $swig -D'MODULE_NAME="tlm_pbsb"' -python -c++ -DUSE_VCS -I${XSP_COMM_INCLUDE} \
--o tlmps.cpp ${XSP_COMM_INCLUDE}/xspcomm/python_tlm_pbsb.i
+-o tlmps.cpp ${XSP_COMM_INCLUDE}/../share/xspcomm/tlm/python.i
 
 # 2 Compile the communication module
 $SYSCAN -full64 -cflags -DUSE_VCS -cflags -I{PYTHON_INCLUDE} \
--cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/xspcomm/tlm_pbsb.cpp tlmps.cpp
+-cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/../share/xspcomm/tlm/pubsub.cpp tlmps.cpp
 
 # 3 Compile DUT in slave mode
 $VLOGAN -full64 +incdir+common tlm.sv +define+UVM_OBJECT_MUST_HAVE_CONSTRUCTOR
@@ -306,7 +306,7 @@ $mv simv.daidir _tlm_pbsb.so.daidir
 ...
 ```
 
-After compilation, you can load the DUT through import. For specific examples, please refer to: tests/tlm
+After compilation, you can load the DUT through import. For specific examples, please refer to: tests/integration/tlm
 
 ### V. Other Available Interfaces
 
@@ -355,8 +355,6 @@ inline void XSeed(unsigned int seed)
 inline bool checkVersion()
 
 // Loop n times, eg: FOR_COUNT(10){i++;}
-FOR_COUNT(n) 
+FOR_COUNT(n)
 
 ```
-
-xinstance.h is only used for instantiating template classes and has no other functions.

@@ -1,16 +1,15 @@
 #ifndef __xspcomm_xexpr_h__
 #define __xspcomm_xexpr_h__
 
-#include "xspcomm/xcomuse/callback.h"
-#include "xspcomm/xclock.h"
-#include "xspcomm/xsignal_cfg.h"
+#include "xspcomm/xdata.h"
 #include <vector>
 #include <map>
-#include <unordered_map>
 #include <memory>
 #include <string>
 
 namespace xspcomm {
+
+    class XSignalCFG;
 
     // Expression Engine
     enum class ExprOp{
@@ -75,7 +74,6 @@ namespace xspcomm {
         uint64_t EvalNode(int id);
         bool IsKnownNode(int id);
         bool EvalCompareNode(const ExprNode &node);
-        static bool CompareXData(XData* lhs, XData* rhs, ExprOp op);
         XData* MakeConstXData(uint32_t width, uint64_t value);
         XData* MakeConstXDataBytes(uint32_t width,
                                   std::vector<unsigned char> &value);
@@ -116,42 +114,7 @@ namespace xspcomm {
         void Clear();
     };
 
-    class ComUseExprCheck: public ComUseStepCb{
-        ExprEngine engine;
-        struct ExprItem{
-            std::string name;
-            int root = -1;
-            uint64_t last_trigger_cycle = (uint64_t)-1;
-        };
-        std::vector<XClock*> clk_list;
-        std::vector<ExprItem> expr_list;
-        std::unordered_map<std::string, size_t> expr_index;
-        uint64_t last_eval_cycle = 0;
-    public:
-        ComUseExprCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}        
-        void BindXClock(XClock *clk);
-        int ExprNewConst(uint64_t v);
-        int ExprNewSignal(XData* sig);
-        int ExprNewUnary(int op, int child);
-        int ExprNewBinary(int op, int lhs, int rhs);
-        int ExprNewCompare(int op, int lhs, int rhs);
-        int ExprNewCompareSigSig(int op, XData* lhs, XData* rhs);
-        int ExprNewCompareSigConst(int op, XData* lhs, uint64_t rhs);
-        int ExprNewCompareConstSig(int op, uint64_t lhs, XData* rhs);
-        int ExprNewCompareSigConstBytes(int op, XData* lhs,
-                                        std::vector<unsigned char> &rhs);
-        int ExprNewCompareConstBytesSig(int op,
-                                        std::vector<unsigned char> &lhs,
-                                        XData* rhs);
-        int CompileExpr(std::string expr, XSignalCFG* cfg);
-        void SetExpr(std::string name, int root);
-        void RemoveExpr(std::string name);
-        std::map<std::string, bool> ListExpr();
-        std::vector<std::string> GetTriggeredExprKeys();
-        void ClearExpr();
-        void ClearAll(){this->ClearExpr();};
-        virtual void Call();
-    };
+
 }
 
 #endif

@@ -46,6 +46,8 @@ else ()
     target_link_libraries(pyxspcomm PRIVATE xspcomm Python3::Module)
 endif ()
 
+target_include_directories(pyxspcomm PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
 # set buld output directory
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)
 set(STAGE_NATIVE_LIBRARY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../StageSharedLibrary.cmake)

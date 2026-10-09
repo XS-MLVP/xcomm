@@ -2,6 +2,7 @@
 #define XSPCOMM_XCOMUSE_RANGE_H
 
 #include "xspcomm/xcallback.h"
+#include "xspcomm/common/compare.h"
 #include "xspcomm/xutil.h"
 #include <cstring>
 
@@ -27,10 +28,7 @@ namespace xspcomm {
         }
 
         static bool cmp(uint64_t target, uint64_t center, int range) {
-            if (range >= 0) {
-                return target <= center && center - target <= static_cast<uint32_t>(range);
-            }
-            return target >= center && target - center <= static_cast<uint64_t>(-static_cast<int64_t>(range));
+            return compare::WithinRange(target, center, range);
         }
 
         static bool ArrayCmp(uint64_t a, uint64_t b, uint64_t self) {
