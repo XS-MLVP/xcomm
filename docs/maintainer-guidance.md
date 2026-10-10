@@ -57,7 +57,9 @@ extensions; a Python version specifier alone cannot verify C++ ABI identity.
 
 The native trigger engine changes the C++ layouts of `XClock`, `XData`, and
 `ExprNode`, which introduced native ABI 2. Complete per-bin trigger programs now
-reorganize `XCoverageBin` and checker/runtime layouts, so the current native ABI is 4 (`libxspcomm.so.4`). Rebuild
+reorganize `XCoverageBin` and checker/runtime layouts (ABI 4). Renaming the
+monitor classes changes exported C++ symbols, so the current native ABI is 5
+(`libxspcomm.so.5`). Rebuild
 Picker-generated DUT extensions and other native bindings against these headers
 and library, and update the consumer's ABI requirement together. Keep each
 generated DUT and its runtime on a matching native ABI.
@@ -72,6 +74,16 @@ bundled native runtime.
 
 The PR #30 review migration introduces `XEngine` with the existing
 `XTriggerEngine` entry alias, explicit coverage kinds and `bin.program`.
-Use the `0.3.0.dev1` preview for ABI 4 / descriptor protocol 5; `0.3.0.dev0`
-identified the earlier ABI 3 / protocol 4 preview. Update frontend lowering and
-rebuild native clients together.
+The next preview is `0.3.0.dev2` for ABI 5 / descriptor protocol 5, with
+`xmonitor.h`, `monitor/` and the `XConditionCheck` family of names. The earlier
+`0.3.0.dev1` preview identifies ABI 4 / protocol 5, and `0.3.0.dev0` identifies
+ABI 3 / protocol 4. Update source names and frontend lowering, then rebuild
+native clients together. See [the migration tables](architecture.md#header-migration).
+
+The installed SDK consists of `include/xspcomm/` and the generated `xconfig.h`.
+Keep pure matching, coverage-state and native-memory implementation headers under
+`src/`; do not add them to the installed include tree or the common SWIG interface.
+Public templates may use helpers from `include/xspcomm/common/`. Keep
+`runtime/types.h` independent of clock and engine implementations. The internal
+matcher and coverage tests use the private source include directory explicitly;
+ordinary SDK consumers should compile with only the installed include directory.

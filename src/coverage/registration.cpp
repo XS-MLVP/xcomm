@@ -1,6 +1,7 @@
-#include "xspcomm/xengine.h"
+#include "runtime/registration.h"
+#include "xspcomm/xclock.h"
 #include "xspcomm/xexpr.h"
-#include "xspcomm/detail/coverage/state.h"
+#include "coverage/state.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -24,7 +25,7 @@ void XEngine::AttachCoverage(XRegistrationHandle handle,
         watchers[handle.slot].coverage) throw std::invalid_argument("invalid coverage registration");
     auto &watcher = watchers[handle.slot];
     watcher.coverage = std::make_shared<detail::CoverageState>(
-        handle.generation, *expr_engine, CoverageSource(watcher), items, bins,
+        handle.generation, *expr_engine, watcher.CoverageSource(), items, bins,
         gate, abort, raise_illegal, diagnostic_capacity, overlap, max_active, diagnostics);
 }
 

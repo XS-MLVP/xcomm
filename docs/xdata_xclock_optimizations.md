@@ -7,7 +7,7 @@ No changes for divider algorithm (4) or runtime fast_mode advice (6).
 ---
 
 ## 1) XData::_update_shadow lower cost when no callbacks
-Location: src/core/data.cpp : XData::_update_shadow
+Location: src/data/data.cpp : XData::_update_shadow
 Current: Every read/write does shadow compare/copy even when no callbacks.
 Idea:
 - When has_on_change_cbs == false, skip per-element compare and callback logic.
@@ -25,7 +25,7 @@ Expected gain:
 ---
 
 ## 2) XData::_need_write use memcmp/memcpy
-Location: src/core/data.cpp : XData::_need_write / _update_last_write
+Location: src/data/data.cpp : XData::_need_write / _update_last_write
 Current: Element-by-element compare and copy for vec data.
 Idea:
 - Use memcmp for change detection on xsvLogicVecVal arrays.
@@ -72,7 +72,7 @@ Expected gain:
 ---
 
 ## Correctness Fix: Reset last_write state on ReInit
-Location: src/core/data.cpp : XData::ReInit, XData::~XData
+Location: src/data/data.cpp : XData::ReInit, XData::~XData
 Reason:
 - ReInit does not reset last_is_write/last_pVecData, which can leave stale
   pointers and sizes after width changes.
@@ -89,7 +89,7 @@ Behavior impact:
 ---
 
 ## Correctness Fix: ReInit memory management
-Location: src/core/data.cpp : XData::ReInit / ~XData
+Location: src/data/data.cpp : XData::ReInit / ~XData
 Reason:
 - ReInit allocates pVecData/__pVecData/pinbind_vec with calloc but does not free
   old allocations on repeated ReInit (leak).
@@ -103,7 +103,7 @@ Behavior impact:
 ---
 
 ## Correctness Fix: validate checks all bval words
-Location: src/core/data.cpp : XData::_update_shadow
+Location: src/data/data.cpp : XData::_update_shadow
 Reason:
 - validate only checks pVecData[0].bval, missing X/Z in higher words.
 Fix:
@@ -115,7 +115,7 @@ Behavior impact:
 
 ## Follow-up: BindNativeData X/Z semantics
 
-Location: src/core/data_backends.cpp : XData::BindNativeData
+Location: src/data/backends.cpp : XData::BindNativeData
 
 Current behavior:
 

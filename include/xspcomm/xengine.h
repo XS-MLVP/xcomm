@@ -1,27 +1,24 @@
 #ifndef XSPCOMM_XENGINE_H
 #define XSPCOMM_XENGINE_H
 
-#include "xspcomm/trigger/types.h"
-#include "xspcomm/xdata.h"
+#include "xspcomm/runtime/types.h"
 #include "xspcomm/xcoverage.h"
-#include "xspcomm/detail/trigger/registration.h"
 
 #include <cstdint>
-#include <limits>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
 namespace xspcomm {
 
+class XClock;
+class XData;
 class ExprEngine;
 
 // Shared sampling runtime. Trigger matches and coverage statistics are clients
 // of the same clock/phase schedule; the matching kernel has no coverage policy.
 class XEngine {
-    using WatcherKind = detail::TriggerRegistration::Kind;
-    struct Watcher : detail::TriggerRegistration {
-        std::shared_ptr<detail::CoverageState> coverage;
-    };
+    struct Watcher;
 
     XClock *clock = nullptr;
     size_t capacity = 0;
@@ -39,17 +36,11 @@ class XEngine {
                    uint64_t value, uint64_t event_id = 0,
                    uint64_t x_mask = 0);
     bool EvaluateCoverage(Watcher &watcher);
-    detail::PatternView CoverageSource(const Watcher &watcher) const {
-        if (watcher.kind == WatcherKind::Sequence || watcher.kind == WatcherKind::Fsm)
-            return detail::PatternView::From(watcher.program);
-        return {};
-    }
     void CheckCoverageHandle(XRegistrationHandle handle) const;
 
 public:
     explicit XEngine(XClock *clock, size_t capacity = 1024);
-    explicit XEngine(XClock &clock, size_t capacity = 1024)
-        : XEngine(&clock, capacity) {}
+    explicit XEngine(XClock &clock, size_t capacity = 1024);
     ~XEngine();
 
     XRegistrationHandle ArmEdge(XPhase phase, uint64_t source_id = 0);

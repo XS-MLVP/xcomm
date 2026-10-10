@@ -1,4 +1,4 @@
-#include "xspcomm/detail/coverage/state.h"
+#include "coverage/state.h"
 #include "xspcomm/xexpr.h"
 
 #include <algorithm>

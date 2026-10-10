@@ -1,7 +1,7 @@
-#ifndef XSPCOMM_XCOMUSE_EXPR_H
-#define XSPCOMM_XCOMUSE_EXPR_H
+#ifndef XSPCOMM_MONITOR_EXPR_H
+#define XSPCOMM_MONITOR_EXPR_H
 
-#include "xspcomm/xcomuse/condition.h"
+#include "xspcomm/monitor/condition.h"
 #include "xspcomm/xexpr.h"
 
 
@@ -9,10 +9,10 @@ namespace xspcomm {
 
 class XClock;
 
-    class ComUseExprCheck: public ComUseCondCheck{
+    class XExprCheck: public XConditionCheck{
         ExprEngine engine;
     public:
-        ComUseExprCheck(XClock* clk=nullptr) : ComUseCondCheck(clk) {}
+        XExprCheck(XClock* clk=nullptr) : XConditionCheck(clk) {}
         int ExprNewConst(uint64_t v);
         int ExprNewSignal(XData* sig);
         int ExprNewUnary(int op, int child);

@@ -1,5 +1,5 @@
 #include "xspcomm/xcomm.h"
-#include "xspcomm/xcomuse.h"
+#include "xspcomm/xmonitor.h"
 
 namespace xspcomm {
 
@@ -349,16 +349,16 @@ int test_xdata()
     clk1.Step(10);
     test_assert(clk1.clk == clk_old+10, "clk1 enable fail: %lld", clk1.clk);
 
-    // ComUseCondCheck
-    ComUseCondCheck check(&clk1);
-    clk1.StepRis(check.GetCb(), check.CSelf(),"ComUseCondCheck");
-    check.SetCondition("key_EQ", &x64, &x64, ComUseCondCmp::EQ);
-    check.SetCondition("key_GT", &x64, &d1, ComUseCondCmp::GT);
+    // XConditionCheck
+    XConditionCheck check(&clk1);
+    clk1.StepRis(check.GetCb(), check.CSelf(),"XConditionCheck");
+    check.SetCondition("key_EQ", &x64, &x64, CompareOp::EQ);
+    check.SetCondition("key_GT", &x64, &d1, CompareOp::GT);
     int px1[1] = {2};
     int px2[1] = {2};
-    check.SetCondition("key_EQ_1", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::EQ, 4);
-    check.SetCondition("key_GT_2", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::GT, 4);
-    check.SetValidCmpMode("key_EQ_1", ComUseCondCmp::NE);
+    check.SetCondition("key_EQ_1", (uint64_t)px1, (uint64_t)px2, CompareOp::EQ, 4);
+    check.SetCondition("key_GT_2", (uint64_t)px1, (uint64_t)px2, CompareOp::GT, 4);
+    check.SetValidCmpMode("key_EQ_1", CompareOp::NE);
 
     clk_old = clk1.clk;
     clk1.Step(10);
@@ -368,12 +368,12 @@ int test_xdata()
     test_assert(1 == clk1.RemoveStepFalCbByDesc("Fal-lambda"), "check remove step cb fail");
     px2[0] = 6;
     check.ClearCondition();
-    ComUseRangeCheck rcheck(6, 4);
-    check.SetCondition("key_RG", (uint64_t)px1, (uint64_t)px2, ComUseCondCmp::GT, 4,
+    XRangeCheck rcheck(6, 4);
+    check.SetCondition("key_RG", (uint64_t)px1, (uint64_t)px2, CompareOp::GT, 4,
                        0, 0, 0, rcheck.GetArrayCmp(), rcheck.CSelf());
     clk1.Enable();
     clk1.Step(10);
-    test_assert(clk1.IsDisable(), "ComUseRangeCheck check fail");
+    test_assert(clk1.IsDisable(), "XRangeCheck check fail");
     Info("test fails: %d, success: %d\n", fails, success);
     return fails;
 }

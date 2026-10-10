@@ -1,4 +1,4 @@
-#include "xspcomm/detail/lifetime.h"
+#include "xspcomm/common/lifetime.h"
 
 namespace xspcomm::detail {
 

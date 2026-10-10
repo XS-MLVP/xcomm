@@ -5,7 +5,7 @@
 #include "xspcomm/xport.h"
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xsignal_cfg.h"
-#include "xspcomm/xcomuse.h"
+#include "xspcomm/xmonitor.h"
 #include "xspcomm/xtrigger.h"
 #include <stdexcept>
 %}
@@ -68,23 +68,22 @@ namespace std {
         SWIG_exception(SWIG_RuntimeError, error.what());
     }
 }
+%include "xspcomm/runtime/types.h"
 %include "xspcomm/xclock.h"
 %include "xspcomm/xdata.h"
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 %include "xspcomm/xsignal_cfg.h"
-%include "xspcomm/xcomuse/callback.h"
-%rename(ComUseCondCmp) xspcomm::CompareOp;
-%include "xspcomm/common/operation.h"
-%include "xspcomm/xcomuse/condition.h"
-%include "xspcomm/xcomuse/range.h"
+%include "xspcomm/monitor/callback.h"
+%include "xspcomm/common/compare_op.h"
+%include "xspcomm/monitor/condition.h"
+%include "xspcomm/monitor/range.h"
 %include "xspcomm/common/memory.h"
 %include "xspcomm/xexpr.h"
-%include "xspcomm/xcomuse/expr.h"
-%include "xspcomm/xcomuse/fsm.h"
-%include "xspcomm/xcomuse.h"
+%include "xspcomm/monitor/expr.h"
+%include "xspcomm/monitor/fsm.h"
+%include "xspcomm/xmonitor.h"
 %include "xspcomm/xpattern.h"
-%include "xspcomm/trigger/types.h"
 %include "xspcomm/xcoverage.h"
 %rename(XTriggerEngine) xspcomm::XEngine;
 %include "xspcomm/xengine.h"
@@ -141,7 +140,7 @@ namespace std {
 %d_callback(cb_int_bool, int, bool);
 %d_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
-// ComUseCondCheck
+// XConditionCheck
 %d_callback(cb_bool_XData_XData_uint64, bool, xspcomm::XData*, xspcomm::XData*, uint64_t);
 %d_callback(cb_bool_uint64_uint64_uint64, bool, uint64_t, uint64_t, uint64_t);
 
@@ -159,6 +158,6 @@ namespace std {
 %x_callback(cb_int_bool, int, bool);
 %x_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
-// ComUseCondCheck
+// XConditionCheck
 %x_callback(cb_bool_XData_XData_uint64, bool, xspcomm::XData*, xspcomm::XData*, uint64_t);
 %x_callback(cb_bool_uint64_uint64_uint64, bool, uint64_t, uint64_t, uint64_t);

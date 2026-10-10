@@ -1,5 +1,5 @@
-#ifndef XSPCOMM_DETAIL_TRIGGER_PROGRAM_H
-#define XSPCOMM_DETAIL_TRIGGER_PROGRAM_H
+#ifndef XSPCOMM_TRIGGER_EXECUTOR_H
+#define XSPCOMM_TRIGGER_EXECUTOR_H
 
 #include "xspcomm/xpattern.h"
 #include <cstddef>

@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include "xspcomm/detail/coverage/state.h"
+#include "coverage/state.h"
 #include "xspcomm/xexpr.h"
 
 using namespace xspcomm;

@@ -9,7 +9,6 @@
 namespace xspcomm {
 
 class XData;
-namespace detail { class CoverageState; }
 
 enum class XCoverageItemKind : uint8_t { Value = 0, Pattern = 1, Cross = 2 };
 enum class XCoverageBinKind : uint8_t { Normal = 0, Ignore = 1, Illegal = 2, Default = 3 };

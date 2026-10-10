@@ -7,7 +7,9 @@ if(XSPCOMM_WASM_LIB)
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${XSPCOMM_SOURCES})
-target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/third_party)
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/third_party)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME ${PROJECT_NAME}
     VERSION ${PROJECT_VERSION}

@@ -1,12 +1,17 @@
-#ifndef XSPCOMM_TRIGGER_TYPES_H
-#define XSPCOMM_TRIGGER_TYPES_H
+#ifndef XSPCOMM_RUNTIME_TYPES_H
+#define XSPCOMM_RUNTIME_TYPES_H
 
-#include "xspcomm/xclock.h"
 #include <cstdint>
 #include <limits>
 #include <vector>
 
 namespace xspcomm {
+
+enum class XPhase {
+    FallingStable = 0,
+    RisingStable = 1,
+    DriveStable = 2,
+};
 
 enum class XHitKind : uint8_t {
     ClockFall = 0,

@@ -1,17 +1,17 @@
-#include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/monitor/callback.h"
 #include "xspcomm/xclock.h"
 #include <stdexcept>
 
 namespace xspcomm {
 
-ComUseStepCb::~ComUseStepCb() { Detach(); }
+XStepCallback::~XStepCallback() { Detach(); }
 
-void ComUseStepCb::Attach(XClock *clock, bool rising) {
+void XStepCallback::Attach(XClock *clock, bool rising) {
     if (!clock) throw std::invalid_argument("callback clock must not be null");
     if (clock->in_callback) throw std::logic_error("cannot attach while clock callbacks are running");
     for (const auto &registration : registrations)
         if (registration.clock == clock && registration.rising == rising && !registration.lifetime.expired()) return;
-    const std::string description = "ComUseStepCb:" + std::to_string(CSelf()) + (rising ? ":rise" : ":fall");
+    const std::string description = "XStepCallback:" + std::to_string(CSelf()) + (rising ? ":rise" : ":fall");
     Registration registration{clock, clock->callback_lifetime.Observe(), rising, description};
     registrations.push_back(registration);
     try {
@@ -27,7 +27,7 @@ void ComUseStepCb::Attach(XClock *clock, bool rising) {
     }
 }
 
-void ComUseStepCb::Detach() {
+void XStepCallback::Detach() {
     for (const auto &registration : registrations) {
         if (registration.lifetime.expired()) continue;
         if (registration.rising) registration.clock->RemoveStepRisCbByDesc(registration.description);
@@ -36,51 +36,51 @@ void ComUseStepCb::Detach() {
     registrations.clear();
 }
 
-u_int64_t ComUseStepCb::GetCb(){
-    return (u_int64_t)ComUseStepCb::Cb;
+u_int64_t XStepCallback::GetCb(){
+    return (u_int64_t)XStepCallback::Cb;
 }
 
-void ComUseStepCb::Cb(uint64_t c, void *self){
-    ComUseStepCb *p = (ComUseStepCb*)self;
+void XStepCallback::Cb(uint64_t c, void *self){
+    XStepCallback *p = (XStepCallback*)self;
     if (unlikely(!p->cb_enable)) return;
     p->cycle = c;
     p->Call();
     if (unlikely(p->cb_maxcts > 0 && p->cb_counts >= p->cb_maxcts)) p->Disable();
 }
 
-void ComUseStepCb::Disable(){
+void XStepCallback::Disable(){
     this->cb_enable = false;
 }
-void ComUseStepCb::Enable(){
+void XStepCallback::Enable(){
     this->cb_enable = true;
 }
-bool ComUseStepCb::IsDisable(){
+bool XStepCallback::IsDisable(){
     return !this->cb_enable;
 }
-int ComUseStepCb::GetCbCount(){
+int XStepCallback::GetCbCount(){
     return this->cb_counts;
 }
-int ComUseStepCb::IncCbCount(){
+int XStepCallback::IncCbCount(){
     this->cb_counts += 1;
     return this->cb_counts;
 }
-int ComUseStepCb::DecCbCount(){
+int XStepCallback::DecCbCount(){
     this->cb_counts -= 1;
     return this->cb_counts;
 }
-void ComUseStepCb::SetMaxCbs(int c){
+void XStepCallback::SetMaxCbs(int c){
     this->cb_maxcts = c;
 }
-void ComUseStepCb::Reset(){
+void XStepCallback::Reset(){
     this->cb_enable = true;
     this->cb_counts = 0;
 }
 
-void ComUseStepCb::Call(){
+void XStepCallback::Call(){
     fprintf(stderr, "Error, This is a virtual Call!\n");
 }
 
-void ComUseEcho::Call(){
+void XEcho::Call(){
     //convert; // 0 (char), 1 (int), 2 (float), 3 (double), 4 (string)
     Assert(this->valid != NULL, "Pin[valid] is Null");
     Assert(this->data  != NULL, "Pin[data] is Null");

@@ -1,7 +1,7 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/xexpr.h"
 
-#include "xspcomm/detail/data/native_memory.h"
+#include "data/native_memory.h"
 
 namespace xspcomm {
 
