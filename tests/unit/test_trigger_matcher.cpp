@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include "trigger/matcher.h"
+#include "xspcomm/detail/trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 
 using namespace xspcomm;

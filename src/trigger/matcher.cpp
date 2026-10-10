@@ -1,4 +1,4 @@
-#include "matcher.h"
+#include "xspcomm/detail/trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 
 #include <algorithm>
@@ -19,16 +19,21 @@ PatternMatcher::PatternMatcher(PatternView program) : program(program)
     }
 }
 
+uint64_t PatternMatcher::AdvanceCondition(ExprEngine &expr)
+{
+    const bool known = expr.IsKnown(program.root);
+    const bool current = known && expr.Eval(program.root) != 0;
+    completed = MatchCondition(known, current, program.mode, last_condition);
+    return completed;
+}
+
 MatchUpdate PatternMatcher::Advance(ExprEngine &expr, bool overlap, size_t max_active)
 {
     MatchUpdate update;
     completed = 0;
     std::fill(terminal_counts.begin(), terminal_counts.end(), 0);
     if (!program.sequence && !program.fsm) {
-        const bool known = expr.IsKnown(program.root);
-        const bool current = known && expr.Eval(program.root) != 0;
-        completed = MatchCondition(known, current, program.mode, last_condition);
-        update.completed = completed;
+        update.completed = AdvanceCondition(expr);
         return update;
     }
     auto record = [&](uint32_t terminal) {
@@ -44,7 +49,7 @@ MatchUpdate PatternMatcher::Advance(ExprEngine &expr, bool overlap, size_t max_a
     size_t kept = 0;
     for (size_t i = 0; i < attempts.size(); ++i) {
         auto &state = attempts[i];
-        const auto result = AdvancePattern(program, state, expr);
+        const auto result = PatternExecutor::Advance(program, state, expr);
         if (result.completed) record(result.terminal);
         else if (result.failed) {
             if (state.sequence_expired) ++update.expired;
@@ -59,7 +64,7 @@ MatchUpdate PatternMatcher::Advance(ExprEngine &expr, bool overlap, size_t max_a
     if (overlap || !had_active) {
         PatternState candidate;
         candidate.fsm_current_state = program.start_state;
-        const auto result = AdvancePattern(program, candidate, expr);
+        const auto result = PatternExecutor::Advance(program, candidate, expr);
         const bool active = program.fsm ? candidate.fsm_current_state != program.start_state :
                            candidate.sequence_index || candidate.sequence_age || candidate.sequence_held;
         if (result.completed || active) {

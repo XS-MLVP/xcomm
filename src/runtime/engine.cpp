@@ -1,7 +1,7 @@
-#include "xspcomm/xtrigger.h"
+#include "xspcomm/xengine.h"
 #include "xspcomm/xexpr.h"
-#include "../coverage/state.h"
-#include "matcher.h"
+#include "xspcomm/detail/coverage/state.h"
+#include "xspcomm/detail/trigger/matcher.h"
 
 #include <chrono>
 #include <algorithm>
@@ -9,7 +9,7 @@
 
 namespace xspcomm {
 
-XTriggerEngine::XTriggerEngine(XClock *clock, size_t capacity)
+XEngine::XEngine(XClock *clock, size_t capacity)
     : clock(clock), capacity(capacity), expr_engine(std::make_unique<ExprEngine>())
 {
     if (clock == nullptr) {
@@ -23,9 +23,9 @@ XTriggerEngine::XTriggerEngine(XClock *clock, size_t capacity)
     hit_buffer.reserve(capacity);
 }
 
-XTriggerEngine::~XTriggerEngine() = default;
+XEngine::~XEngine() = default;
 
-XRegistrationHandle XTriggerEngine::Allocate()
+XRegistrationHandle XEngine::Allocate()
 {
     uint32_t slot;
     if (!free_slots.empty()) {
@@ -53,21 +53,24 @@ XRegistrationHandle XTriggerEngine::Allocate()
     watcher.expected_wide.reset();
     watcher.expected_bytes.clear();
     watcher.expected_x_bytes.clear();
-    watcher.condition_mode = XConditionMode::Enter;
+    watcher.program.mode = XConditionMode::Enter;
     watcher.last_condition = false;
-    watcher.expr_root = -1;
-    watcher.sequence_steps.clear();
+    watcher.program.kind = XTriggerProgramKind::Expr;
+    watcher.program.root = -1;
+    watcher.program.overlap = false;
+    watcher.program.max_active = 1;
+    watcher.program.steps.clear();
     watcher.sequence_index = 0;
     watcher.sequence_age = 0;
     watcher.sequence_held = 0;
-    watcher.fsm_transitions.clear();
-    watcher.fsm_state_count = 0;
-    watcher.fsm_start_state = 0;
+    watcher.program.transitions.clear();
+    watcher.program.state_count = 0;
+    watcher.program.start_state = 0;
     watcher.fsm_current_state = 0;
     return {slot, watcher.generation};
 }
 
-XRegistrationHandle XTriggerEngine::ArmEdge(
+XRegistrationHandle XEngine::ArmEdge(
     XPhase phase, uint64_t source_id)
 {
     auto handle = Allocate();
@@ -79,7 +82,7 @@ XRegistrationHandle XTriggerEngine::ArmEdge(
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmClockCycles(
+XRegistrationHandle XEngine::ArmClockCycles(
     uint64_t cycles, XPhase phase, uint64_t source_id)
 {
     if (cycles == 0) return {};
@@ -94,7 +97,7 @@ XRegistrationHandle XTriggerEngine::ArmClockCycles(
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmValueEq(
+XRegistrationHandle XEngine::ArmValueEq(
     XData *signal, uint64_t expected, XPhase phase, XConditionMode mode,
     uint64_t source_id)
 {
@@ -107,11 +110,11 @@ XRegistrationHandle XTriggerEngine::ArmValueEq(
     watcher.source_id = source_id ? source_id : signal->CSelf();
     watcher.signal = signal;
     watcher.expected = expected;
-    watcher.condition_mode = mode;
+    watcher.program.mode = mode;
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmValueEqBytes(
+XRegistrationHandle XEngine::ArmValueEqBytes(
     XData *signal, std::vector<unsigned char> &expected, XPhase phase,
     XConditionMode mode, uint64_t source_id)
 {
@@ -125,11 +128,11 @@ XRegistrationHandle XTriggerEngine::ArmValueEqBytes(
     watcher.signal = signal;
     watcher.expected_wide = std::make_shared<XData>(signal->W(), XData::InOut);
     watcher.expected_wide->SetVU8(expected);
-    watcher.condition_mode = mode;
+    watcher.program.mode = mode;
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmValueChange(
+XRegistrationHandle XEngine::ArmValueChange(
     XData *signal, XPhase phase, uint64_t source_id)
 {
     if (signal == nullptr) return {};
@@ -150,7 +153,7 @@ XRegistrationHandle XTriggerEngine::ArmValueChange(
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmSample(
+XRegistrationHandle XEngine::ArmSample(
     XPhase phase, uint64_t source_id)
 {
     auto handle = Allocate();
@@ -162,52 +165,52 @@ XRegistrationHandle XTriggerEngine::ArmSample(
     return handle;
 }
 
-int XTriggerEngine::ExprNewConst(uint64_t value)
+int XEngine::ExprNewConst(uint64_t value)
 {
     return expr_engine->NewConst(value);
 }
 
-int XTriggerEngine::ExprNewSignal(XData *signal)
+int XEngine::ExprNewSignal(XData *signal)
 {
     if (signal == nullptr || signal->W() > 64) return -1;
     return expr_engine->NewSignal(signal);
 }
 
-int XTriggerEngine::ExprNewUnary(int op, int child)
+int XEngine::ExprNewUnary(int op, int child)
 {
     return expr_engine->NewUnary(static_cast<ExprOp>(op), child);
 }
 
-int XTriggerEngine::ExprNewBinary(int op, int lhs, int rhs)
+int XEngine::ExprNewBinary(int op, int lhs, int rhs)
 {
     return expr_engine->NewBinary(static_cast<ExprOp>(op), lhs, rhs);
 }
 
-int XTriggerEngine::ExprNewCompare(int op, int lhs, int rhs)
+int XEngine::ExprNewCompare(int op, int lhs, int rhs)
 {
     return expr_engine->NewCompare(static_cast<ExprOp>(op), lhs, rhs);
 }
 
-int XTriggerEngine::ExprNewCompareSigSig(int op, XData *lhs, XData *rhs)
+int XEngine::ExprNewCompareSigSig(int op, XData *lhs, XData *rhs)
 {
     return expr_engine->NewCompareSigSig(static_cast<ExprOp>(op), lhs, rhs);
 }
 
-int XTriggerEngine::ExprNewCompareSigConstBytes(
+int XEngine::ExprNewCompareSigConstBytes(
     int op, XData *lhs, std::vector<unsigned char> &rhs)
 {
     return expr_engine->NewCompareSigConstBytes(
         static_cast<ExprOp>(op), lhs, rhs);
 }
 
-int XTriggerEngine::ExprNewCompareConstBytesSig(
+int XEngine::ExprNewCompareConstBytesSig(
     int op, std::vector<unsigned char> &lhs, XData *rhs)
 {
     return expr_engine->NewCompareConstBytesSig(
         static_cast<ExprOp>(op), lhs, rhs);
 }
 
-int XTriggerEngine::ExprNewMaskedCompareSigConstBytes(
+int XEngine::ExprNewMaskedCompareSigConstBytes(
     XData *lhs, std::vector<unsigned char> &value, std::vector<unsigned char> &mask)
 {
     const int root = expr_engine->NewMaskedCompareSigConstBytes(lhs, value, mask);
@@ -215,73 +218,61 @@ int XTriggerEngine::ExprNewMaskedCompareSigConstBytes(
     return root;
 }
 
-XRegistrationHandle XTriggerEngine::ArmExpr(
+XRegistrationHandle XEngine::ArmExpr(
     int root, XPhase phase, XConditionMode mode, uint64_t source_id)
 {
-    if (root < 0) return {};
+    XTriggerProgram program;
+    program.root = root;
+    program.mode = mode;
+    program.overlap = false;
+    if (!detail::ProgramValidator::Validate(program, *expr_engine)) return {};
     auto handle = Allocate();
     if (!handle.IsValid()) return handle;
     auto &watcher = watchers[handle.slot];
     watcher.kind = WatcherKind::Expr;
     watcher.phase = phase;
     watcher.source_id = source_id;
-    watcher.expr_root = root;
-    watcher.condition_mode = mode;
+    watcher.program.root = root;
+    watcher.program.mode = mode;
     expr_engine->OptimizeShortCircuitOrder(root);
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmSequence(
+XRegistrationHandle XEngine::ArmSequence(
     const std::vector<XSequenceStep> &steps, XPhase phase,
     uint64_t source_id)
 {
-    if (steps.empty()) return {};
-    for (const auto &step : steps) {
-        if (step.root < 0) return {};
-        if (step.kind == XSequenceStepKind::Within &&
-            step.maximum < step.minimum) {
-            return {};
-        }
-        if (step.kind == XSequenceStepKind::Hold && step.cycles == 0) {
-            return {};
-        }
-    }
+    if (!detail::ProgramValidator::Sequence(steps, *expr_engine)) return {};
     auto handle = Allocate();
     if (!handle.IsValid()) return handle;
     auto &watcher = watchers[handle.slot];
     watcher.kind = WatcherKind::Sequence;
     watcher.phase = phase;
     watcher.source_id = source_id;
-    watcher.sequence_steps = steps;
+    watcher.program.kind = XTriggerProgramKind::Sequence;
+    watcher.program.steps = steps;
     for (const auto &step : steps) {
         expr_engine->OptimizeShortCircuitOrder(step.root);
     }
     return handle;
 }
 
-XRegistrationHandle XTriggerEngine::ArmFsm(
+XRegistrationHandle XEngine::ArmFsm(
     uint32_t state_count, uint32_t start_state,
     const std::vector<XFsmTransition> &transitions, XPhase phase,
     uint64_t source_id)
 {
-    if (state_count == 0 || start_state >= state_count || transitions.empty()) {
-        return {};
-    }
-    for (const auto &transition : transitions) {
-        if (transition.from_state >= state_count ||
-            (!transition.trigger && transition.next_state >= state_count)) {
-            return {};
-        }
-    }
+    if (!detail::ProgramValidator::Fsm(state_count, start_state, transitions, *expr_engine)) return {};
     auto handle = Allocate();
     if (!handle.IsValid()) return handle;
     auto &watcher = watchers[handle.slot];
     watcher.kind = WatcherKind::Fsm;
     watcher.phase = phase;
     watcher.source_id = source_id;
-    watcher.fsm_transitions = transitions;
-    watcher.fsm_state_count = state_count;
-    watcher.fsm_start_state = start_state;
+    watcher.program.kind = XTriggerProgramKind::Fsm;
+    watcher.program.state_count = state_count;
+    watcher.program.start_state = start_state;
+    watcher.program.transitions = transitions;
     watcher.fsm_current_state = start_state;
     for (const auto &transition : transitions) {
         if (transition.root >= 0) {
@@ -291,7 +282,7 @@ XRegistrationHandle XTriggerEngine::ArmFsm(
     return handle;
 }
 
-bool XTriggerEngine::Disarm(XRegistrationHandle handle)
+bool XEngine::Disarm(XRegistrationHandle handle)
 {
     if (!handle.IsValid() || handle.slot >= watchers.size()) return false;
     auto &watcher = watchers[handle.slot];
@@ -309,7 +300,7 @@ bool XTriggerEngine::Disarm(XRegistrationHandle handle)
     return true;
 }
 
-bool XTriggerEngine::RearmSample(XRegistrationHandle handle)
+bool XEngine::RearmSample(XRegistrationHandle handle)
 {
     if (!handle.IsValid() || handle.slot >= watchers.size()) return false;
     auto &watcher = watchers[handle.slot];
@@ -321,7 +312,7 @@ bool XTriggerEngine::RearmSample(XRegistrationHandle handle)
     return true;
 }
 
-bool XTriggerEngine::Rearm(XRegistrationHandle handle)
+bool XEngine::Rearm(XRegistrationHandle handle)
 {
     if (!handle.IsValid() || handle.slot >= watchers.size()) return false;
     auto &watcher = watchers[handle.slot];
@@ -337,7 +328,7 @@ bool XTriggerEngine::Rearm(XRegistrationHandle handle)
         watcher.sequence_age = 0;
         watcher.sequence_held = 0;
     } else if (watcher.kind == WatcherKind::Fsm) {
-        watcher.fsm_current_state = watcher.fsm_start_state;
+        watcher.fsm_current_state = watcher.program.start_state;
     } else if (watcher.kind == WatcherKind::ValueChange) {
         if (watcher.signal->W() > 64) {
             watcher.expected_bytes = watcher.signal->GetVU8();
@@ -350,7 +341,7 @@ bool XTriggerEngine::Rearm(XRegistrationHandle handle)
     return true;
 }
 
-void XTriggerEngine::AppendHit(
+void XEngine::AppendHit(
     uint32_t slot, Watcher &watcher, XHitKind kind, uint64_t value,
     uint64_t event_id, uint64_t x_mask)
 {
@@ -375,7 +366,7 @@ void XTriggerEngine::AppendHit(
     watcher.armed = false;
 }
 
-bool XTriggerEngine::HasArmedPhase(XPhase phase) const
+bool XEngine::HasArmedPhase(XPhase phase) const
 {
     for (const auto &watcher : watchers) {
         if (watcher.occupied && watcher.armed && watcher.phase == phase) {
@@ -386,7 +377,7 @@ bool XTriggerEngine::HasArmedPhase(XPhase phase) const
 }
 
 // Keep the sampling adapter visible to the phase loop so it can inline.
-inline bool XTriggerEngine::EvaluateCoverage(Watcher &watcher)
+inline bool XEngine::EvaluateCoverage(Watcher &watcher)
 {
     auto &coverage = *watcher.coverage;
     switch (coverage.BeginSample(*expr_engine, clock->GetHalfTick())) {
@@ -407,7 +398,7 @@ inline bool XTriggerEngine::EvaluateCoverage(Watcher &watcher)
     return false;
 }
 
-void XTriggerEngine::EvaluatePhase(XPhase phase)
+void XEngine::EvaluatePhase(XPhase phase)
 {
     evaluation_phase = phase;
     uint64_t edge_event_id = 0;
@@ -419,99 +410,26 @@ void XTriggerEngine::EvaluatePhase(XPhase phase)
             continue;
         }
         if (watcher.coverage && EvaluateCoverage(watcher)) continue;
-        switch (watcher.kind) {
-        case WatcherKind::Edge: {
+        const auto match = watcher.Evaluate(*expr_engine, phase);
+        if (!match.hit) continue;
+        uint64_t event_id = 0;
+        if (watcher.kind == WatcherKind::Edge) {
             if (edge_event_id == 0) edge_event_id = next_event_id++;
-            XHitKind kind = XHitKind::ClockFall;
-            if (phase == XPhase::RisingStable) {
-                kind = XHitKind::ClockRise;
-            } else if (phase == XPhase::DriveStable) {
-                kind = XHitKind::DriveStable;
-            }
-            AppendHit(slot, watcher, kind, 0, edge_event_id);
-            break;
+            event_id = edge_event_id;
         }
-        case WatcherKind::ClockCycles:
-            watcher.remaining -= 1;
-            if (watcher.remaining == 0) {
-                AppendHit(slot, watcher, XHitKind::ClockCycles, 0);
-            }
-            break;
-        case WatcherKind::ValueEq: {
-            const uint64_t value = watcher.signal->W() > 64
-                                       ? 0 : watcher.signal->U();
-            const bool known = watcher.signal->DataValid();
-            const bool current = known &&
-                (watcher.expected_wide
-                     ? watcher.signal->Equal(*watcher.expected_wide)
-                     : value == watcher.expected);
-            const bool emit = detail::MatchCondition(known, current,
-                                                     watcher.condition_mode, watcher.last_condition);
-            if (emit) {
-                AppendHit(slot, watcher, XHitKind::Value, value);
-            }
-            break;
-        }
-        case WatcherKind::ValueChange: {
-            if (watcher.signal->W() > 64) {
-                auto value = watcher.signal->GetVU8();
-                auto x_value = watcher.signal->GetBvalBytes();
-                if (value != watcher.expected_bytes ||
-                    x_value != watcher.expected_x_bytes) {
-                    watcher.expected_bytes = std::move(value);
-                    watcher.expected_x_bytes = std::move(x_value);
-                    AppendHit(slot, watcher, XHitKind::ValueChange, 0);
-                }
-                break;
-            }
-            const uint64_t value = watcher.signal->U();
-            const uint64_t x_mask = watcher.signal->XMask();
-            if (value != watcher.expected ||
-                x_mask != watcher.expected_x_mask) {
-                watcher.expected = value;
-                watcher.expected_x_mask = x_mask;
-                AppendHit(slot, watcher, XHitKind::ValueChange, value, 0,
-                          x_mask);
-            }
-            break;
-        }
-        case WatcherKind::Sample:
-            AppendHit(slot, watcher, XHitKind::Condition, 0);
-            break;
-        case WatcherKind::Expr: {
-            const bool known = expr_engine->IsKnown(watcher.expr_root);
-            const bool current = known &&
-                                 expr_engine->Eval(watcher.expr_root) != 0;
-            const bool emit = detail::MatchCondition(known, current,
-                                                     watcher.condition_mode, watcher.last_condition);
-            if (emit) {
-                AppendHit(slot, watcher, XHitKind::Condition, current ? 1 : 0);
-            }
-            break;
-        }
-        case WatcherKind::Sequence:
-            if (detail::AdvancePattern({&watcher.sequence_steps}, watcher, *expr_engine).completed) {
-                AppendHit(slot, watcher, XHitKind::Fsm, 1);
-            }
-            break;
-        case WatcherKind::Fsm: {
-            const auto result = detail::AdvancePattern(
-                {nullptr, &watcher.fsm_transitions, watcher.fsm_start_state}, watcher, *expr_engine);
-            if (result.completed) AppendHit(slot, watcher, XHitKind::Fsm, result.terminal);
-            break;
-        }
-        }
+        AppendHit(slot, watcher, match.kind, match.value, event_id, match.x_mask);
     }
 }
 
-XRunResult XTriggerEngine::RunUntil(
+XRunResult XEngine::RunUntil(
     uint64_t max_half_ticks, uint64_t max_wall_time_ns,
     uint32_t budget_check_interval)
 {
     XRunResult result;
     result.stopped_phase = clock->GetPhase();
     hit_buffer.clear();
-    const auto started = std::chrono::steady_clock::now();
+    const auto started = max_wall_time_ns ? std::chrono::steady_clock::now()
+                                         : std::chrono::steady_clock::time_point{};
     if (budget_check_interval == 0) budget_check_interval = 1;
 
     for (uint64_t i = 0; i < max_half_ticks; ++i) {
@@ -558,7 +476,7 @@ XRunResult XTriggerEngine::RunUntil(
     return result;
 }
 
-XRunResult XTriggerEngine::SamplePhase(XPhase phase)
+XRunResult XEngine::SamplePhase(XPhase phase)
 {
     if (phase != XPhase::DriveStable ||
         clock->GetPhase() != XPhase::FallingStable) {
@@ -579,7 +497,7 @@ XRunResult XTriggerEngine::SamplePhase(XPhase phase)
 }
 
 
-size_t XTriggerEngine::ActiveCount() const
+size_t XEngine::ActiveCount() const
 {
     size_t count = 0;
     for (const auto &watcher : watchers) {
@@ -588,7 +506,7 @@ size_t XTriggerEngine::ActiveCount() const
     return count;
 }
 
-void XTriggerEngine::ClearExecutionState()
+void XEngine::ClearExecutionState()
 {
     if (ActiveCount() != 0) {
         throw std::logic_error(
@@ -599,15 +517,15 @@ void XTriggerEngine::ClearExecutionState()
         watcher.expected_wide.reset();
         watcher.expected_bytes.clear();
         watcher.expected_x_bytes.clear();
-        watcher.sequence_steps.clear();
-        watcher.fsm_transitions.clear();
-        watcher.expr_root = -1;
+        watcher.program.steps.clear();
+        watcher.program.transitions.clear();
+        watcher.program.root = -1;
     }
     hit_buffer.clear();
     expr_engine->Clear();
 }
 
-void XTriggerEngine::Clear()
+void XEngine::Clear()
 {
     watchers.clear();
     free_slots.clear();

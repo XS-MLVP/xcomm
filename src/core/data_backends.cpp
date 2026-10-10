@@ -1,81 +1,9 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/xexpr.h"
 
-#include <type_traits>
-#include <utility>
+#include "xspcomm/detail/data/native_memory.h"
 
 namespace xspcomm {
-
-namespace {
-// Count == 0 uses a runtime loop; fixed counts are expanded at compile time.
-template<class T, size_t Count = 0>
-struct VecMemoryIO {
-    static_assert(std::is_same_v<T, uint8_t> ||
-                  std::is_same_v<T, uint16_t> ||
-                  std::is_same_v<T, uint32_t>);
-
-    static T Load(const unsigned char* src) {
-        T value;
-        std::memcpy(&value, src, sizeof(T));
-        return value;
-    }
-
-    static void Store(unsigned char* dst, uint32_t value) {
-        const T native = static_cast<T>(value);
-        std::memcpy(dst, &native, sizeof(T));
-    }
-
-    template<size_t... I>
-    static void ReadFixed(xsvLogicVecVal* dst, const unsigned char* src,
-                          std::index_sequence<I...>) {
-        ((dst[I].aval = static_cast<uint32_t>(Load(src + I * sizeof(T)))), ...);
-    }
-
-    template<size_t... I>
-    static void WriteFixed(unsigned char* dst, const xsvLogicVecVal* src,
-                           std::index_sequence<I...>) {
-        (Store(dst + I * sizeof(T), src[I].aval), ...);
-    }
-
-    static void Read(xsvLogicVecVal* dst, const void* src, size_t count) {
-        const auto* bytes = static_cast<const unsigned char*>(src);
-        const size_t words = sizeof(T) < sizeof(uint32_t) ? 1 : count;
-        if constexpr (Count != 0) {
-            // ReInit preserves callbacks, so the current width can differ.
-            if (likely(words == Count)) {
-                ReadFixed(dst, bytes, std::make_index_sequence<Count>{});
-                return;
-            }
-        }
-        for (size_t i = 0; i < words; ++i)
-            dst[i].aval = static_cast<uint32_t>(Load(bytes + i * sizeof(T)));
-    }
-
-    static void Write(void* dst, const xsvLogicVecVal* src, size_t count) {
-        auto* bytes = static_cast<unsigned char*>(dst);
-        const size_t words = sizeof(T) < sizeof(uint32_t) ? 1 : count;
-        if constexpr (Count != 0) {
-            if (likely(words == Count)) {
-                WriteFixed(bytes, src, std::make_index_sequence<Count>{});
-                return;
-            }
-        }
-        for (size_t i = 0; i < words; ++i)
-            Store(bytes + i * sizeof(T), src[i].aval);
-    }
-
-    using VecCallback = xfunction<void, xsvLogicVecVal*>;
-    static void Bind(uint64_t address, const uint32_t& count,
-                     VecCallback& read, VecCallback& write) {
-        read = [address, &count](xsvLogicVecVal* dst) {
-            Read(dst, reinterpret_cast<const void*>(address), count);
-        };
-        write = [address, &count](const xsvLogicVecVal* src) {
-            Write(reinterpret_cast<void*>(address), src, count);
-        };
-    }
-};
-} // namespace
 
 void XData::BindDPIPtr(uint64_t read_ptr, uint64_t write_ptr)
 {
@@ -144,22 +72,22 @@ void XData::BindNativeData(uint64_t pdata){
             *native = value;
         };
     } else if (this->mWidth <= 8) {
-        VecMemoryIO<uint8_t, 1>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite);
+        detail::VecMemoryIO<uint8_t, 1>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite);
     } else if (this->mWidth <= 16) {
-        VecMemoryIO<uint16_t, 1>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite);
+        detail::VecMemoryIO<uint16_t, 1>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite);
     } else {
 #define XCOMM_NATIVE_WORD_COUNTS(M) \
     M(1) M(2) M(3) M(4) M(5) M(6) M(7) M(8) \
     M(9) M(10) M(11) M(12) M(13) M(14) M(15) M(16)
 #define XCOMM_BIND_NATIVE_CASE(N) \
     case N: \
-        VecMemoryIO<uint32_t, N>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite); \
+        detail::VecMemoryIO<uint32_t, N>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite); \
         break;
 
         switch (this->vecSize) {
         XCOMM_NATIVE_WORD_COUNTS(XCOMM_BIND_NATIVE_CASE)
         default:
-            VecMemoryIO<uint32_t>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite);
+            detail::VecMemoryIO<uint32_t>::Bind(pdata, this->vecSize, this->vecRead, this->vecWrite);
             break;
         }
 #undef XCOMM_BIND_NATIVE_CASE

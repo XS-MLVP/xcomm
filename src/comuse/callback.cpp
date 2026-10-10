@@ -1,7 +1,40 @@
 #include "xspcomm/xcomuse/callback.h"
 #include "xspcomm/xclock.h"
+#include <stdexcept>
 
 namespace xspcomm {
+
+ComUseStepCb::~ComUseStepCb() { Detach(); }
+
+void ComUseStepCb::Attach(XClock *clock, bool rising) {
+    if (!clock) throw std::invalid_argument("callback clock must not be null");
+    if (clock->in_callback) throw std::logic_error("cannot attach while clock callbacks are running");
+    for (const auto &registration : registrations)
+        if (registration.clock == clock && registration.rising == rising && !registration.lifetime.expired()) return;
+    const std::string description = "ComUseStepCb:" + std::to_string(CSelf()) + (rising ? ":rise" : ":fall");
+    Registration registration{clock, clock->callback_lifetime.Observe(), rising, description};
+    registrations.push_back(registration);
+    try {
+        const auto alive = lifetime.Observe();
+        auto callback = [alive, this](uint64_t cycle, void *) {
+            if (!alive.expired()) Cb(cycle, this);
+        };
+        if (rising) clock->StepRis(callback, nullptr, description);
+        else clock->StepFal(callback, nullptr, description);
+    } catch (...) {
+        registrations.pop_back();
+        throw;
+    }
+}
+
+void ComUseStepCb::Detach() {
+    for (const auto &registration : registrations) {
+        if (registration.lifetime.expired()) continue;
+        if (registration.rising) registration.clock->RemoveStepRisCbByDesc(registration.description);
+        else registration.clock->RemoveStepFalCbByDesc(registration.description);
+    }
+    registrations.clear();
+}
 
 u_int64_t ComUseStepCb::GetCb(){
     return (u_int64_t)ComUseStepCb::Cb;

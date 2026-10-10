@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include "coverage/state.h"
+#include "xspcomm/detail/coverage/state.h"
 #include "xspcomm/xexpr.h"
 
 using namespace xspcomm;
@@ -16,7 +16,7 @@ TEST_CASE("Coverage samples independently of the trigger engine", "[coverage]") 
     XCoverageItem item;
     item.signal = &value;
     XCoverageBin bin;
-    bin.root = expr.NewConst(1);
+    bin.program.root = expr.NewConst(1);
     CoverageState coverage(9, expr, {}, {item}, {bin},
         expr.NewSignal(&gate), expr.NewSignal(&abort), true, 32, false, 1, true);
 
@@ -55,7 +55,7 @@ TEST_CASE("Coverage abort clears overlapping pattern history", "[coverage][patte
     XCoverageItem item;
     item.signal = &value;
     XCoverageBin bin;
-    bin.root = expr.NewConst(1);
+    bin.program.root = expr.NewConst(1);
     CoverageState coverage(1, expr, source, {item}, {bin},
         -1, expr.NewSignal(&abort), true, 32, true, 2, true);
 

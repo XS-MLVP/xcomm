@@ -16,7 +16,7 @@ TEST_CASE("Coverage counts persist without returning ordinary hits", "[xtrigger]
     XCoverageItem item;
     item.signal = &value;
     XCoverageBin bin;
-    bin.root = one;
+    bin.program.root = one;
     auto handle = engine.ArmEdge(XPhase::RisingStable);
     engine.AttachCoverage(handle, {item}, {bin});
     auto limit = engine.ArmClockCycles(10);
@@ -51,7 +51,8 @@ TEST_CASE("Coverage transitions overlap and have isolated registration history",
     XCoverageItem item;
     item.signal = &value;
     XCoverageBin bin;
-    bin.steps = {{XSequenceStepKind::Wait, one}, {XSequenceStepKind::Next, one}};
+    bin.program.kind = XTriggerProgramKind::Sequence;
+    bin.program.steps = {{XSequenceStepKind::Wait, one}, {XSequenceStepKind::Next, one}};
     auto h = engine.ArmEdge(XPhase::RisingStable);
     engine.AttachCoverage(h, {item}, {bin});
     REQUIRE(engine.RunUntil(6).hits.empty());
@@ -75,7 +76,7 @@ TEST_CASE("Coverage rejects malformed descriptors without changing the watcher",
     XCoverageBin bin;
     XData value(8, XData::InOut);
     item.signal = &value;
-    bin.root = 100000;
+    bin.program.root = 100000;
     REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {bin}));
     REQUIRE(engine.RunUntil(2).hits.size() == 1);
     REQUIRE(engine.Disarm(h));
@@ -91,8 +92,8 @@ TEST_CASE("Coverage snapshots preserve full-width illegal values", "[xtrigger][c
     XCoverageItem item;
     item.signal = &value;
     XCoverageBin bin;
-    bin.kind = 2;
-    bin.root = engine.ExprNewCompareSigConstBytes(static_cast<int>(ExprOp::EQ), &value, bytes);
+    bin.kind = XCoverageBinKind::Illegal;
+    bin.program.root = engine.ExprNewCompareSigConstBytes(static_cast<int>(ExprOp::EQ), &value, bytes);
     auto handle = engine.ArmEdge(XPhase::RisingStable);
     engine.AttachCoverage(handle, {item}, {bin}, -1, -1, false);
     engine.RunUntil(2);
@@ -118,7 +119,7 @@ TEST_CASE("Coverage overlapping sequences count simultaneous completions", "[xtr
     auto h = engine.ArmSequence({{XSequenceStepKind::Wait, start_root},
                                 {XSequenceStepKind::Within, done_root, 1, 3}});
     XCoverageItem item; item.signal = &value;
-    XCoverageBin bin; bin.root = engine.ExprNewConst(1);
+    XCoverageBin bin; bin.program.root = engine.ExprNewConst(1);
     engine.AttachCoverage(h, {item}, {bin}, -1, -1, true, 1024, true, 2, true);
     start = 1;
     REQUIRE(engine.RunUntil(4).hits.empty());
@@ -147,7 +148,7 @@ TEST_CASE("Coverage overlap capacity failure preserves pending state for cleanup
     auto h = engine.ArmSequence({{XSequenceStepKind::Wait, engine.ExprNewSignal(&start)},
                                 {XSequenceStepKind::Wait, engine.ExprNewSignal(&done)}});
     XCoverageItem item; item.signal = &value;
-    XCoverageBin bin; bin.root = engine.ExprNewConst(1);
+    XCoverageBin bin; bin.program.root = engine.ExprNewConst(1);
     REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {bin}, -1, -1, true, 1024, true, 0, true));
     engine.AttachCoverage(h, {item}, {bin}, -1, -1, true, 1024, true, 1, false);
     start = 1;
@@ -170,11 +171,11 @@ TEST_CASE("Coverage bins run full independent temporal programs", "[xtrigger][co
     const auto req = engine.ExprNewSignal(&start), ack = engine.ExprNewSignal(&done);
     const auto ready = engine.ExprNewSignal(&stable);
     auto handle = engine.ArmSample(XPhase::RisingStable);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin long_bin; long_bin.program_kind = 1; long_bin.overlap = false;
-    long_bin.steps = {{XSequenceStepKind::Wait, req}, {XSequenceStepKind::Within, ack, 1, 4},
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin long_bin; long_bin.program.kind = XTriggerProgramKind::Sequence; long_bin.program.overlap = false;
+    long_bin.program.steps = {{XSequenceStepKind::Wait, req}, {XSequenceStepKind::Within, ack, 1, 4},
                       {XSequenceStepKind::Hold, ready, 0, 0, 2}};
-    auto short_bin = long_bin; short_bin.steps[1].maximum = 1;
+    auto short_bin = long_bin; short_bin.program.steps[1].maximum = 1;
     engine.AttachCoverage(handle, {item}, {long_bin, short_bin});
     start = 1; REQUIRE(engine.RunUntil(2).hits.empty());
     start = 0; REQUIRE(engine.RunUntil(2).hits.empty());
@@ -192,9 +193,9 @@ TEST_CASE("Coverage FSM terminal filtering ends every terminal attempt", "[xtrig
     XClock clock([](bool) { return 0; });
     XTriggerEngine engine(clock);
     XData start(1, XData::InOut), success(1, XData::InOut), failure(1, XData::InOut);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin bin; bin.program_kind = 2; bin.overlap = false; bin.state_count = 2;
-    bin.transitions = {{0, engine.ExprNewSignal(&start), 1, 0, false},
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin bin; bin.program.kind = XTriggerProgramKind::Fsm; bin.program.overlap = false; bin.program.state_count = 2;
+    bin.program.transitions = {{0, engine.ExprNewSignal(&start), 1, 0, false},
                        {1, engine.ExprNewSignal(&success), 0, 7, true},
                        {1, engine.ExprNewSignal(&failure), 0, 8, true}};
     bin.terminals = {7};
@@ -219,9 +220,9 @@ TEST_CASE("Coverage pattern overlap preserves simultaneous completion counts", "
     XTriggerEngine engine(clock);
     XData start(1, XData::InOut), done(1, XData::InOut);
     auto h = engine.ArmSample(XPhase::RisingStable);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin bin; bin.program_kind = 1; bin.overlap = true; bin.max_active = 3;
-    bin.steps = {{XSequenceStepKind::Wait, engine.ExprNewSignal(&start)},
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin bin; bin.program.kind = XTriggerProgramKind::Sequence; bin.program.overlap = true; bin.program.max_active = 3;
+    bin.program.steps = {{XSequenceStepKind::Wait, engine.ExprNewSignal(&start)},
                  {XSequenceStepKind::Within, engine.ExprNewSignal(&done), 1, 5}};
     engine.AttachCoverage(h, {item}, {bin});
     start = 1; REQUIRE(engine.RunUntil(6).hits.empty());
@@ -234,14 +235,14 @@ TEST_CASE("Coverage rejects malformed pattern descriptors atomically", "[xtrigge
     XClock clock([](bool) { return 0; });
     XTriggerEngine engine(clock);
     auto h = engine.ArmSample(XPhase::RisingStable);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin bin; bin.overlap = false; bin.root = engine.ExprNewConst(1);
-    auto invalid = bin; invalid.mode = static_cast<XConditionMode>(99);
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin bin; bin.program.overlap = false; bin.program.root = engine.ExprNewConst(1);
+    auto invalid = bin; invalid.program.mode = static_cast<XConditionMode>(99);
     REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {invalid}));
-    invalid = bin; invalid.max_active = 0;
+    invalid = bin; invalid.program.max_active = 0;
     REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {invalid}));
-    invalid = bin; invalid.program_kind = 2; invalid.state_count = 1;
-    invalid.root = -1; invalid.terminals = {99};
+    invalid = bin; invalid.program.kind = XTriggerProgramKind::Fsm; invalid.program.state_count = 1;
+    invalid.program.root = -1; invalid.terminals = {99};
     REQUIRE_THROWS(engine.AttachCoverage(h, {item}, {invalid}));
     engine.AttachCoverage(h, {item}, {bin});
     engine.RunUntil(4);
@@ -256,11 +257,11 @@ TEST_CASE("Coverage shares an FSM and routes every terminal to its bins", "[xtri
     const auto req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
     const auto good = engine.ExprNewSignal(&correct);
     const auto ok = engine.ExprNewBinary(static_cast<int>(ExprOp::LAND), rsp, good);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin first; first.program_kind = 2; first.state_count = 2; first.overlap = false;
-    first.transitions = {{0, req, 1, 0, false}, {1, ok, 0, 7, true}, {1, rsp, 0, 8, true}};
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin first; first.program.kind = XTriggerProgramKind::Fsm; first.program.state_count = 2; first.program.overlap = false;
+    first.program.transitions = {{0, req, 1, 0, false}, {1, ok, 0, 7, true}, {1, rsp, 0, 8, true}};
     first.terminals = {7};
-    auto second = first; second.terminals = {8}; second.kind = 2;
+    auto second = first; second.terminals = {8}; second.kind = XCoverageBinKind::Illegal;
     auto all = first; all.terminals.clear();
     const auto handle = engine.ArmSample(XPhase::RisingStable);
     engine.AttachCoverage(handle, {item}, {first, second, all}, -1, -1, false, 1024, false, 1, true);
@@ -295,10 +296,10 @@ TEST_CASE("Shared coverage FSM retains simultaneous counts for different termina
     XTriggerEngine engine(clock);
     XData request(1, XData::InOut), response(1, XData::InOut);
     const auto req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin fast; fast.program_kind = 2; fast.state_count = 3;
-    fast.overlap = true; fast.max_active = 3;
-    fast.transitions = {{0, req, 1, 0, false}, {1, rsp, 0, 7, true},
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin fast; fast.program.kind = XTriggerProgramKind::Fsm; fast.program.state_count = 3;
+    fast.program.overlap = true; fast.program.max_active = 3;
+    fast.program.transitions = {{0, req, 1, 0, false}, {1, rsp, 0, 7, true},
                         {1, -1, 2, 0, false}, {2, rsp, 0, 8, true}};
     fast.terminals = {7};
     auto slow = fast; slow.terminals = {8};
@@ -325,13 +326,13 @@ TEST_CASE("Coverage shares only identical execution policies in the same point",
     XTriggerEngine engine(clock);
     XData request(1, XData::InOut), response(1, XData::InOut);
     const auto req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
-    XCoverageItem item; item.pattern = true;
-    XCoverageBin original; original.program_kind = 1; original.overlap = false;
-    original.steps = {{XSequenceStepKind::Wait, req}, {XSequenceStepKind::Within, rsp, 1, 4}};
+    XCoverageItem item; item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin original; original.program.kind = XTriggerProgramKind::Sequence; original.program.overlap = false;
+    original.program.steps = {{XSequenceStepKind::Wait, req}, {XSequenceStepKind::Within, rsp, 1, 4}};
     auto alias = original;
     auto other_point = original; other_point.item = 1;
-    auto short_window = original; short_window.steps[1].maximum = 2;
-    auto overlapping = original; overlapping.overlap = true; overlapping.max_active = 3;
+    auto short_window = original; short_window.program.steps[1].maximum = 2;
+    auto overlapping = original; overlapping.program.overlap = true; overlapping.program.max_active = 3;
     auto h = engine.ArmSample(XPhase::RisingStable);
     engine.AttachCoverage(h, {item, item}, {original, alias, other_point, short_window, overlapping});
     REQUIRE(engine.CoverageExecutionCount(h) == 4);
@@ -341,4 +342,46 @@ TEST_CASE("Coverage shares only identical execution policies in the same point",
     const auto snapshot = engine.CoverageSnapshot(h);
     for (size_t bin = 0; bin < 5; ++bin) REQUIRE(snapshot.counters[12 + bin] == 0);
     REQUIRE(engine.Disarm(h));
+}
+
+TEST_CASE("Explicit coverage kinds reject mixed definitions", "[coverage][validation]") {
+    XClock clock([](bool) { return 0; });
+    XEngine engine(clock);
+    XData signal(8, XData::InOut);
+    const auto root = engine.ExprNewConst(1);
+    auto handle = engine.ArmSample(XPhase::RisingStable);
+    XCoverageItem item;
+    XCoverageBin bin;
+    bin.program.root = root;
+    REQUIRE_THROWS_AS(engine.AttachCoverage(handle, {item}, {bin}), std::invalid_argument);
+    item.kind = XCoverageItemKind::Pattern;
+    item.signal = &signal;
+    REQUIRE_THROWS_AS(engine.AttachCoverage(handle, {item}, {bin}), std::invalid_argument);
+    item.signal = nullptr;
+    bin.program.overlap = false;
+    bin.program.transitions = {{0, root, 0, 0, true}};
+    REQUIRE_THROWS_AS(engine.AttachCoverage(handle, {item}, {bin}), std::invalid_argument);
+    bin.program.transitions.clear();
+    bin.program.kind = static_cast<XTriggerProgramKind>(99);
+    REQUIRE_THROWS_AS(engine.AttachCoverage(handle, {item}, {bin}), std::invalid_argument);
+    bin.program.kind = XTriggerProgramKind::Expr;
+    engine.AttachCoverage(handle, {item}, {bin});
+    engine.RunUntil(2);
+    REQUIRE(engine.CoverageSnapshot(handle).counters.back() == 1);
+}
+
+TEST_CASE("Trigger and coverage share program validation", "[coverage][trigger][validation]") {
+    XClock clock([](bool) { return 0; });
+    XEngine engine(clock);
+    const auto root = engine.ExprNewConst(1);
+    const std::vector<XSequenceStep> invalid{{static_cast<XSequenceStepKind>(99), root}};
+    REQUIRE_FALSE(engine.ArmSequence(invalid).IsValid());
+    XCoverageItem item;
+    item.kind = XCoverageItemKind::Pattern;
+    XCoverageBin bin;
+    bin.program.kind = XTriggerProgramKind::Sequence;
+    bin.program.steps = invalid;
+    bin.program.overlap = false;
+    const auto handle = engine.ArmSample(XPhase::RisingStable);
+    REQUIRE_THROWS_AS(engine.AttachCoverage(handle, {item}, {bin}), std::invalid_argument);
 }

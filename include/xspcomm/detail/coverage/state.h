@@ -2,7 +2,7 @@
 #define XSPCOMM_COVERAGE_STATE_H
 
 #include "xspcomm/xcoverage.h"
-#include "../trigger/matcher.h"
+#include "xspcomm/detail/trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 #include <algorithm>
 #include <limits>
@@ -38,6 +38,10 @@ public:
     XCoverageSnapshot Snapshot(uint64_t tick, bool progress) const;
 
 private:
+    void RecordDiagnostics(size_t pattern, const MatchUpdate &update);
+    void SampleValuePoint(ExprEngine &expr, size_t item, size_t offset);
+    inline void SamplePatternPoint(ExprEngine &expr, size_t item, size_t offset);
+    void SampleCrossPoint(size_t item, size_t offset);
     size_t Advance(ExprEngine &expr, PatternMatcher &matcher,
                    size_t pattern, bool overlap, size_t max_active);
     std::vector<XCoverageItem> items;
@@ -45,6 +49,7 @@ private:
     PatternMatcher source_matcher;
     std::vector<PatternMatcher> matchers;
     std::vector<size_t> owners;
+    std::vector<size_t> illegal_indices;
     bool overlap = false;
     size_t max_active = 1;
     enum { Started, Completed, Failed, Expired, Aborted, Cleared, PeakActive, DiagnosticCount };
