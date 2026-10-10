@@ -56,15 +56,34 @@ extensions; a Python version specifier alone cannot verify C++ ABI identity.
 ## Migrating to the native trigger engine
 
 The native trigger engine changes the C++ layouts of `XClock`, `XData`, and
-`ExprNode`, so this release uses native ABI 2 (`libxspcomm.so.2`). Rebuild
-Picker-generated DUT extensions and other native bindings against the new
-headers and library. Keep each generated DUT and its runtime on a matching
-native ABI; changing a library symlink does not make an ABI 1 binary compatible.
+`ExprNode`, which introduced native ABI 2. Complete per-bin trigger programs now
+reorganize `XCoverageBin` and checker/runtime layouts (ABI 4). Renaming the
+monitor classes changes exported C++ symbols, so the current native ABI is 5
+(`libxspcomm.so.5`). Rebuild
+Picker-generated DUT extensions and other native bindings against these headers
+and library, and update the consumer's ABI requirement together. Keep each
+generated DUT and its runtime on a matching native ABI.
 
-`XTriggerEngine.CoverageVersion() == 3` identifies the coverage snapshot
-protocol. It is separate from the native library ABI and the Python package
-version. The Python `XPin` wrapper is removed; use `XData` directly instead.
+`XTriggerEngine.CoverageVersion() == 5` identifies the complete trigger-bin
+descriptor protocol. It is separate from the native library ABI and the Python
+package version. The Python `XPin` wrapper is removed; use `XData` directly instead.
 
 Picker 2.0.1 restricts xspcomm to `<0.2`. Before releasing Picker with an
 xspcomm `0.2.x` package, update its supported dependency range and rebuild its
 bundled native runtime.
+
+The PR #30 review migration introduces `XEngine` with the existing
+`XTriggerEngine` entry alias, explicit coverage kinds and `bin.program`.
+The next preview is `0.3.0.dev2` for ABI 5 / descriptor protocol 5, with
+`xmonitor.h`, `monitor/` and the `XConditionCheck` family of names. The earlier
+`0.3.0.dev1` preview identifies ABI 4 / protocol 5, and `0.3.0.dev0` identifies
+ABI 3 / protocol 4. Update source names and frontend lowering, then rebuild
+native clients together. See [the migration tables](architecture.md#header-migration).
+
+The installed SDK consists of `include/xspcomm/` and the generated `xconfig.h`.
+Keep pure matching, coverage-state and native-memory implementation headers under
+`src/`; do not add them to the installed include tree or the common SWIG interface.
+Public templates may use helpers from `include/xspcomm/common/`. Keep
+`runtime/types.h` independent of clock and engine implementations. The internal
+matcher and coverage tests use the private source include directory explicitly;
+ordinary SDK consumers should compile with only the installed include directory.

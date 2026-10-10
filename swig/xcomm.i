@@ -5,7 +5,7 @@
 #include "xspcomm/xport.h"
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xsignal_cfg.h"
-#include "xspcomm/xcomuse.h"
+#include "xspcomm/xmonitor.h"
 #include "xspcomm/xtrigger.h"
 #include <stdexcept>
 %}
@@ -45,7 +45,7 @@
 %include std_string.i
 %include std_map.i
 %include std_vector.i
-#if !defined(SWIGGO) && !defined(SWIGLUA)
+#if !defined(SWIGGO) && !defined(SWIGLUA) && !defined(SWIGJAVASCRIPT)
 %include std_shared_ptr.i
 %shared_ptr(xspcomm::XData)
 #endif
@@ -58,15 +58,6 @@ namespace std {
    %template(DictStrBool) map<string, bool>;
 }
 
-%include "xspcomm/xclock.h"
-%include "xspcomm/xdata.h"
-%include "xspcomm/xport.h"
-%include "xspcomm/xutil.h"
-%include "xspcomm/xsignal_cfg.h"
-%include "xspcomm/xcomuse_base.h"
-%include "xspcomm/xexpr.h"
-%include "xspcomm/xfsm.h"
-%include "xspcomm/xcomuse.h"
 %include exception.i
 %exception {
     try { $action }
@@ -77,6 +68,25 @@ namespace std {
         SWIG_exception(SWIG_RuntimeError, error.what());
     }
 }
+%include "xspcomm/runtime/types.h"
+%include "xspcomm/xclock.h"
+%include "xspcomm/xdata.h"
+%include "xspcomm/xport.h"
+%include "xspcomm/xutil.h"
+%include "xspcomm/xsignal_cfg.h"
+%include "xspcomm/monitor/callback.h"
+%include "xspcomm/common/compare_op.h"
+%include "xspcomm/monitor/condition.h"
+%include "xspcomm/monitor/range.h"
+%include "xspcomm/common/memory.h"
+%include "xspcomm/xexpr.h"
+%include "xspcomm/monitor/expr.h"
+%include "xspcomm/monitor/fsm.h"
+%include "xspcomm/xmonitor.h"
+%include "xspcomm/xpattern.h"
+%include "xspcomm/xcoverage.h"
+%rename(XTriggerEngine) xspcomm::XEngine;
+%include "xspcomm/xengine.h"
 %include "xspcomm/xtrigger.h"
 %exception;
 
@@ -130,7 +140,7 @@ namespace std {
 %d_callback(cb_int_bool, int, bool);
 %d_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
-// ComUseCondCheck
+// XConditionCheck
 %d_callback(cb_bool_XData_XData_uint64, bool, xspcomm::XData*, xspcomm::XData*, uint64_t);
 %d_callback(cb_bool_uint64_uint64_uint64, bool, uint64_t, uint64_t, uint64_t);
 
@@ -148,6 +158,6 @@ namespace std {
 %x_callback(cb_int_bool, int, bool);
 %x_callback(cb_void_u64_voidp, void, u_int64_t, void *); // StepRis, StepFal
 
-// ComUseCondCheck
+// XConditionCheck
 %x_callback(cb_bool_XData_XData_uint64, bool, xspcomm::XData*, xspcomm::XData*, uint64_t);
 %x_callback(cb_bool_uint64_uint64_uint64, bool, uint64_t, uint64_t, uint64_t);

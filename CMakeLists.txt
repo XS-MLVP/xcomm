@@ -11,7 +11,7 @@ else()
 endif()
 
 # Increment only when the native C++ ABI becomes incompatible.
-set(XSPCOMM_ABI_VERSION 2)
+set(XSPCOMM_ABI_VERSION 5)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -24,8 +24,13 @@ init_xspcomm()
 include_directories(BEFORE ${PROJECT_SOURCE_DIR}/include)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(XSPCOMM_HEADER_STAGE ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_subdirectory(src)
-add_subdirectory(tests)
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+add_subdirectory(integrations/tlm)
 add_subdirectory(swig)

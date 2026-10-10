@@ -32,7 +32,9 @@ if(DEFINED CMAKE_BUILD_PARALLEL)
 set(INNER_CMAKE_BUILD_PARALLEL "=${CMAKE_BUILD_PARALLEL}")
 endif()
 
-set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -ftree-vectorize -mtune=native -funroll-loops -funswitch-loops -fomit-frame-pointer")
+# Native signal buffers are accessed through both 32-bit and 64-bit views.
+# Keep those accesses dependent under optimization, including wheel builds.
+set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -fno-strict-aliasing -ftree-vectorize -mtune=native -funroll-loops -funswitch-loops -fomit-frame-pointer")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)
@@ -72,8 +74,8 @@ message(STATUS "GIT_BRANCH: ${GIT_BRANCH}")
 message(STATUS "GIT_HASH: ${GIT_HASH}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/xspcomm/xconfig.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/include/xspcomm/xconfig.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+               ${CMAKE_CURRENT_BINARY_DIR}/generated/xspcomm/xconfig.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 if (NOT "$ENV{XSPCOMM_INSTALL_PREFIX}" STREQUAL "")
   set(XSPCOMM_INSTALL_PREFIX "$ENV{XSPCOMM_INSTALL_PREFIX}" PARENT_SCOPE)

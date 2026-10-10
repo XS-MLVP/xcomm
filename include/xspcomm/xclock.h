@@ -4,6 +4,8 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/xutil.h"
+#include "xspcomm/common/lifetime.h"
+#include "xspcomm/runtime/types.h"
 
 #if ENABLE_XCOROUTINE
 #include "xspcomm/xcoroutine.h"
@@ -53,14 +55,10 @@ enum class FastMode {
     ONLY_STEP_FAL = -2,      // Only step on fall edges (half cycle)
 };
 
-enum class XPhase {
-    FallingStable = 0,
-    RisingStable = 1,
-    DriveStable = 2,
-};
-
 class XClock
 {
+    friend class XStepCallback;
+    detail::Lifetime callback_lifetime;
     xfunction<int, bool> step_fc;
 #if ENABLE_XCOROUTINE
     std::map<std::coroutine_handle<>, _XAWait *> cor_handler;
@@ -68,6 +66,7 @@ class XClock
     std::vector<XClockCallBack> list_call_back_ris;
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
+    bool callbacks_removed = false;
     bool is_disable = false;
     int fast_mode_level = 0;
     bool half_cycle_open = false;
