@@ -1,25 +1,25 @@
 set(XSPCOMM_SOURCES
     common/lifetime.cpp
     common/memory.cpp
-    comuse/callback.cpp
-    comuse/condition.cpp
-    comuse/expr.cpp
-    comuse/fsm.cpp
-    comuse/range.cpp
+    monitor/callback.cpp
+    monitor/condition.cpp
+    monitor/expr.cpp
+    monitor/fsm.cpp
+    monitor/range.cpp
     core/clock.cpp
     core/coroutine.cpp
-    core/data.cpp
-    core/data_backends.cpp
-    core/data_value.cpp
-    core/data_vpi.cpp
-    core/pin.cpp
+    data/data.cpp
+    data/backends.cpp
+    data/value.cpp
+    data/vpi.cpp
+    data/pin.cpp
     core/port.cpp
     core/signal_cfg.cpp
     core/util.cpp
-    coverage/engine.cpp
+    coverage/state.cpp
     expr/engine.cpp
     expr/parser.cpp
-    trigger/pattern.cpp
+    trigger/executor.cpp
     coverage/registration.cpp
     runtime/engine.cpp
     trigger/matcher.cpp

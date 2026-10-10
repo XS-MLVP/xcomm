@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include "xspcomm/common/memory/access.h"
-#include "xspcomm/common/operation.h"
+#include "xspcomm/common/memory_access.h"
+#include "xspcomm/common/compare_op.h"
 
 namespace xspcomm::compare {
 

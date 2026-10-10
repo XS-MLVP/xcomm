@@ -1,7 +1,7 @@
-#ifndef XSPCOMM_XCOMUSE_CONDITION_H
-#define XSPCOMM_XCOMUSE_CONDITION_H
+#ifndef XSPCOMM_MONITOR_CONDITION_H
+#define XSPCOMM_MONITOR_CONDITION_H
 
-#include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/monitor/callback.h"
 #include "xspcomm/common/compare.h"
 #include "xspcomm/xdata.h"
 #include <map>
@@ -15,15 +15,15 @@ namespace xspcomm {
     class ExprEngine;
 
     // Condition Checker
-    class ComUseCondCheck: public ComUseStepCb{
+    class XConditionCheck: public XStepCallback{
         using XDataCmpFn = bool (*)(XData*, XData*);
-        using PtrCmpFn = bool (*)(ComUseCondCheck*, uint64_t, uint64_t, int);
+        using PtrCmpFn = bool (*)(XConditionCheck*, uint64_t, uint64_t, int);
         template <CompareOp Op>
         static bool XDataCmp(XData* a, XData* b) {
             return compare::Compare<Op>(*a, *b);
         }
         template <CompareOp Op>
-        static bool PtrCmp(ComUseCondCheck*, uint64_t a, uint64_t b, int bytes) {
+        static bool PtrCmp(XConditionCheck*, uint64_t a, uint64_t b, int bytes) {
             const int order = compare::CompareSignedBytes(
                 reinterpret_cast<const unsigned char*>(a),
                 reinterpret_cast<const unsigned char*>(b), bytes);
@@ -87,7 +87,7 @@ namespace xspcomm {
     protected:
         void SetExpression(std::string name, ExprEngine &engine, int root);
     public:
-        ComUseCondCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
+        XConditionCheck(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
         void BindXClock(XClock *clk);
         void SetCondition(std::string unique_name, XData* pin, XData* val, CompareOp cmp, XData *valid = nullptr, XData *valid_value = nullptr, xfunction<bool, XData*, XData*, uint64_t> func = nullptr, uint64_t arg=0);
         void SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, CompareOp cmp, int bytes, uint64_t valid_ptr = 0, uint64_t valid_value_ptr = 0, int valid_bytes = 1, xfunction<bool, uint64_t, uint64_t, uint64_t> func = nullptr, uint64_t arg=0);

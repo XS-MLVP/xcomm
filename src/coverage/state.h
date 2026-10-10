@@ -2,7 +2,7 @@
 #define XSPCOMM_COVERAGE_STATE_H
 
 #include "xspcomm/xcoverage.h"
-#include "xspcomm/detail/trigger/matcher.h"
+#include "trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 #include <algorithm>
 #include <limits>

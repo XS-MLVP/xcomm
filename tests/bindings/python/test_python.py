@@ -116,7 +116,7 @@ def test_xdata():
     clk.StepRis(lambda c, x, y: print("lambda ris: ", c, x, y), (1, 2))
     clk.StepRis(lambda c, x, y: print("lambda fal: ", c, x, y), (3, 4))
 
-    echo = ComUseEcho(a.CSelf(), b.CSelf())
+    echo = XEcho(a.CSelf(), b.CSelf())
     print("echo:", a.value, b.value)
     a.value = 1
     b.value = b'A'

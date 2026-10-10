@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include "xspcomm/xcomuse/fsm.h"
+#include "xspcomm/monitor/fsm.h"
 #include "xspcomm/xclock.h"
 
 using namespace xspcomm;
@@ -17,11 +17,11 @@ TEST_CASE("FSM basic transitions and trigger", "[xfsm]") {
         "  if $counter0 >= 2 trigger\n";
 
     XClock clk([](bool){ return 0; });
-    ComUseFsmTrigger fsm(&clk);
+    XFsmMonitor fsm(&clk);
     fsm.LoadProgram(prog, nullptr);
     REQUIRE(fsm.GetCurrentState() == "S0");
 
-    auto fn = (void (*)(uint64_t, void*))ComUseStepCb::GetCb();
+    auto fn = (void (*)(uint64_t, void*))XStepCallback::GetCb();
     fn(1, &fsm);
     REQUIRE(fsm.GetCurrentState() == "S1");
     REQUIRE(fsm.IsTriggered() == false);
@@ -45,17 +45,17 @@ TEST_CASE("FSM else/goto", "[xfsm]") {
         "state C:\n"
         "  trigger\n";
 
-    ComUseFsmTrigger fsm;
+    XFsmMonitor fsm;
     fsm.LoadProgram(prog, nullptr);
     REQUIRE(fsm.GetCurrentState() == "A");
 
-    auto fn = (void (*)(uint64_t, void*))ComUseStepCb::GetCb();
+    auto fn = (void (*)(uint64_t, void*))XStepCallback::GetCb();
     fn(1, &fsm);
     REQUIRE(fsm.GetCurrentState() == "C");
 }
 
 TEST_CASE("FSM parse errors", "[xfsm]") {
-    ComUseFsmTrigger fsm;
+    XFsmMonitor fsm;
 
     REQUIRE_NOTHROW(fsm.LoadProgram("", nullptr));
     REQUIRE(fsm.ListStates().empty());

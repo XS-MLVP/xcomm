@@ -1,13 +1,16 @@
-#include "xspcomm/xengine.h"
+#include "runtime/registration.h"
+#include "xspcomm/xclock.h"
 #include "xspcomm/xexpr.h"
-#include "xspcomm/detail/coverage/state.h"
-#include "xspcomm/detail/trigger/matcher.h"
+#include "coverage/state.h"
+#include "trigger/matcher.h"
 
 #include <chrono>
 #include <algorithm>
 #include <stdexcept>
 
 namespace xspcomm {
+
+using WatcherKind = detail::TriggerRegistration::Kind;
 
 XEngine::XEngine(XClock *clock, size_t capacity)
     : clock(clock), capacity(capacity), expr_engine(std::make_unique<ExprEngine>())
@@ -22,6 +25,8 @@ XEngine::XEngine(XClock *clock, size_t capacity)
     free_slots.reserve(capacity);
     hit_buffer.reserve(capacity);
 }
+
+XEngine::XEngine(XClock &clock, size_t capacity) : XEngine(&clock, capacity) {}
 
 XEngine::~XEngine() = default;
 
@@ -390,7 +395,7 @@ inline bool XEngine::EvaluateCoverage(Watcher &watcher)
     case detail::CoverageState::SampleStatus::Ready:
         break;
     }
-    const auto source = CoverageSource(watcher);
+    const auto source = watcher.CoverageSource();
     if (source.sequence || source.fsm) {
         coverage.SamplePattern(*expr_engine, clock->GetHalfTick());
         return true;

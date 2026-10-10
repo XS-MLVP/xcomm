@@ -1,4 +1,4 @@
-#include "xspcomm/detail/trigger/program.h"
+#include "trigger/executor.h"
 #include "xspcomm/xexpr.h"
 
 #include <algorithm>

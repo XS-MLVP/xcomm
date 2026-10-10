@@ -1,5 +1,5 @@
-#ifndef XSPCOMM_XCOMUSE_RANGE_H
-#define XSPCOMM_XCOMUSE_RANGE_H
+#ifndef XSPCOMM_MONITOR_RANGE_H
+#define XSPCOMM_MONITOR_RANGE_H
 
 #include "xspcomm/xcallback.h"
 #include "xspcomm/common/compare.h"
@@ -10,7 +10,7 @@ namespace xspcomm {
 
     class XData;
 
-    class ComUseRangeCheck {
+    class XRangeCheck {
         int bytes;
         int range;
 
@@ -23,7 +23,7 @@ namespace xspcomm {
             return bytes <= 8 ? comparisons[bytes - 1] : ArrayWideCmp;
         }
     public:
-        ComUseRangeCheck(int range, int bytes) : bytes(bytes), range(range) {
+        XRangeCheck(int range, int bytes) : bytes(bytes), range(range) {
             Assert(bytes >= 1, "Need bytes >= 1");
         }
 
@@ -32,7 +32,7 @@ namespace xspcomm {
         }
 
         static bool ArrayCmp(uint64_t a, uint64_t b, uint64_t self) {
-            const auto* check = reinterpret_cast<const ComUseRangeCheck*>(self);
+            const auto* check = reinterpret_cast<const XRangeCheck*>(self);
             if (check->bytes == sizeof(uint64_t)) {
                 uint64_t target, center;
                 std::memcpy(&target, reinterpret_cast<const void*>(a), sizeof(target));

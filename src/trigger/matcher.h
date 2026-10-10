@@ -1,7 +1,7 @@
-#ifndef XSPCOMM_DETAIL_TRIGGER_MATCHER_H
-#define XSPCOMM_DETAIL_TRIGGER_MATCHER_H
+#ifndef XSPCOMM_TRIGGER_MATCHER_H
+#define XSPCOMM_TRIGGER_MATCHER_H
 
-#include "xspcomm/detail/trigger/program.h"
+#include "trigger/executor.h"
 #include <algorithm>
 
 namespace xspcomm::detail {

@@ -1,8 +1,8 @@
-#ifndef XSPCOMM_DETAIL_DATA_NATIVE_MEMORY_H
-#define XSPCOMM_DETAIL_DATA_NATIVE_MEMORY_H
+#ifndef XSPCOMM_DATA_NATIVE_MEMORY_H
+#define XSPCOMM_DATA_NATIVE_MEMORY_H
 
 #include "xspcomm/xdata.h"
-#include "xspcomm/common/memory/access.h"
+#include "xspcomm/common/memory_access.h"
 #include <type_traits>
 #include <utility>
 

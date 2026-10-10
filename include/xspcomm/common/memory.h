@@ -2,7 +2,7 @@
 #define XSPCOMM_COMMON_MEMORY_H
 
 #include "xspcomm/xutil.h"
-#include "xspcomm/common/memory/access.h"
+#include "xspcomm/common/memory_access.h"
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -36,28 +36,28 @@ namespace xspcomm {
     unsigned int       *U64AsU32Ptr(uint64_t p);
     unsigned char      *U64AsU8Ptr(uint64_t p);
 
-    class ComUseDataArray{
+    class XByteBuffer{
         bool is_ref = false;
         int byte_size;
         int *buffer = nullptr;
     public:
-        ComUseDataArray(int byte_size):byte_size(byte_size){
+        XByteBuffer(int byte_size):byte_size(byte_size){
             Assert(byte_size > 0, "Need size > 0");
             int n = byte_size/4 + (byte_size % 4 == 0 ? 0:1);
             this->buffer = new int[n];
             memset(this->buffer, 0, this->byte_size);
         }
-        ComUseDataArray(uint64_t base, int byte_size):byte_size(byte_size){
+        XByteBuffer(uint64_t base, int byte_size):byte_size(byte_size){
             this->buffer = (int*)base;
             this->is_ref = true;
         }
-        ~ComUseDataArray(){if(!this->is_ref)delete[] this->buffer;}
-        bool operator==(const ComUseDataArray & t) const{
+        ~XByteBuffer(){if(!this->is_ref)delete[] this->buffer;}
+        bool operator==(const XByteBuffer & t) const{
             if(this->byte_size != t.byte_size)return false;
             return memcmp(this->buffer, t.buffer, this->byte_size) == 0;
         }
-        ComUseDataArray * Copy(){
-            auto ret = new ComUseDataArray(this->byte_size);
+        XByteBuffer * Copy(){
+            auto ret = new XByteBuffer(this->byte_size);
             ret->SyncFrom(this->BaseAddr(), this->byte_size);
             return ret;
         }

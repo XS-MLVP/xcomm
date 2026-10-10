@@ -1,4 +1,4 @@
-#include "xspcomm/detail/trigger/matcher.h"
+#include "trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 
 #include <algorithm>

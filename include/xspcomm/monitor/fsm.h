@@ -1,14 +1,14 @@
-#ifndef XSPCOMM_XCOMUSE_FSM_H
-#define XSPCOMM_XCOMUSE_FSM_H
+#ifndef XSPCOMM_MONITOR_FSM_H
+#define XSPCOMM_MONITOR_FSM_H
 
-#include "xspcomm/xcomuse/callback.h"
+#include "xspcomm/monitor/callback.h"
 #include "xspcomm/xexpr.h"
 
 namespace xspcomm {
 
     class XClock;
 
-    class ComUseFsmTrigger: public ComUseStepCb{
+    class XFsmMonitor: public XStepCallback{
         struct FsmTransition{
             int cond_root = -1;
             std::string next_name;
@@ -25,7 +25,7 @@ namespace xspcomm {
             };
             Type type = Type::SetFlag;
             int index = -1;
-            void (*exec)(ComUseFsmTrigger*, int) = nullptr;
+            void (*exec)(XFsmMonitor*, int) = nullptr;
         };
         struct FsmState{
             std::string name;
@@ -49,12 +49,12 @@ namespace xspcomm {
         int current_state = -1;
         bool triggered = false;
         std::string triggered_state;
-        static void ExecSetFlag(ComUseFsmTrigger* self, int idx);
-        static void ExecClearFlag(ComUseFsmTrigger* self, int idx);
-        static void ExecIncCounter(ComUseFsmTrigger* self, int idx);
-        static void ExecResetCounter(ComUseFsmTrigger* self, int idx);
+        static void ExecSetFlag(XFsmMonitor* self, int idx);
+        static void ExecClearFlag(XFsmMonitor* self, int idx);
+        static void ExecIncCounter(XFsmMonitor* self, int idx);
+        static void ExecResetCounter(XFsmMonitor* self, int idx);
     public:
-        ComUseFsmTrigger(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}        
+        XFsmMonitor(XClock* clk=nullptr){if(clk)this->clk_list.push_back(clk);}
         void BindXClock(XClock *clk);
         void LoadProgram(std::string program, XSignalCFG* cfg);
         void Reset();

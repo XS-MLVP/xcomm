@@ -1,8 +1,8 @@
-#ifndef XSPCOMM_XCOMUSE_CALLBACK_H
-#define XSPCOMM_XCOMUSE_CALLBACK_H
+#ifndef XSPCOMM_MONITOR_CALLBACK_H
+#define XSPCOMM_MONITOR_CALLBACK_H
 
 #include "xspcomm/xutil.h"
-#include "xspcomm/detail/lifetime.h"
+#include "xspcomm/common/lifetime.h"
 #include <string>
 #include <memory>
 #include <vector>
@@ -12,7 +12,7 @@ namespace xspcomm {
     class XData;
     class XClock;
 
-    class ComUseStepCb{
+    class XStepCallback{
         int cb_maxcts = -1;
         int cb_counts = 0;
         bool cb_enable = true;
@@ -26,10 +26,10 @@ namespace xspcomm {
         std::vector<Registration> registrations;
     public:
         uint64_t cycle = 0;
-        ComUseStepCb() = default;
-        ComUseStepCb(const ComUseStepCb &) = delete;
-        ComUseStepCb &operator=(const ComUseStepCb &) = delete;
-        virtual ~ComUseStepCb();
+        XStepCallback() = default;
+        XStepCallback(const XStepCallback &) = delete;
+        XStepCallback &operator=(const XStepCallback &) = delete;
+        virtual ~XStepCallback();
         void Attach(XClock *clock, bool rising = true);
         void Detach();
         void Disable();
@@ -47,14 +47,14 @@ namespace xspcomm {
     };
 
     // Echo data when valid != 0
-    class ComUseEcho: public ComUseStepCb{
+    class XEcho: public XStepCallback{
     public:
         bool stderr_echo;
         XData* valid = NULL;
         XData* data  = NULL;
         std::string fmt;
         int convert; // 0 (char), 1 (int), 2 (float), 3 (double), 4 (string)
-        ComUseEcho(u_int64_t valid, u_int64_t data,
+        XEcho(u_int64_t valid, u_int64_t data,
                    bool stderr_echo = true,
                    std::string fmt="%c",
                    int convert = 0):

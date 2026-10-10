@@ -1,8 +1,8 @@
-#ifndef XSPCOMM_DETAIL_TRIGGER_REGISTRATION_H
-#define XSPCOMM_DETAIL_TRIGGER_REGISTRATION_H
+#ifndef XSPCOMM_TRIGGER_REGISTRATION_H
+#define XSPCOMM_TRIGGER_REGISTRATION_H
 
-#include "xspcomm/trigger/types.h"
-#include "xspcomm/detail/trigger/matcher.h"
+#include "xspcomm/runtime/types.h"
+#include "trigger/matcher.h"
 #include "xspcomm/xexpr.h"
 #include <memory>
 

@@ -2,7 +2,7 @@
 #include "catch.hpp"
 
 #include "xspcomm/xexpr.h"
-#include "xspcomm/xcomuse/expr.h"
+#include "xspcomm/monitor/expr.h"
 #include "xspcomm/xdata.h"
 #include "xspcomm/xsignal_cfg.h"
 
@@ -137,9 +137,9 @@ TEST_CASE("ExprEngine parser errors", "[xexpr]") {
     REQUIRE_THROWS(eng.CompileExpr("a @ b", nullptr));
 }
 
-TEST_CASE("ComUseExprCheck reports every expression hit in one call",
+TEST_CASE("XExprCheck reports every expression hit in one call",
           "[xexpr][trigger]") {
-    ComUseExprCheck checker;
+    XExprCheck checker;
     checker.SetExpr("first", checker.ExprNewConst(1));
     checker.SetExpr("second", checker.ExprNewConst(1));
 

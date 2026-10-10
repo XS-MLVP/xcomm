@@ -1,13 +1,13 @@
-#include "xspcomm/xcomuse/condition.h"
+#include "xspcomm/monitor/condition.h"
 #include "xspcomm/xclock.h"
 #include "xspcomm/xexpr.h"
 
 namespace xspcomm {
 
-void ComUseCondCheck::BindXClock(XClock *clk){
+void XConditionCheck::BindXClock(XClock *clk){
     this->clk_list.push_back(clk);
 }
-void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid, XData *valid_value, xfunction<bool, XData*, XData*, uint64_t> func, uint64_t arg){
+void XConditionCheck::SetCondition(std::string unique_name, XData* pin, XData* val, CompareOp cmp, XData *valid, XData *valid_value, xfunction<bool, XData*, XData*, uint64_t> func, uint64_t arg){
     Assert(func == nullptr, "func type error: %d", func.func == nullptr);
     RemoveExpression(unique_name);
     if (!pin || !val || !SelectXDataCmpFn(cmp) || (valid && !valid_value))
@@ -24,7 +24,7 @@ void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* v
         entry.valid_value = valid_value;
         entry.func = func;
         entry.arg = arg;
-        entry.valid_cmp = ComUseCondCmp::EQ;
+        entry.valid_cmp = CompareOp::EQ;
         entry.cmp_fn = SelectXDataCmpFn(cmp);
         entry.valid_cmp_fn = SelectXDataCmpFn(entry.valid_cmp);
         this->cond_vec_xdata.push_back(std::move(entry));
@@ -42,7 +42,7 @@ void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* v
         entry.valid_cmp_fn = SelectXDataCmpFn(entry.valid_cmp);
     }
 };
-void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, int valid_bytes, xfunction<bool, uint64_t, uint64_t, uint64_t> func, uint64_t arg){
+void XConditionCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, CompareOp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, int valid_bytes, xfunction<bool, uint64_t, uint64_t, uint64_t> func, uint64_t arg){
     RemoveExpression(unique_name);
     if (!SelectPtrCmpFn(cmp) || (!func && (!pin_ptr || !val_ptr || bytes <= 0)) ||
         (valid_ptr && (!valid_value_ptr || valid_bytes <= 0)))
@@ -61,7 +61,7 @@ void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, ui
         entry.valid_bytes = valid_bytes;
         entry.func = func;
         entry.arg = arg;
-        entry.valid_cmp = ComUseCondCmp::EQ;
+        entry.valid_cmp = CompareOp::EQ;
         entry.cmp_fn = SelectPtrCmpFn(cmp);
         entry.valid_cmp_fn = SelectPtrCmpFn(entry.valid_cmp);
         this->cond_vec_uint64.push_back(std::move(entry));
@@ -81,12 +81,12 @@ void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, ui
         entry.valid_cmp_fn = SelectPtrCmpFn(entry.valid_cmp);
     }
 };
-void ComUseCondCheck::RemoveCondition(std::string unique_name){
+void XConditionCheck::RemoveCondition(std::string unique_name){
     RemoveExpression(unique_name);
     RemoveXDataCond(this->cond_idx_xdata, this->cond_vec_xdata, unique_name);
     RemoveUint64Cond(this->cond_idx_uint64, this->cond_vec_uint64, unique_name);
 };
-std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
+std::vector<std::string> XConditionCheck::GetTriggeredConditionKeys(){
     std::vector<std::string> ret;
     for(auto &e : this->cond_vec_xdata){
         if(e.triggered)ret.push_back(e.name);
@@ -97,7 +97,7 @@ std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
     for (const auto &entry : expressions) if (entry.triggered) ret.push_back(entry.name);
     return ret;
 }
-std::map<std::string, bool> ComUseCondCheck::ListCondition(){
+std::map<std::string, bool> XConditionCheck::ListCondition(){
     std::map<std::string, bool> ret;
     for(auto &e : this->cond_vec_xdata){
         ret[e.name] = e.triggered ? true : false;
@@ -108,7 +108,7 @@ std::map<std::string, bool> ComUseCondCheck::ListCondition(){
     for (const auto &entry : expressions) ret[entry.name] = entry.triggered;
     return ret;
 }
-ComUseCondCmp ComUseCondCheck::GetValidCmpMode(std::string unique_name){
+CompareOp XConditionCheck::GetValidCmpMode(std::string unique_name){
     auto it = this->cond_idx_xdata.find(unique_name);
     if(it != this->cond_idx_xdata.end()){
         return this->cond_vec_xdata[it->second].valid_cmp;
@@ -118,9 +118,9 @@ ComUseCondCmp ComUseCondCheck::GetValidCmpMode(std::string unique_name){
         return this->cond_vec_uint64[it2->second].valid_cmp;
     }
     Error("Condition not found: %s", unique_name.c_str());
-    return ComUseCondCmp::EQ; // default
+    return CompareOp::EQ; // default
 }
-void ComUseCondCheck::SetValidCmpMode(std::string unique_name, ComUseCondCmp cmp){
+void XConditionCheck::SetValidCmpMode(std::string unique_name, CompareOp cmp){
     if (!SelectXDataCmpFn(cmp)) throw std::invalid_argument("invalid comparison operation");
     auto it = this->cond_idx_xdata.find(unique_name);
     if(it != this->cond_idx_xdata.end()){
@@ -138,8 +138,8 @@ void ComUseCondCheck::SetValidCmpMode(std::string unique_name, ComUseCondCmp cmp
     }
     Error("Condition not found: %s", unique_name.c_str());
 }
-void ComUseCondCheck::ClearClock(){this->clk_list.clear();}
-void ComUseCondCheck::ClearCondition(){
+void XConditionCheck::ClearClock(){this->clk_list.clear();}
+void XConditionCheck::ClearCondition(){
     expressions.clear();
     expression_index.clear();
     this->cond_idx_xdata.clear();
@@ -147,11 +147,11 @@ void ComUseCondCheck::ClearCondition(){
     this->cond_vec_xdata.clear();
     this->cond_vec_uint64.clear();
 };
-xfunction<bool, XData*, XData*, uint64_t> ComUseCondCheck::AsXDataXFunc(uint64_t func){
+xfunction<bool, XData*, XData*, uint64_t> XConditionCheck::AsXDataXFunc(uint64_t func){
     xfunction<bool, XData*, XData*, uint64_t> ret = (bool (*)(XData*, XData*, uint64_t))func;
     return ret;
 }
-xfunction<bool, uint64_t, uint64_t, uint64_t> ComUseCondCheck::AsPtrXFunc(uint64_t func){
+xfunction<bool, uint64_t, uint64_t, uint64_t> XConditionCheck::AsPtrXFunc(uint64_t func){
     xfunction<bool, uint64_t, uint64_t, uint64_t> ret = (bool (*)(uint64_t, uint64_t, uint64_t))func;
     return ret;
 }
@@ -179,24 +179,24 @@ void CheckEntries(Entries &entries, Evaluate evaluate, OnHit on_hit) {
 }
 }
 
-inline bool ComUseCondCheck::Evaluate(CondXDataEntry &entry) {
+inline bool XConditionCheck::Evaluate(CondXDataEntry &entry) {
     if (entry.valid && !entry.valid_cmp_fn(entry.valid, entry.valid_value)) return false;
     return entry.func ? entry.func(entry.pin, entry.val, entry.arg)
                       : entry.cmp_fn(entry.pin, entry.val);
 }
 
-inline bool ComUseCondCheck::Evaluate(CondUint64Entry &entry) {
+inline bool XConditionCheck::Evaluate(CondUint64Entry &entry) {
     if (entry.valid_ptr && !entry.valid_cmp_fn(this, entry.valid_ptr, entry.valid_value_ptr, entry.valid_bytes))
         return false;
     return entry.func ? entry.func(entry.pin_ptr, entry.val_ptr, entry.arg)
                       : entry.cmp_fn(this, entry.pin_ptr, entry.val_ptr, entry.bytes);
 }
 
-inline bool ComUseCondCheck::Evaluate(ExprEntry &entry) {
+inline bool XConditionCheck::Evaluate(ExprEntry &entry) {
     return entry.root >= 0 && entry.engine->Eval(entry.root) != 0;
 }
 
-void ComUseCondCheck::Call() {
+void XConditionCheck::Call() {
     // Keep comparisons specialized at registration; no per-sample allocation.
     auto evaluate = [this](auto &entry) { return Evaluate(entry); };
     bool triggered = false;
@@ -211,7 +211,7 @@ void ComUseCondCheck::Call() {
     CheckEntries(expressions, evaluate, on_hit);
 }
 
-void ComUseCondCheck::SetExpression(std::string name, ExprEngine &engine, int root) {
+void XConditionCheck::SetExpression(std::string name, ExprEngine &engine, int root) {
     RemoveXDataCond(cond_idx_xdata, cond_vec_xdata, name);
     RemoveUint64Cond(cond_idx_uint64, cond_vec_uint64, name);
     const auto found = expression_index.find(name);
@@ -225,40 +225,40 @@ void ComUseCondCheck::SetExpression(std::string name, ExprEngine &engine, int ro
     }
 }
 
-void ComUseCondCheck::RemoveExpression(const std::string &name) {
+void XConditionCheck::RemoveExpression(const std::string &name) {
     RemoveEntry(expression_index, expressions, name);
 }
 
-ComUseCondCheck::XDataCmpFn ComUseCondCheck::SelectXDataCmpFn(ComUseCondCmp cmp){
+XConditionCheck::XDataCmpFn XConditionCheck::SelectXDataCmpFn(CompareOp cmp){
     switch (cmp) {
-    case ComUseCondCmp::EQ: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::EQ>;
-    case ComUseCondCmp::NE: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::NE>;
-    case ComUseCondCmp::GT: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::GT>;
-    case ComUseCondCmp::GE: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::GE>;
-    case ComUseCondCmp::LT: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::LT>;
-    case ComUseCondCmp::LE: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::LE>;
+    case CompareOp::EQ: return &XConditionCheck::XDataCmp<CompareOp::EQ>;
+    case CompareOp::NE: return &XConditionCheck::XDataCmp<CompareOp::NE>;
+    case CompareOp::GT: return &XConditionCheck::XDataCmp<CompareOp::GT>;
+    case CompareOp::GE: return &XConditionCheck::XDataCmp<CompareOp::GE>;
+    case CompareOp::LT: return &XConditionCheck::XDataCmp<CompareOp::LT>;
+    case CompareOp::LE: return &XConditionCheck::XDataCmp<CompareOp::LE>;
     default: return nullptr;
     }
 }
 
-ComUseCondCheck::PtrCmpFn ComUseCondCheck::SelectPtrCmpFn(ComUseCondCmp cmp){
+XConditionCheck::PtrCmpFn XConditionCheck::SelectPtrCmpFn(CompareOp cmp){
     switch (cmp) {
-    case ComUseCondCmp::EQ: return &ComUseCondCheck::PtrCmp<ComUseCondCmp::EQ>;
-    case ComUseCondCmp::NE: return &ComUseCondCheck::PtrCmp<ComUseCondCmp::NE>;
-    case ComUseCondCmp::GT: return &ComUseCondCheck::PtrCmp<ComUseCondCmp::GT>;
-    case ComUseCondCmp::GE: return &ComUseCondCheck::PtrCmp<ComUseCondCmp::GE>;
-    case ComUseCondCmp::LT: return &ComUseCondCheck::PtrCmp<ComUseCondCmp::LT>;
-    case ComUseCondCmp::LE: return &ComUseCondCheck::PtrCmp<ComUseCondCmp::LE>;
+    case CompareOp::EQ: return &XConditionCheck::PtrCmp<CompareOp::EQ>;
+    case CompareOp::NE: return &XConditionCheck::PtrCmp<CompareOp::NE>;
+    case CompareOp::GT: return &XConditionCheck::PtrCmp<CompareOp::GT>;
+    case CompareOp::GE: return &XConditionCheck::PtrCmp<CompareOp::GE>;
+    case CompareOp::LT: return &XConditionCheck::PtrCmp<CompareOp::LT>;
+    case CompareOp::LE: return &XConditionCheck::PtrCmp<CompareOp::LE>;
     default: return nullptr;
     }
 }
 
-bool ComUseCondCheck::RemoveXDataCond(std::unordered_map<std::string, size_t> &index,
+bool XConditionCheck::RemoveXDataCond(std::unordered_map<std::string, size_t> &index,
                                     std::vector<CondXDataEntry> &entries, const std::string &name) {
     return RemoveEntry(index, entries, name);
 }
 
-bool ComUseCondCheck::RemoveUint64Cond(std::unordered_map<std::string, size_t> &index,
+bool XConditionCheck::RemoveUint64Cond(std::unordered_map<std::string, size_t> &index,
                                      std::vector<CondUint64Entry> &entries, const std::string &name) {
     return RemoveEntry(index, entries, name);
 }

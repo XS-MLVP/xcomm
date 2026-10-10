@@ -1,4 +1,4 @@
-#include "xspcomm/xcomuse/fsm.h"
+#include "xspcomm/monitor/fsm.h"
 #include "xspcomm/xclock.h"
 #include "xspcomm/xsignal_cfg.h"
 
@@ -112,39 +112,39 @@ void CollectSpecialNames(const std::string &expr,
     }
 }
 } // namespace
-void ComUseFsmTrigger::ExecSetFlag(ComUseFsmTrigger* self, int idx){
+void XFsmMonitor::ExecSetFlag(XFsmMonitor* self, int idx){
     if(idx >= 0 && idx < (int)self->flags.size()){
         self->flags[idx].value = 1;
         (*self->flags[idx].xdata) = (uint64_t)1;
     }
 }
 
-void ComUseFsmTrigger::ExecClearFlag(ComUseFsmTrigger* self, int idx){
+void XFsmMonitor::ExecClearFlag(XFsmMonitor* self, int idx){
     if(idx >= 0 && idx < (int)self->flags.size()){
         self->flags[idx].value = 0;
         (*self->flags[idx].xdata) = (uint64_t)0;
     }
 }
 
-void ComUseFsmTrigger::ExecIncCounter(ComUseFsmTrigger* self, int idx){
+void XFsmMonitor::ExecIncCounter(XFsmMonitor* self, int idx){
     if(idx >= 0 && idx < (int)self->counters.size()){
         self->counters[idx].value += 1;
         (*self->counters[idx].xdata) = self->counters[idx].value;
     }
 }
 
-void ComUseFsmTrigger::ExecResetCounter(ComUseFsmTrigger* self, int idx){
+void XFsmMonitor::ExecResetCounter(XFsmMonitor* self, int idx){
     if(idx >= 0 && idx < (int)self->counters.size()){
         self->counters[idx].value = 0;
         (*self->counters[idx].xdata) = (uint64_t)0;
     }
 }
 
-void ComUseFsmTrigger::BindXClock(XClock *clk){
+void XFsmMonitor::BindXClock(XClock *clk){
     this->clk_list.push_back(clk);
 }
 
-void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
+void XFsmMonitor::LoadProgram(std::string program, XSignalCFG* cfg){
     this->Clear();
     try{
     if(program.empty()){
@@ -220,7 +220,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::SetFlag;
             act.index = idx;
-            act.exec = &ComUseFsmTrigger::ExecSetFlag;
+            act.exec = &XFsmMonitor::ExecSetFlag;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -245,7 +245,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::ClearFlag;
             act.index = idx;
-            act.exec = &ComUseFsmTrigger::ExecClearFlag;
+            act.exec = &XFsmMonitor::ExecClearFlag;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -270,7 +270,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::IncCounter;
             act.index = idx;
-            act.exec = &ComUseFsmTrigger::ExecIncCounter;
+            act.exec = &XFsmMonitor::ExecIncCounter;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -295,7 +295,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
             FsmAction act;
             act.type = FsmAction::Type::ResetCounter;
             act.index = idx;
-            act.exec = &ComUseFsmTrigger::ExecResetCounter;
+            act.exec = &XFsmMonitor::ExecResetCounter;
             cur_state->actions.push_back(act);
             continue;
         }
@@ -439,7 +439,7 @@ void ComUseFsmTrigger::LoadProgram(std::string program, XSignalCFG* cfg){
     }
 }
 
-void ComUseFsmTrigger::Reset(){
+void XFsmMonitor::Reset(){
     this->triggered = false;
     this->triggered_state.clear();
     this->current_state = this->start_state;
@@ -458,7 +458,7 @@ void ComUseFsmTrigger::Reset(){
     this->engine.ResetState();
 }
 
-void ComUseFsmTrigger::Clear(){
+void XFsmMonitor::Clear(){
     this->states.clear();
     this->state_map.clear();
     this->flag_map.clear();
@@ -472,14 +472,14 @@ void ComUseFsmTrigger::Clear(){
     this->engine.Clear();
 }
 
-std::string ComUseFsmTrigger::GetCurrentState(){
+std::string XFsmMonitor::GetCurrentState(){
     if(this->current_state < 0 || this->current_state >= (int)this->states.size()){
         return "";
     }
     return this->states[this->current_state].name;
 }
 
-std::vector<std::string> ComUseFsmTrigger::ListStates(){
+std::vector<std::string> XFsmMonitor::ListStates(){
     std::vector<std::string> ret;
     for(const auto &st : this->states){
         ret.push_back(st.name);
@@ -487,7 +487,7 @@ std::vector<std::string> ComUseFsmTrigger::ListStates(){
     return ret;
 }
 
-void ComUseFsmTrigger::Call(){
+void XFsmMonitor::Call(){
     if(this->triggered){
         return;
     }

@@ -3,7 +3,7 @@
 本文档基于当前项目源码整理，主要对应以下文件：
 
 - 核心 C++ API：`include/xspcomm/xdata.h`、`xport.h`、`xclock.h`、`xsignal_cfg.h`
-- 组合检查与表达式/FSM：`include/xspcomm/xcomuse.h`、`xcomuse/`、`xexpr.h`、`xcomuse/expr.h`、`xcomuse/fsm.h`
+- 组合检查与表达式/FSM：`include/xspcomm/xmonitor.h`、`monitor/`、`xexpr.h`、`monitor/expr.h`、`monitor/fsm.h`
 - 多语言封装：`swig/python/xcomm.py`、`swig/java/java.i`、`swig/scala/xsp.scala`、`swig/golang/golang.i`、`swig/lua/lua.i`、`swig/javascript/xspcomm.js`
 
 xspcomm 的核心抽象是：
@@ -12,7 +12,7 @@ xspcomm 的核心抽象是：
 - `XPort`：一组 `XData` 的命名集合，用于批量连接、批量 IO 类型/写入模式设置，以及被 `XClock` 统一刷新。
 - `XClock`：仿真时钟驱动器，负责拉高/拉低时钟引脚、调用 DUT step 函数、在上升沿/下降沿刷新端口并执行回调。
 - `XSignalCFG`：从 YAML 配置或 YAML 字符串创建绑定到 native memory 的 `XData`。
-- `ComUse*`、`ExprEngine`、`ComUseFsmTrigger`：用于通用仿真辅助，例如条件触发、表达式触发、FSM 触发、数据数组和字符串辅助。
+- `XConditionCheck`、`XExprCheck`、`XFsmMonitor`：时钟驱动的条件、表达式及 FSM 检查器。`ExprEngine` 提供表达式求值，`XByteBuffer` 和 `CString` 提供内存与字符串工具。
 
 ## 通用约定
 
@@ -22,10 +22,10 @@ C++ API 位于 `xspcomm` 命名空间。常用头文件：
 
 ```c++
 #include "xspcomm/xcomm.h"       // 常用核心 API 汇总
-#include "xspcomm/xcomuse.h"     // ComUse、Expr、FSM 汇总
+#include "xspcomm/xmonitor.h"     // Monitor、Expr、FSM 汇总
 ```
 
-ComUse 组件位于 `xspcomm/xcomuse/`，可以按需包含 `callback.h`、`condition.h`、`range.h`、`expr.h` 和 `fsm.h`。独立的表达式引擎位于 `xexpr.h`。`common/compare.h` 提供 XData、表达式和检查器共用的比较算法；`common/memory.h` 提供数组、指针及字符串工具。
+Monitor 组件位于 `xspcomm/monitor/`，可以按需包含 `callback.h`、`condition.h`、`range.h`、`expr.h` 和 `fsm.h`。独立的表达式引擎位于 `xexpr.h`。`common/compare.h` 提供 XData、表达式和检查器共用的比较算法；`common/memory.h` 提供数组、指针及字符串工具。
 
 多语言 SWIG 包通常复用 C++ 名称，部分语言会增加更符合本语言习惯的包装方法，见“多语言差异”。
 
@@ -494,11 +494,11 @@ if (eng.Eval(root)) {
 }
 ```
 
-## ComUse 系列
+## Monitor 系列
 
-### ComUseStepCb
+### XStepCallback
 
-`ComUseStepCb` 是可挂到 `XClock::StepRis/StepFal` 的基类。派生类覆写 `Call()` 实现逻辑。
+`XStepCallback` 是可挂到 `XClock::StepRis/StepFal` 的基类。派生类覆写 `Call()` 实现逻辑。
 
 | API | 说明 |
 | --- | --- |
@@ -512,13 +512,13 @@ if (eng.Eval(root)) {
 | `uint64_t CSelf()` | 返回自身地址。 |
 | `uint64_t cycle` | 当前回调周期，由 `Cb()` 设置。 |
 
-### ComUseEcho
+### XEcho
 
 当 `valid != 0` 时打印 `data`。
 
 | API | 说明 |
 | --- | --- |
-| `ComUseEcho(uint64_t valid, uint64_t data, bool stderr_echo = true, std::string fmt = "%c", int convert = 0)` | `valid` 和 `data` 是 `XData*` 地址，通常传 `xdata.CSelf()`。 |
+| `XEcho(uint64_t valid, uint64_t data, bool stderr_echo = true, std::string fmt = "%c", int convert = 0)` | `valid` 和 `data` 是 `XData*` 地址，通常传 `xdata.CSelf()`。 |
 | `void Call()` | valid 为真时按格式输出。 |
 
 `convert` 取值：
@@ -531,32 +531,32 @@ if (eng.Eval(root)) {
 | `3` | `double` |
 | `4` | `data->String().c_str()` |
 
-### ComUseCondCheck
+### XConditionCheck
 
-`ComUseCondCheck` 检查一组条件；任一条件触发时会 `Disable()` 绑定的 clocks，并记录触发 key。
+`XConditionCheck` 检查一组条件；任一条件触发时会 `Disable()` 绑定的 clocks，并记录触发 key。
 
 比较模式：
 
 | 枚举 | 说明 |
 | --- | --- |
-| `ComUseCondCmp::EQ` | 等于 |
-| `ComUseCondCmp::NE` | 不等于 |
-| `ComUseCondCmp::GT` | 大于 |
-| `ComUseCondCmp::GE` | 大于等于 |
-| `ComUseCondCmp::LT` | 小于 |
-| `ComUseCondCmp::LE` | 小于等于 |
+| `CompareOp::EQ` | 等于 |
+| `CompareOp::NE` | 不等于 |
+| `CompareOp::GT` | 大于 |
+| `CompareOp::GE` | 大于等于 |
+| `CompareOp::LT` | 小于 |
+| `CompareOp::LE` | 小于等于 |
 
 | API | 说明 |
 | --- | --- |
-| `ComUseCondCheck(XClock *clk = nullptr)` | 可选绑定 clock。 |
+| `XConditionCheck(XClock *clk = nullptr)` | 可选绑定 clock。 |
 | `void BindXClock(XClock *clk)` | 添加触发后需要 disable 的 clock。 |
-| `void SetCondition(std::string unique_name, XData *pin, XData *val, ComUseCondCmp cmp, XData *valid = nullptr, XData *valid_value = nullptr, xfunction<bool, XData*, XData*, uint64_t> func = nullptr, uint64_t arg = 0)` | 添加/更新 XData 条件。valid 非空时先检查 valid 与 valid_value。当前源码对 XData 自定义 `func` 有 assert 限制，常规用法应传 `nullptr`。 |
-| `void SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr = 0, uint64_t valid_value_ptr = 0, int valid_bytes = 1, xfunction<bool, uint64_t, uint64_t, uint64_t> func = nullptr, uint64_t arg = 0)` | 添加/更新内存指针条件。指针比较按 `bytes` 做有符号比较。 |
+| `void SetCondition(std::string unique_name, XData *pin, XData *val, CompareOp cmp, XData *valid = nullptr, XData *valid_value = nullptr, xfunction<bool, XData*, XData*, uint64_t> func = nullptr, uint64_t arg = 0)` | 添加/更新 XData 条件。valid 非空时先检查 valid 与 valid_value。当前源码对 XData 自定义 `func` 有 assert 限制，常规用法应传 `nullptr`。 |
+| `void SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, CompareOp cmp, int bytes, uint64_t valid_ptr = 0, uint64_t valid_value_ptr = 0, int valid_bytes = 1, xfunction<bool, uint64_t, uint64_t, uint64_t> func = nullptr, uint64_t arg = 0)` | 添加/更新内存指针条件。指针比较按 `bytes` 做有符号比较。 |
 | `void RemoveCondition(std::string unique_name)` | 删除条件。 |
 | `std::map<std::string, bool> ListCondition()` | 返回所有条件及本轮是否触发。 |
 | `std::vector<std::string> GetTriggeredConditionKeys()` | 返回本轮触发的 key。 |
-| `ComUseCondCmp GetValidCmpMode(std::string unique_name)` | 获取 valid gating 的比较模式。 |
-| `void SetValidCmpMode(std::string unique_name, ComUseCondCmp cmp)` | 设置 valid gating 比较模式，默认 `EQ`。 |
+| `CompareOp GetValidCmpMode(std::string unique_name)` | 获取 valid gating 的比较模式。 |
+| `void SetValidCmpMode(std::string unique_name, CompareOp cmp)` | 设置 valid gating 比较模式，默认 `EQ`。 |
 | `void ClearClock()` / `ClearCondition()` / `ClearAll()` | 清空绑定 clock、条件或全部。 |
 | `xfunction<bool, XData*, XData*, uint64_t> AsXDataXFunc(uint64_t func)` | 把函数地址转成 XData 自定义比较 callback。 |
 | `xfunction<bool, uint64_t, uint64_t, uint64_t> AsPtrXFunc(uint64_t func)` | 把函数地址转成 pointer 自定义比较 callback。 |
@@ -565,21 +565,21 @@ if (eng.Eval(root)) {
 示例：
 
 ```c++
-ComUseCondCheck check(&clk);
+XConditionCheck check(&clk);
 clk.StepRis(check.GetCb(), check.CSelf(), "cond-check");
-check.SetCondition("data_eq", &data, &expect, ComUseCondCmp::EQ, &valid, &one);
+check.SetCondition("data_eq", &data, &expect, CompareOp::EQ, &valid, &one);
 
 clk.Step(1000);  // 触发后 clk 会被 Disable()
 auto keys = check.GetTriggeredConditionKeys();
 ```
 
-### ComUseExprCheck
+### XExprCheck
 
-`ComUseExprCheck` 是基于 `ExprEngine` 的表达式触发器。任一表达式求值为非 0 时会 disable 绑定 clocks，并记录触发 key。
+`XExprCheck` 是基于 `ExprEngine` 的表达式触发器。任一表达式求值为非 0 时会 disable 绑定 clocks，并记录触发 key。
 
 | API | 说明 |
 | --- | --- |
-| `ComUseExprCheck(XClock *clk = nullptr)` | 可选绑定 clock。 |
+| `XExprCheck(XClock *clk = nullptr)` | 可选绑定 clock。 |
 | `void BindXClock(XClock *clk)` | 添加触发后需要 disable 的 clock。 |
 | `int CompileExpr(std::string expr, XSignalCFG *cfg)` | 编译表达式。失败返回 `-1` 并打印错误。 |
 | `void SetExpr(std::string name, int root)` | 添加/更新表达式 root。 |
@@ -593,7 +593,7 @@ auto keys = check.GetTriggeredConditionKeys();
 示例：
 
 ```c++
-ComUseExprCheck checker(&clk);
+XExprCheck checker(&clk);
 clk.StepRis(checker.GetCb(), checker.CSelf(), "expr-check");
 
 XData valid(1, XData::InOut);
@@ -604,13 +604,13 @@ int root = checker.ExprNewBinary((int)ExprOp::LAND, valid_node, data_eq);
 checker.SetExpr("hit_data", root);
 ```
 
-### ComUseFsmTrigger
+### XFsmMonitor
 
-`ComUseFsmTrigger` 加载一个简易 FSM 脚本。触发 `trigger` 后会 disable 绑定 clocks。
+`XFsmMonitor` 加载一个简易 FSM 脚本。触发 `trigger` 后会 disable 绑定 clocks。
 
 | API | 说明 |
 | --- | --- |
-| `ComUseFsmTrigger(XClock *clk = nullptr)` | 可选绑定 clock。 |
+| `XFsmMonitor(XClock *clk = nullptr)` | 可选绑定 clock。 |
 | `void BindXClock(XClock *clk)` | 添加触发后需要 disable 的 clock。 |
 | `void LoadProgram(std::string program, XSignalCFG *cfg)` | 加载 FSM 脚本。解析失败会打印错误并清空 FSM，不抛异常给调用者。 |
 | `void Reset()` | 回到 start state，清空 `$flag*` 和 `$counter*`。 |
@@ -658,15 +658,15 @@ state S2:
 
 表达式语法同 `ExprEngine`。`$flag*` 和 `$counter*` 是 FSM 内部变量，也可在表达式中使用。
 
-### ComUseDataArray
+### XByteBuffer
 
-`ComUseDataArray` 是 byte buffer 包装，可拥有内存，也可引用外部地址。
+`XByteBuffer` 是 byte buffer 包装，可拥有内存，也可引用外部地址。
 
 | API | 说明 |
 | --- | --- |
-| `ComUseDataArray(int byte_size)` | 创建自有 buffer。 |
-| `ComUseDataArray(uint64_t base, int byte_size)` | 引用外部地址。 |
-| `ComUseDataArray *Copy()` | 拷贝一份自有 buffer。 |
+| `XByteBuffer(int byte_size)` | 创建自有 buffer。 |
+| `XByteBuffer(uint64_t base, int byte_size)` | 引用外部地址。 |
+| `XByteBuffer *Copy()` | 拷贝一份自有 buffer。 |
 | `void SyncFrom(uint64_t addr, int size)` | 从地址拷贝到内部 buffer。 |
 | `void SyncTo(uint64_t addr, int size)` | 从内部 buffer 拷贝到地址。 |
 | `void SetZero()` | 清零。 |
@@ -676,19 +676,19 @@ state S2:
 | `int FromBytes(std::vector<unsigned char> &input)` | 从 bytes 写入，返回实际写入长度。 |
 | `operator==` | 比较 size 和内容。 |
 
-### ComUseRangeCheck
+### XRangeCheck
 
-`ComUseRangeCheck` 生成可传给 `ComUseCondCheck` 的范围比较函数。
+`XRangeCheck` 生成可传给 `XConditionCheck` 的范围比较函数。
 
 | API | 说明 |
 | --- | --- |
-| `ComUseRangeCheck(int range, int bytes)` | `bytes >= 1`；pointer 比较按 little-endian 读取指定的字节数，支持未对齐地址和超过 64 bit 的值。 |
+| `XRangeCheck(int range, int bytes)` | `bytes >= 1`；pointer 比较按 little-endian 读取指定的字节数，支持未对齐地址和超过 64 bit 的值。 |
 | `static bool cmp(uint64_t t, uint64_t c, int r)` | 当 `r >= 0` 时检查 `c-r <= t <= c`；当 `r < 0` 时检查 `c <= t <= c-r`。按数学整数判断，不在零或最大值处回绕。 |
 | `uint64_t CSelf()` | 返回自身地址，用作 callback arg。 |
 | `GetArrayCmp()` | 返回 pointer 比较 callback。 |
 | `GetXDataCmp()` | 返回 XData 比较 callback，使用信号的完整位宽；不同位宽按无符号零扩展，含 X/Z 时返回 false。`bytes` 不截断 XData。 |
 
-`range` 是有符号 `int` 容差，比较值的位宽不受其限制。例如 `ComUseRangeCheck(1, 16)`
+`range` 是有符号 `int` 容差，比较值的位宽不受其限制。例如 `XRangeCheck(1, 16)`
 可以比较两个 128-bit buffer；`0xffffffffffffffff` 位于 `0x10000000000000000` 下方 1 的范围内。
 宽比较直接逐 32-bit word 计算差值，不分配临时大整数；每个 XData 操作数只刷新一次，不写回。
 
@@ -1021,7 +1021,7 @@ JS wrapper 增加：
 
 ```c++
 #include "xspcomm/xcomm.h"
-#include "xspcomm/xcomuse.h"
+#include "xspcomm/xmonitor.h"
 
 using namespace xspcomm;
 
@@ -1041,9 +1041,9 @@ int main() {
 
     XClock clk([](bool dump) { return 0; }, {&clk_pin}, {&port});
 
-    ComUseCondCheck check(&clk);
+    XConditionCheck check(&clk);
     clk.StepRis(check.GetCb(), check.CSelf(), "cond");
-    check.SetCondition("data_hit", &data, &expect, ComUseCondCmp::EQ,
+    check.SetCondition("data_hit", &data, &expect, CompareOp::EQ,
                        &valid, &one);
 
     clk.Step(1000);
@@ -1056,7 +1056,7 @@ int main() {
 ### C++：表达式触发
 
 ```c++
-ComUseExprCheck check(&clk);
+XExprCheck check(&clk);
 clk.StepRis(check.GetCb(), check.CSelf(), "expr");
 
 XData valid(1, XData::InOut);
@@ -1069,4 +1069,4 @@ check.SetExpr("hit_data", root);
 clk.Step(1000);
 ```
 
-若要使用带名字的信号表达式，`ExprEngine` 更适合配合 `XSignalCFG` 或手工 `RegisterExternalSignal()`；`ComUseExprCheck` 这层更偏向“把已经构建好的表达式 root 挂到 clock 上”。
+若要使用带名字的信号表达式，`ExprEngine` 更适合配合 `XSignalCFG` 或手工 `RegisterExternalSignal()`；`XExprCheck` 这层更偏向“把已经构建好的表达式 root 挂到 clock 上”。
