@@ -1,4 +1,5 @@
 set(XSPCOMM_SOURCES
+    common/lifetime.cpp
     common/memory.cpp
     comuse/callback.cpp
     comuse/condition.cpp
@@ -18,9 +19,9 @@ set(XSPCOMM_SOURCES
     coverage/engine.cpp
     expr/engine.cpp
     expr/parser.cpp
-    pattern.cpp
-    trigger/coverage.cpp
-    trigger/engine.cpp
+    trigger/pattern.cpp
+    coverage/registration.cpp
+    runtime/engine.cpp
     trigger/matcher.cpp
 )
 list(TRANSFORM XSPCOMM_SOURCES PREPEND "${CMAKE_CURRENT_LIST_DIR}/../src/")

@@ -1,5 +1,6 @@
 #include "xspcomm/xcomuse/condition.h"
 #include "xspcomm/xclock.h"
+#include "xspcomm/xexpr.h"
 
 namespace xspcomm {
 
@@ -8,6 +9,9 @@ void ComUseCondCheck::BindXClock(XClock *clk){
 }
 void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* val, ComUseCondCmp cmp, XData *valid, XData *valid_value, xfunction<bool, XData*, XData*, uint64_t> func, uint64_t arg){
     Assert(func == nullptr, "func type error: %d", func.func == nullptr);
+    RemoveExpression(unique_name);
+    if (!pin || !val || !SelectXDataCmpFn(cmp) || (valid && !valid_value))
+        throw std::invalid_argument("invalid XData comparison");
     RemoveUint64Cond(this->cond_idx_uint64, this->cond_vec_uint64, unique_name);
     auto it = this->cond_idx_xdata.find(unique_name);
     if(it == this->cond_idx_xdata.end()){
@@ -39,6 +43,10 @@ void ComUseCondCheck::SetCondition(std::string unique_name, XData* pin, XData* v
     }
 };
 void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, uint64_t val_ptr, ComUseCondCmp cmp, int bytes, uint64_t valid_ptr, uint64_t valid_value_ptr, int valid_bytes, xfunction<bool, uint64_t, uint64_t, uint64_t> func, uint64_t arg){
+    RemoveExpression(unique_name);
+    if (!SelectPtrCmpFn(cmp) || (!func && (!pin_ptr || !val_ptr || bytes <= 0)) ||
+        (valid_ptr && (!valid_value_ptr || valid_bytes <= 0)))
+        throw std::invalid_argument("invalid pointer comparison");
     RemoveXDataCond(this->cond_idx_xdata, this->cond_vec_xdata, unique_name);
     auto it = this->cond_idx_uint64.find(unique_name);
     if(it == this->cond_idx_uint64.end()){
@@ -74,6 +82,7 @@ void ComUseCondCheck::SetCondition(std::string unique_name, uint64_t pin_ptr, ui
     }
 };
 void ComUseCondCheck::RemoveCondition(std::string unique_name){
+    RemoveExpression(unique_name);
     RemoveXDataCond(this->cond_idx_xdata, this->cond_vec_xdata, unique_name);
     RemoveUint64Cond(this->cond_idx_uint64, this->cond_vec_uint64, unique_name);
 };
@@ -85,6 +94,7 @@ std::vector<std::string> ComUseCondCheck::GetTriggeredConditionKeys(){
     for(auto &e : this->cond_vec_uint64){
         if(e.triggered)ret.push_back(e.name);
     }
+    for (const auto &entry : expressions) if (entry.triggered) ret.push_back(entry.name);
     return ret;
 }
 std::map<std::string, bool> ComUseCondCheck::ListCondition(){
@@ -95,6 +105,7 @@ std::map<std::string, bool> ComUseCondCheck::ListCondition(){
     for(auto &e : this->cond_vec_uint64){
         ret[e.name] = e.triggered ? true : false;
     }
+    for (const auto &entry : expressions) ret[entry.name] = entry.triggered;
     return ret;
 }
 ComUseCondCmp ComUseCondCheck::GetValidCmpMode(std::string unique_name){
@@ -110,6 +121,7 @@ ComUseCondCmp ComUseCondCheck::GetValidCmpMode(std::string unique_name){
     return ComUseCondCmp::EQ; // default
 }
 void ComUseCondCheck::SetValidCmpMode(std::string unique_name, ComUseCondCmp cmp){
+    if (!SelectXDataCmpFn(cmp)) throw std::invalid_argument("invalid comparison operation");
     auto it = this->cond_idx_xdata.find(unique_name);
     if(it != this->cond_idx_xdata.end()){
         auto &entry = this->cond_vec_xdata[it->second];
@@ -128,6 +140,8 @@ void ComUseCondCheck::SetValidCmpMode(std::string unique_name, ComUseCondCmp cmp
 }
 void ComUseCondCheck::ClearClock(){this->clk_list.clear();}
 void ComUseCondCheck::ClearCondition(){
+    expressions.clear();
+    expression_index.clear();
     this->cond_idx_xdata.clear();
     this->cond_idx_uint64.clear();
     this->cond_vec_xdata.clear();
@@ -141,86 +155,80 @@ xfunction<bool, uint64_t, uint64_t, uint64_t> ComUseCondCheck::AsPtrXFunc(uint64
     xfunction<bool, uint64_t, uint64_t, uint64_t> ret = (bool (*)(uint64_t, uint64_t, uint64_t))func;
     return ret;
 }
-void ComUseCondCheck::Call(){
-    if (likely(this->cond_vec_xdata.empty() && this->cond_vec_uint64.empty())) {
-        return;
+namespace {
+template<class Index, class Entries>
+bool RemoveEntry(Index &index, Entries &entries, const std::string &name) {
+    const auto found = index.find(name);
+    if (found == index.end()) return false;
+    const size_t at = found->second;
+    if (at + 1 != entries.size()) {
+        entries[at] = std::move(entries.back());
+        index[entries[at].name] = at;
     }
-    // check XData condition
-    bool is_triggered = false;
-    for(auto &entry : this->cond_vec_xdata){
-        auto pin = entry.pin;
-        auto val = entry.val;
-        auto valid = entry.valid;
-        auto valid_value = entry.valid_value;
-        auto func = entry.func;
-        auto arg = entry.arg;
-        auto cmp_fn = entry.cmp_fn;
-        auto valid_cmp_fn = entry.valid_cmp_fn;
-        // not triggered
-        entry.triggered = 0;
-        if (unlikely(valid != nullptr)){
-            Assert(valid_value != nullptr, "valid_value is null");
-            if(unlikely(!valid_cmp_fn || !valid_cmp_fn(valid, valid_value))) continue;
-        }
-        // check cmp
-        if(unlikely(func)){
-            if(func(pin, val, arg)){
-                entry.triggered = 1;
-            }
-        }else{
-            if(unlikely(!cmp_fn)){
-                Assert(0, "cmp xdata type error");
-            }else if(cmp_fn(pin, val)){
-                entry.triggered = 1;
-            }
-        }
-        if(unlikely(!is_triggered && entry.triggered)){
-                for(auto &clk : this->clk_list){
-                    clk->Disable();
-                }
-                is_triggered = true;
-                this->IncCbCount();
-        }
+    entries.pop_back();
+    index.erase(found);
+    return true;
+}
+
+template<class Entries, class Evaluate, class OnHit>
+void CheckEntries(Entries &entries, Evaluate evaluate, OnHit on_hit) {
+    for (auto &entry : entries) {
+        entry.triggered = evaluate(entry);
+        if (entry.triggered) on_hit();
     }
-    // check uint64_t condition
-    for(auto &entry : this->cond_vec_uint64){
-        auto pin_ptr = entry.pin_ptr;
-        auto val_ptr = entry.val_ptr;
-        auto bytes = entry.bytes;
-        auto valid_ptr = entry.valid_ptr;
-        auto valid_value_ptr = entry.valid_value_ptr;
-        auto valid_bytes = entry.valid_bytes;
-        auto func = entry.func;
-        auto arg = entry.arg;
-        auto cmp_fn = entry.cmp_fn;
-        auto valid_cmp_fn = entry.valid_cmp_fn;
-        // not triggered
-        entry.triggered = 0;
-        if (unlikely(valid_ptr != 0)){
-            Assert(valid_value_ptr != 0, "valid_value is null");
-            if(unlikely(!valid_cmp_fn || !valid_cmp_fn(this, valid_ptr, valid_value_ptr, valid_bytes))) continue;
-        }
-        // check cmp
-        if(unlikely(func)){
-            if(func(pin_ptr, val_ptr, arg)){
-                entry.triggered = 1;
-            }
-        }else{
-            if(unlikely(!cmp_fn)){
-                Assert(0, "cmp ptr type error");
-            }else if(cmp_fn(this, pin_ptr, val_ptr, bytes)){
-                entry.triggered = 1;
-            }
-        }
-        if(unlikely(!is_triggered && entry.triggered)){
-                for(auto &clk : this->clk_list){
-                    clk->Disable();
-                }
-                is_triggered = true;
-                this->IncCbCount();
-        }
+}
+}
+
+inline bool ComUseCondCheck::Evaluate(CondXDataEntry &entry) {
+    if (entry.valid && !entry.valid_cmp_fn(entry.valid, entry.valid_value)) return false;
+    return entry.func ? entry.func(entry.pin, entry.val, entry.arg)
+                      : entry.cmp_fn(entry.pin, entry.val);
+}
+
+inline bool ComUseCondCheck::Evaluate(CondUint64Entry &entry) {
+    if (entry.valid_ptr && !entry.valid_cmp_fn(this, entry.valid_ptr, entry.valid_value_ptr, entry.valid_bytes))
+        return false;
+    return entry.func ? entry.func(entry.pin_ptr, entry.val_ptr, entry.arg)
+                      : entry.cmp_fn(this, entry.pin_ptr, entry.val_ptr, entry.bytes);
+}
+
+inline bool ComUseCondCheck::Evaluate(ExprEntry &entry) {
+    return entry.root >= 0 && entry.engine->Eval(entry.root) != 0;
+}
+
+void ComUseCondCheck::Call() {
+    // Keep comparisons specialized at registration; no per-sample allocation.
+    auto evaluate = [this](auto &entry) { return Evaluate(entry); };
+    bool triggered = false;
+    auto on_hit = [&] {
+        if (triggered) return;
+        for (auto *clock : clk_list) clock->Disable();
+        IncCbCount();
+        triggered = true;
+    };
+    CheckEntries(cond_vec_xdata, evaluate, on_hit);
+    CheckEntries(cond_vec_uint64, evaluate, on_hit);
+    CheckEntries(expressions, evaluate, on_hit);
+}
+
+void ComUseCondCheck::SetExpression(std::string name, ExprEngine &engine, int root) {
+    RemoveXDataCond(cond_idx_xdata, cond_vec_xdata, name);
+    RemoveUint64Cond(cond_idx_uint64, cond_vec_uint64, name);
+    const auto found = expression_index.find(name);
+    if (found == expression_index.end()) {
+        expression_index[name] = expressions.size();
+        expressions.push_back({std::move(name), &engine, root});
+    } else {
+        auto &entry = expressions[found->second];
+        entry.engine = &engine;
+        entry.root = root;
     }
-};
+}
+
+void ComUseCondCheck::RemoveExpression(const std::string &name) {
+    RemoveEntry(expression_index, expressions, name);
+}
+
 ComUseCondCheck::XDataCmpFn ComUseCondCheck::SelectXDataCmpFn(ComUseCondCmp cmp){
     switch (cmp) {
     case ComUseCondCmp::EQ: return &ComUseCondCheck::XDataCmp<ComUseCondCmp::EQ>;
@@ -245,36 +253,14 @@ ComUseCondCheck::PtrCmpFn ComUseCondCheck::SelectPtrCmpFn(ComUseCondCmp cmp){
     }
 }
 
-bool ComUseCondCheck::RemoveXDataCond(std::unordered_map<std::string, size_t> &idx,
-                                      std::vector<CondXDataEntry> &vec,
-                                      const std::string &name){
-    auto it = idx.find(name);
-    if(it == idx.end()) return false;
-    size_t at = it->second;
-    size_t last = vec.size() - 1;
-    if(at != last){
-        vec[at] = std::move(vec[last]);
-        idx[vec[at].name] = at;
-    }
-    vec.pop_back();
-    idx.erase(it);
-    return true;
+bool ComUseCondCheck::RemoveXDataCond(std::unordered_map<std::string, size_t> &index,
+                                    std::vector<CondXDataEntry> &entries, const std::string &name) {
+    return RemoveEntry(index, entries, name);
 }
 
-bool ComUseCondCheck::RemoveUint64Cond(std::unordered_map<std::string, size_t> &idx,
-                                       std::vector<CondUint64Entry> &vec,
-                                       const std::string &name){
-    auto it = idx.find(name);
-    if(it == idx.end()) return false;
-    size_t at = it->second;
-    size_t last = vec.size() - 1;
-    if(at != last){
-        vec[at] = std::move(vec[last]);
-        idx[vec[at].name] = at;
-    }
-    vec.pop_back();
-    idx.erase(it);
-    return true;
+bool ComUseCondCheck::RemoveUint64Cond(std::unordered_map<std::string, size_t> &index,
+                                     std::vector<CondUint64Entry> &entries, const std::string &name) {
+    return RemoveEntry(index, entries, name);
 }
 
 } // namespace xspcomm

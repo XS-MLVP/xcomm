@@ -2,6 +2,7 @@
 #define XSPCOMM_COMMON_MEMORY_H
 
 #include "xspcomm/xutil.h"
+#include "xspcomm/common/memory/access.h"
 #include <algorithm>
 #include <cstring>
 #include <string>

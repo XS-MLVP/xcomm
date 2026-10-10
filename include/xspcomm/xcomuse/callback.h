@@ -2,19 +2,36 @@
 #define XSPCOMM_XCOMUSE_CALLBACK_H
 
 #include "xspcomm/xutil.h"
+#include "xspcomm/detail/lifetime.h"
 #include <string>
+#include <memory>
+#include <vector>
 
 namespace xspcomm {
 
     class XData;
+    class XClock;
 
     class ComUseStepCb{
         int cb_maxcts = -1;
         int cb_counts = 0;
         bool cb_enable = true;
+        detail::Lifetime lifetime;
+        struct Registration {
+            XClock *clock;
+            std::weak_ptr<const int> lifetime;
+            bool rising;
+            std::string description;
+        };
+        std::vector<Registration> registrations;
     public:
-        uint64_t cycle;
-        ComUseStepCb(){}
+        uint64_t cycle = 0;
+        ComUseStepCb() = default;
+        ComUseStepCb(const ComUseStepCb &) = delete;
+        ComUseStepCb &operator=(const ComUseStepCb &) = delete;
+        virtual ~ComUseStepCb();
+        void Attach(XClock *clock, bool rising = true);
+        void Detach();
         void Disable();
         void Enable();
         bool IsDisable();

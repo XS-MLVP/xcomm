@@ -57,15 +57,21 @@ extensions; a Python version specifier alone cannot verify C++ ABI identity.
 
 The native trigger engine changes the C++ layouts of `XClock`, `XData`, and
 `ExprNode`, which introduced native ABI 2. Complete per-bin trigger programs now
-expand `XCoverageBin`, so the current native ABI is 3 (`libxspcomm.so.3`). Rebuild
+reorganize `XCoverageBin` and checker/runtime layouts, so the current native ABI is 4 (`libxspcomm.so.4`). Rebuild
 Picker-generated DUT extensions and other native bindings against these headers
 and library, and update the consumer's ABI requirement together. Keep each
 generated DUT and its runtime on a matching native ABI.
 
-`XTriggerEngine.CoverageVersion() == 4` identifies the complete trigger-bin
+`XTriggerEngine.CoverageVersion() == 5` identifies the complete trigger-bin
 descriptor protocol. It is separate from the native library ABI and the Python
 package version. The Python `XPin` wrapper is removed; use `XData` directly instead.
 
 Picker 2.0.1 restricts xspcomm to `<0.2`. Before releasing Picker with an
 xspcomm `0.2.x` package, update its supported dependency range and rebuild its
 bundled native runtime.
+
+The PR #30 review migration introduces `XEngine` with the existing
+`XTriggerEngine` entry alias, explicit coverage kinds and `bin.program`.
+Use the `0.3.0.dev1` preview for ABI 4 / descriptor protocol 5; `0.3.0.dev0`
+identified the earlier ABI 3 / protocol 4 preview. Update frontend lowering and
+rebuild native clients together.

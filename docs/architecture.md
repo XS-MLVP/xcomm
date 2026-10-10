@@ -4,23 +4,30 @@ Public interfaces are installed below `include/xspcomm`. Common class entry
 headers (`xdata.h`, `xclock.h`, `xexpr.h`, `xtrigger.h`) describe their own modules;
 `xcomm.h` and `xcomuse.h` are the aggregate entry points.
 
-- `common/`: comparison algorithms and memory/string utilities. Comparison
-  algorithms depend only on standard headers, so XData and checkers share them.
-- `xcomuse/`: clock callbacks, condition/range checkers, expression checkers and
-  the text-program FSM adapter. `ExprEngine` itself belongs to `xexpr.h`.
-- `xpattern.h`: shared event modes and sequence/FSM descriptors.
-  `detail/pattern.h` holds borrowed program views and matching state;
-  `src/pattern.cpp` implements sequence/FSM advancement. The common execution
-  component in `src/trigger/matcher.*` manages expression events, overlapping
-  attempts, completion counts and FSM terminal results for native consumers.
-- `xcoverage.h`: coverage descriptors and snapshots. The component in
-  `src/coverage` organizes points and bins, selects completion results, and owns
-  crosses, counters and statistical policies. It uses the common trigger
-  matcher for execution history and advancement.
-- `src/trigger`: trigger registration/execution and a small coverage adapter.
-  Ordinary triggers and coverage use the same expression events and pattern
-  advancement. Coverage runs in the native sampling phase, with no event queue
-  or language callback.
+- `common/`: comparison operations and algorithms, plus memory/string utilities.
+  `common/memory/access.h` provides non-owning reads and writes with exact access
+  widths. It depends only on standard headers and is shared by comparison and
+  native signal backends. `ComUseDataArray` retains storage ownership/copy duties.
+- `xcomuse/`: clock callbacks, condition/range checkers, expression construction
+  and the text-program FSM adapter. `ComUseExprCheck` uses `ComUseCondCheck`'s
+  registration namespace, hit processing and clock-stop behavior. Native pointer,
+  XData and expression evaluation keep their own comparison semantics.
+- `xpattern.h` and `trigger/types.h`: common trigger program descriptions, event
+  modes, sequence/FSM descriptors, handles and sampling results.
+- `detail/trigger/`: program validation, single-execution state advancement,
+  overlapping matchers and trigger registrations. The matching kernel has no
+  coverage dependency. Implementations live together under `src/trigger`.
+- `xcoverage.h` and `detail/coverage/`: explicitly typed points/bins and snapshots,
+  plus coverage execution history and statistical policy. Bins contain a shared
+  `XTriggerProgram` description and select completion results. Coverage owns
+  crosses, counters, classification and terminal selection.
+- `xengine.h` and `src/runtime`: the shared clock/phase schedule and registration
+  lifecycle. The engine sends matches to either trigger events or coverage
+  statistics. `xtrigger.h` retains the `XTriggerEngine` entry name as an alias of
+  `XEngine`; language bindings retain their existing class name. Coverage-specific
+  registration operations live under `src/coverage`, not the trigger kernel.
+- `detail/data/native_memory.h`: the templated native-to-vector storage adapter.
+  Fixed word counts stay expanded at compile time; widths are selected at binding.
 - `src/core`: signal storage/value operations, backend bindings, ports, clocks,
   coroutines and configuration. YAML parsing stays in the configuration source;
   third-party YAML headers are not part of the public header dependency graph.
@@ -46,20 +53,26 @@ Update includes directly; removed paths do not have forwarding headers:
 
 `xinstance.h` and its `test_xdata()` helper are removed from the production SDK;
 that test implementation is compiled into `test_xdata` instead. Python-only
-third-call declarations live beside the Python wrapper. Existing signal/clock
-layouts and callable interfaces are retained. Coverage
-descriptors have expanded, so native clients must rebuild against ABI 3;
+third-call declarations live beside the Python wrapper. Existing signal
+access and clock stepping interfaces are retained. Coverage descriptors and
+clock/checker/runtime layouts have changed, so native clients must rebuild against ABI 4;
 source clients must also update the includes above.
 
 ## Trigger programs and coverage
 
-Language frontends lower declarations to expression roots, sequence steps or
-FSM transitions. A value point observes an XData signal; a pattern point sets
-`XCoverageItem.pattern` and organizes complete trigger programs without a
-synthetic signal. Pattern bins select Expr, Sequence or FSM with
-`XCoverageBin.program_kind` (0, 1 or 2), and specify event mode, bounded overlap
-and optional FSM terminals. `CoverageVersion() == 4` identifies this descriptor
-protocol; the native library ABI is independently versioned as 3.
+Language frontends lower declarations to `XTriggerProgram`: an explicitly typed
+expression, sequence or FSM, with event mode and execution capacity. The trigger
+and coverage paths use the same validator and advancement kernel. Matching state
+belongs to each execution and is independent of the immutable program description.
+
+`XCoverageItem.kind` selects Value, Pattern or Cross. Value points require an
+XData source; pattern points have no synthetic source; crosses name preceding
+value points. `XCoverageBin.kind` selects Normal, Ignore, Illegal or Default,
+while `XCoverageBin.program` supplies matching and `terminals` selects FSM
+completion results. Impossible field combinations are rejected at registration.
+`CoverageVersion() == 5` identifies this descriptor protocol; the native library
+ABI is independently versioned as 4. Protocol 4 frontends must migrate flat bin
+program fields to `bin.program` and replace `item.pattern` with an explicit kind.
 
 Equivalent programs within one point share an execution when their roots,
 steps/transitions, event mode and overlap capacity agree. Terminal selection,
@@ -76,6 +89,18 @@ completion results; value points retain their classification priority rules.
 Crosses containing pattern points are rejected until completion correlation
 semantics are defined. Program reclamation during a long execution and complete
 expression width/signed/cast/four-state semantics remain separate work.
+
+## ComUse callback ownership
+
+`ComUseStepCb.Attach(clock, rising)` registers a managed clock callback; `Detach`
+and destruction remove its registrations. Destroying the clock first is safe.
+Removal during another callback defers vector erasure until iteration finishes.
+The callback base has a virtual destructor and cannot be copied with registrations.
+
+`ComUseCondCheck.BindXClock` specifies clocks to stop on a hit, separately from
+sampling registration. `ClearClock` clears that stop list. Existing `GetCb` /
+`CSelf` raw callback registration remains available and requires the caller to
+unregister before destroying the checker; use `Attach` for managed ownership.
 
 ## TLM source SDK
 

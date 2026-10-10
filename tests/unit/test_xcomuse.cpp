@@ -370,3 +370,127 @@ TEST_CASE("XData equality preserves zero extension and four-state masks", "[xcom
         REQUIRE(checker.ListCondition().at("ne"));
     }
 }
+
+TEST_CASE("Managed ComUse callbacks detach with either lifetime order", "[xcomuse_base][lifetime]") {
+    XClock clock([](bool) { return 0; });
+    {
+        auto callback = std::make_unique<StepCbProbe>();
+        callback->Attach(&clock);
+        callback->Attach(&clock);
+        REQUIRE(clock.StepRisQueueSize() == 1);
+        clock.Step();
+        REQUIRE(callback->calls == 1);
+    }
+    REQUIRE(clock.StepRisQueueSize() == 0);
+    clock.Step();
+
+    StepCbProbe callback;
+    {
+        XClock temporary([](bool) { return 0; });
+        callback.Attach(&temporary, false);
+        temporary.Step();
+        REQUIRE(callback.calls == 1);
+    }
+    callback.Detach();
+}
+
+TEST_CASE("Managed callback removal during sampling preserves iteration", "[xcomuse_base][lifetime]") {
+    XClock clock([](bool) { return 0; });
+    auto callback = std::make_unique<StepCbProbe>();
+    clock.StepRis([&](uint64_t, void *) { callback.reset(); });
+    callback->Attach(&clock);
+    clock.Step();
+    REQUIRE_FALSE(callback);
+    REQUIRE(clock.StepRisQueueSize() == 1);
+    clock.Step();
+}
+
+TEST_CASE("Copied clocks cannot retain destroyed managed callbacks", "[xcomuse_base][lifetime]") {
+    auto original = std::make_unique<XClock>([](bool) { return 0; });
+    auto callback = std::make_unique<StepCbProbe>();
+    callback->Attach(original.get());
+    XClock copy = *original;
+    original.reset();
+    copy.Step();
+    REQUIRE(callback->calls == 1);
+    callback.reset();
+    copy.Step();
+}
+
+TEST_CASE("Expression and comparison checkers share registration and hit handling", "[xcomuse_base][xexpr]") {
+    XClock clock([](bool) { return 0; });
+    XData left(129, XData::InOut), right(129, XData::InOut);
+    left = right = "0x100000000000000000000000000000001";
+    ComUseExprCheck checker(&clock);
+    checker.SetCondition("wide", &left, &right, ComUseCondCmp::EQ);
+    checker.SetExpr("expression", checker.ExprNewCompareSigSig(static_cast<int>(ExprOp::EQ), &left, &right));
+    checker.Call();
+    REQUIRE(checker.GetTriggeredExprKeys().size() == 2);
+    REQUIRE(checker.GetCbCount() == 1);
+    REQUIRE(clock.IsDisable());
+
+    checker.SetExpr("wide", checker.ExprNewConst(0));
+    checker.Call();
+    REQUIRE_FALSE(checker.ListCondition().at("wide"));
+    REQUIRE(checker.GetTriggeredExprKeys().size() == 1);
+
+    int8_t negative = -1, positive = 1;
+    checker.SetCondition("expression", reinterpret_cast<uint64_t>(&negative),
+                         reinterpret_cast<uint64_t>(&positive), ComUseCondCmp::LT, 1);
+    checker.Call();
+    REQUIRE(checker.ListExpr().at("expression"));
+    checker.RemoveExpr("expression");
+    REQUIRE(checker.ListCondition().size() == 1);
+    checker.ClearExpr();
+    REQUIRE(checker.ListCondition().empty());
+}
+
+TEST_CASE("Expression hits clear when evaluated again in the same cycle", "[xcomuse_base][xexpr]") {
+    ComUseExprCheck checker;
+    checker.SetExpr("condition", checker.ExprNewConst(1));
+    checker.Call();
+    REQUIRE(checker.ListExpr().at("condition"));
+    checker.SetExpr("condition", checker.ExprNewConst(0));
+    checker.Call();
+    REQUIRE_FALSE(checker.ListExpr().at("condition"));
+    REQUIRE(checker.GetTriggeredExprKeys().empty());
+}
+
+TEST_CASE("Unified checks retain four-state equality and first-hit clock behavior", "[xcomuse_base][xexpr]") {
+    XClock clock([](bool) { return 0; });
+    XData left(129, XData::InOut), right(129, XData::InOut);
+    left = right = "x";
+    ComUseExprCheck checker(&clock);
+    checker.SetCondition("compare", &left, &right, ComUseCondCmp::EQ);
+    checker.SetExpr("expression", checker.ExprNewCompareSigSig(static_cast<int>(ExprOp::EQ), &left, &right));
+    bool observed_disabled = false;
+    checker.SetCondition("callback", uint64_t(0), uint64_t(0), ComUseCondCmp::EQ, 0, 0, 0, 1,
+                         [&](uint64_t, uint64_t, uint64_t) { observed_disabled = clock.IsDisable(); return true; });
+    checker.Call();
+    REQUIRE(checker.GetTriggeredExprKeys().size() == 3);
+    REQUIRE(observed_disabled);
+    REQUIRE(checker.GetCbCount() == 1);
+}
+
+TEST_CASE("Invalid raw comparison registration is rejected before sampling", "[xcomuse_base]") {
+    ComUseCondCheck checker;
+    uint64_t left = 1, right = 2;
+    REQUIRE_THROWS_AS(checker.SetCondition("invalid", reinterpret_cast<uint64_t>(&left),
+        reinterpret_cast<uint64_t>(&right), ComUseCondCmp::EQ, 0), std::invalid_argument);
+    REQUIRE_THROWS_AS(checker.SetCondition("invalid", reinterpret_cast<uint64_t>(&left),
+        reinterpret_cast<uint64_t>(&right), static_cast<ComUseCondCmp>(99), 8), std::invalid_argument);
+}
+
+TEST_CASE("Raw array helpers preserve unaligned accesses and signed offsets", "[xcomuse_base][memory]") {
+    unsigned char storage[18];
+    std::memset(storage, 0xA5, sizeof(storage));
+    const auto middle = reinterpret_cast<uint64_t>(storage + 9);
+    SetU64Array(middle, -1, UINT64_C(0x123456789ABCDEF0));
+    REQUIRE(GetFromU64Array(middle, -1) == UINT64_C(0x123456789ABCDEF0));
+    REQUIRE(storage[0] == 0xA5);
+    REQUIRE(storage[9] == 0xA5);
+    SetU32Array(middle, 0, 0x12345678);
+    REQUIRE(GetFromU32Array(middle, 0) == 0x12345678);
+    REQUIRE(storage[13] == 0xA5);
+    REQUIRE(storage[17] == 0xA5);
+}

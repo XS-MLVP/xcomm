@@ -266,15 +266,13 @@ std::string inline removeSuffix(const std::string& str, const std::string& suffi
 inline void big_shift(int* a, int size, int shift) {
     if (size <= 0) return;
     int intBits = sizeof(int) * 8;
-    // Unsigned arithmetic also handles the magnitude of INT_MIN.
-    unsigned int absShift = shift < 0 ? 0U - static_cast<unsigned int>(shift)
-                                     : static_cast<unsigned int>(shift);
-    int numInts = absShift / intBits;
+    const int64_t distance = shift < 0 ? -static_cast<int64_t>(shift) : shift;
+    const int numInts = distance / intBits;
     if (numInts >= size) {
         std::memset(a, 0, size * sizeof(int));
         return;
     }
-    int bitShift = absShift % intBits;
+    int bitShift = distance % intBits;
     if (shift < 0) {
         if (numInts > 0) {
             std::memmove(a + numInts, a, (size - numInts) * sizeof(int));

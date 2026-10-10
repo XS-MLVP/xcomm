@@ -1,7 +1,7 @@
-#ifndef XSPCOMM_TRIGGER_MATCHER_H
-#define XSPCOMM_TRIGGER_MATCHER_H
+#ifndef XSPCOMM_DETAIL_TRIGGER_MATCHER_H
+#define XSPCOMM_DETAIL_TRIGGER_MATCHER_H
 
-#include "xspcomm/detail/pattern.h"
+#include "xspcomm/detail/trigger/program.h"
 #include <algorithm>
 
 namespace xspcomm::detail {
@@ -13,25 +13,6 @@ inline bool MatchCondition(bool known, bool current, XConditionMode mode, bool &
                      mode == XConditionMode::Enter ? current && !previous : current != previous;
     previous = current;
     return hit;
-}
-
-struct PatternResult {
-    bool completed = false;
-    bool failed = false;
-    uint32_t terminal = 0;
-};
-
-inline PatternResult AdvancePattern(const PatternView &program, PatternState &state, ExprEngine &expr)
-{
-    PatternResult result;
-    if (program.fsm) {
-        result.completed = AdvanceFsm(*program.fsm, state, expr, result.terminal);
-        result.failed = !result.completed && state.fsm_current_state == program.start_state;
-    } else {
-        result.completed = AdvanceSequence(*program.sequence, state, expr);
-        result.failed = state.sequence_failed;
-    }
-    return result;
 }
 
 struct MatchUpdate {
@@ -48,6 +29,8 @@ class PatternMatcher {
 public:
     explicit PatternMatcher(PatternView program = {});
     MatchUpdate Advance(ExprEngine &expr, bool overlap = false, size_t max_active = 1);
+    // Expression programs use the same history without temporal diagnostics.
+    uint64_t AdvanceCondition(ExprEngine &expr);
     // Counts from the latest sample, optionally restricted to selected FSM terminals.
     uint64_t Count(const std::vector<unsigned int> &terminals = {}) const
     {

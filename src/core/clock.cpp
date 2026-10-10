@@ -55,9 +55,15 @@ void XClock::_call_back(std::vector<XClockCallBack> &list)
     }
     this->in_callback = true;
     for (auto &e : list) {
-        e.func(this->clk, e.args);
+        if (e.func) e.func(this->clk, e.args);
     }
     this->in_callback = false;
+    if (callbacks_removed) {
+        for (auto *callbacks : {&list_call_back_ris, &list_call_back_fal})
+            callbacks->erase(std::remove_if(callbacks->begin(), callbacks->end(),
+                [](const auto &callback) { return !callback.func; }), callbacks->end());
+        callbacks_removed = false;
+    }
 }
 void XClock::_add_cb(std::vector<XClockCallBack> &cblist,
                      xfunction<void, u_int64_t, void *> func, void *args,
@@ -349,29 +355,24 @@ int XClock::_remove_step_cb_by(int type, int group, std::string desc, xfunction<
     int remove_count = 0;
     std::vector<XClockCallBack> *vec = &this->list_call_back_ris;
     if(group != 0)vec = &this->list_call_back_fal;
-    remove_count = (int)vec->size();
-    vec->erase(
-        std::remove_if(vec->begin(), vec->end(),
-            [&func, &desc, &type](const auto& x) {
-                switch (type)
-                {
-                case 0:
-                    return x.func == func;
-                    break;
-                case 1:
-                    return x.desc == desc;
-                    break;
-                case 2:
-                    return x.func==func && x.desc == desc;
-                    break;
-                default:
-                    break;
-                }
-                return false;
-        }),
-        vec->end()
-    );
-    return remove_count - (int)vec->size();
+    auto matches = [&](const auto &callback) {
+        if (!callback.func) return false;
+        if (type == 0) return callback.func == func;
+        if (type == 1) return callback.desc == desc;
+        return callback.func == func && callback.desc == desc;
+    };
+    if (in_callback) {
+        for (auto &callback : *vec) if (matches(callback)) {
+            callbacks_removed = true;
+            callback.func = nullptr;
+            ++remove_count;
+        }
+    } else {
+        const auto previous = vec->size();
+        vec->erase(std::remove_if(vec->begin(), vec->end(), matches), vec->end());
+        remove_count = previous - vec->size();
+    }
+    return remove_count;
 }
 
 void XClock::_fal_pins(){

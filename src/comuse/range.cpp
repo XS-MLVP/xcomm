@@ -8,8 +8,8 @@ namespace xspcomm {
 template <size_t Bytes>
 bool ComUseRangeCheck::Compare(uint64_t a, uint64_t b, uint64_t self) {
     const auto* check = reinterpret_cast<const ComUseRangeCheck*>(self);
-    const auto target = compare::UIntBytes<Bytes>::Load(reinterpret_cast<const unsigned char*>(a));
-    const auto center = compare::UIntBytes<Bytes>::Load(reinterpret_cast<const unsigned char*>(b));
+    const auto target = memory::UIntBytes<Bytes>::Load(reinterpret_cast<const unsigned char*>(a));
+    const auto center = memory::UIntBytes<Bytes>::Load(reinterpret_cast<const unsigned char*>(b));
     return cmp(target, center, check->range);
 }
 
@@ -21,8 +21,8 @@ const ComUseRangeCheck::ArrayCompare ComUseRangeCheck::comparisons[] = {
 bool ComUseRangeCheck::ArrayWideCmp(uint64_t a, uint64_t b, uint64_t self) {
     const auto* check = reinterpret_cast<const ComUseRangeCheck*>(self);
     const size_t bytes = check->bytes;
-    const compare::ByteWords target{reinterpret_cast<const unsigned char*>(a), bytes};
-    const compare::ByteWords center{reinterpret_cast<const unsigned char*>(b), bytes};
+    const memory::ByteWords target{reinterpret_cast<const unsigned char*>(a), bytes};
+    const memory::ByteWords center{reinterpret_cast<const unsigned char*>(b), bytes};
     return compare::WithinRange(target.Count(), check->range, target, center);
 }
 

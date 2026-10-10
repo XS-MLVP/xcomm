@@ -58,19 +58,6 @@ namespace std {
    %template(DictStrBool) map<string, bool>;
 }
 
-%include "xspcomm/xclock.h"
-%include "xspcomm/xdata.h"
-%include "xspcomm/xport.h"
-%include "xspcomm/xutil.h"
-%include "xspcomm/xsignal_cfg.h"
-%include "xspcomm/xcomuse/callback.h"
-%include "xspcomm/xcomuse/condition.h"
-%include "xspcomm/xcomuse/range.h"
-%include "xspcomm/common/memory.h"
-%include "xspcomm/xexpr.h"
-%include "xspcomm/xcomuse/expr.h"
-%include "xspcomm/xcomuse/fsm.h"
-%include "xspcomm/xcomuse.h"
 %include exception.i
 %exception {
     try { $action }
@@ -81,8 +68,26 @@ namespace std {
         SWIG_exception(SWIG_RuntimeError, error.what());
     }
 }
+%include "xspcomm/xclock.h"
+%include "xspcomm/xdata.h"
+%include "xspcomm/xport.h"
+%include "xspcomm/xutil.h"
+%include "xspcomm/xsignal_cfg.h"
+%include "xspcomm/xcomuse/callback.h"
+%rename(ComUseCondCmp) xspcomm::CompareOp;
+%include "xspcomm/common/operation.h"
+%include "xspcomm/xcomuse/condition.h"
+%include "xspcomm/xcomuse/range.h"
+%include "xspcomm/common/memory.h"
+%include "xspcomm/xexpr.h"
+%include "xspcomm/xcomuse/expr.h"
+%include "xspcomm/xcomuse/fsm.h"
+%include "xspcomm/xcomuse.h"
 %include "xspcomm/xpattern.h"
+%include "xspcomm/trigger/types.h"
 %include "xspcomm/xcoverage.h"
+%rename(XTriggerEngine) xspcomm::XEngine;
+%include "xspcomm/xengine.h"
 %include "xspcomm/xtrigger.h"
 %exception;
 
