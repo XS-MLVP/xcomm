@@ -2,9 +2,9 @@
 #define __xspcomm_xcfg__
 
 #include "xspcomm/xdata.h"
-#include "xspcomm/node.hpp"
 #include "xspcomm/xutil.h"
 #include <set>
+#include <map>
 
 namespace xspcomm {
 typedef struct
@@ -59,9 +59,7 @@ class XSignalCFG {
     private:
     XData* new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return=false);
     void load_cfg();
-    bool _set_cfg_data(fkyaml::node &var, std::string prefix="");
-    bool _set_signal_meta(fkyaml::node &signal);
-    int _rec_set_cfg_data(fkyaml::node &var, std::string prefix);
+    class Parser;
     void _register_native_meta(const std::string &name, const s_xsignal_cfg &cfg);
     std::string _normalize_expr(std::string expr) const;
     uint64_t _parse_const_value(const std::string &value) const;

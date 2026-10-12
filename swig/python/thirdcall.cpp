@@ -1,4 +1,4 @@
-#include "xspcomm/thirdcall.h"
+#include "thirdcall.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include <map>

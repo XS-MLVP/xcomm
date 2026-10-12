@@ -53,7 +53,7 @@ enum class XDataBackendKind {
 #define bit32_one(tar, msk) tar = msk | tar
 #define bit32_zro(tar, msk) tar = (~msk) & tar
 #define bit32_val(tar, msk) (msk & tar) == 0 ? 0 : 1
-#define bit32_msk(ones) (1 << ones) - 1
+#define bit32_msk(ones) ((uint32_t(1) << (ones)) - 1U)
 #define bit32_set(tar, idx) tar = (tar) | (1 << idx)
 #define bit32_hex(tar, idx, val)                                               \
     tar = ((~(0xF << idx * 4)) & (tar)) | (val << idx * 4)

@@ -4,6 +4,8 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/xutil.h"
+#include "xspcomm/common/lifetime.h"
+#include "xspcomm/runtime/types.h"
 
 #if ENABLE_XCOROUTINE
 #include "xspcomm/xcoroutine.h"
@@ -16,6 +18,7 @@ uint64_t TEST_get_u64_step_func();
 uint64_t TEST_get_u64_ris_fal_cblback_func();
 
 class XClock;
+class XEngine;
 #if ENABLE_XCOROUTINE
 class XStep : public _XAWait
 {
@@ -53,14 +56,20 @@ enum class FastMode {
     ONLY_STEP_FAL = -2,      // Only step on fall edges (half cycle)
 };
 
-enum class XPhase {
-    FallingStable = 0,
-    RisingStable = 1,
-    DriveStable = 2,
-};
-
 class XClock
 {
+    friend class XStepCallback;
+    friend class XEngine;
+    // Idle clocks remain copyable; copying an actively controlled clock would
+    // create a second stepping entry point for the same DUT.
+    struct DriveControl {
+        XEngine *owner = nullptr;
+        bool stepping = false;
+        DriveControl() = default;
+        DriveControl(const DriveControl &other);
+        DriveControl &operator=(const DriveControl &other);
+    } drive_control;
+    detail::Lifetime callback_lifetime;
     xfunction<int, bool> step_fc;
 #if ENABLE_XCOROUTINE
     std::map<std::coroutine_handle<>, _XAWait *> cor_handler;
@@ -68,6 +77,7 @@ class XClock
     std::vector<XClockCallBack> list_call_back_ris;
     std::vector<XClockCallBack> list_call_back_fal;
     bool in_callback = false;
+    bool callbacks_removed = false;
     bool is_disable = false;
     int fast_mode_level = 0;
     bool half_cycle_open = false;
@@ -75,6 +85,7 @@ class XClock
     uint64_t half_tick = 0;
     XPhase phase = XPhase::RisingStable;
 
+    void CheckManualStep() const;
     virtual void _step(bool d);
     void _shchedule_await();
     bool _step_half_impl(bool honor_disable);
@@ -120,6 +131,7 @@ public:
     }
     void RefreshComb(){this->eval();}
     void RefreshCombT(){this->eval_t();}
+    bool IsControlled() const { return drive_control.owner != nullptr; }
     void Step(int s = 1);
     bool StepHalf();
     uint64_t GetHalfTick() const { return this->half_tick; }

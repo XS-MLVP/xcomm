@@ -10,7 +10,7 @@ xspcomm 为 picker 的公用数据定义与操作接口，包括接口读/写、
 
 make BUILD_XSPCOMM_SWIG=python,scala,java,golang,lua
 
-# results 
+# results
 build/python/
 └── xspcomm             # python 模块
     ├── __init__.py
@@ -36,7 +36,7 @@ build/golang/
 以上示例为 Linux 下的产物形式。macOS 下原生动态库/扩展模块会保留平台原生命名（例如 `.dylib`、`.jnilib` 或模块实际文件名），不再额外拼接 Linux 风格的 `.${PROJECT_VERSION}` 后缀。
 
 **测试：**
-make命令默认编译执行 tests/test_xdata.cpp。 若要运行 tests/tests_python.py 执行如下命令：
+make命令默认编译执行 tests/unit/test_xdata.cpp。 若要运行 tests/bindings/python/test_python.py 执行如下命令：
 ```bash
 $make BUILD_XSPCOMM_SWIG=python
 $make test_python
@@ -90,7 +90,7 @@ XData(uint32_t width, IOType itype, std::string name = "");
 
 绑定DPI
 ```c++
-void BindDPIRW(xfunction<void, void *> read, 
+void BindDPIRW(xfunction<void, void *> read,
                xfunction<void, void *> write);
 void BindDPIRW(xfunction<void, void *> read,
                xfunction<void, unsigned char> write);
@@ -156,7 +156,7 @@ bool Del(std::string pin);                            // 删除引脚
 bool Connect(XPort &target);                          // 和另外一个port进行连接
 XPort &NewSubPort(std::string subprefix);             // 创建子port
 xspcomm::XData &operator[](std::string key);          // 按key获取引脚
-xspcomm::XData &Get(std::string key, 
+xspcomm::XData &Get(std::string key,
                     bool raw_key = false); // 同上
 XPort &Flip();                             // port中所有引脚值进行反转
 XPort &AsBiIO();                           // 把port中所有引脚设置为BiIO模式
@@ -286,11 +286,11 @@ if __name__ == "__main__":
 ...
 # 1 通过swig生成python wrapper
 $swig -D'MODULE_NAME="tlm_pbsb"' -python -c++ -DUSE_VCS -I${XSP_COMM_INCLUDE} \
--o tlmps.cpp ${XSP_COMM_INCLUDE}/xspcomm/python_tlm_pbsb.i
+-o tlmps.cpp ${XSP_COMM_INCLUDE}/../share/xspcomm/tlm/python.i
 
 # 2 编译通信模块
 $SYSCAN -full64 -cflags -DUSE_VCS -cflags -I{PYTHON_INCLUDE} \
--cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/xspcomm/tlm_pbsb.cpp tlmps.cpp
+-cflags -I${XSP_COMM_INCLUDE} ${XSP_COMM_INCLUDE}/../share/xspcomm/tlm/pubsub.cpp tlmps.cpp
 
 # 3 以slave模式编译 DUT
 $VLOGAN -full64 +incdir+common tlm.sv +define+UVM_OBJECT_MUST_HAVE_CONSTRUCTOR
@@ -302,7 +302,7 @@ $mv simv.daidir _tlm_pbsb.so.daidir
 ...
 ```
 
-编译完成后，可以通过 import 加载dut，具体例子请参考：tests/tlm
+编译完成后，可以通过 import 加载dut，具体例子请参考：tests/integration/tlm
 
 ### 五、其他可用接口
 
@@ -350,8 +350,6 @@ inline void XSeed(unsigned int seed)
 inline bool checkVersion()
 
 // 循环 n 次，，eg: FOR_COUNT(10){i++;}
-FOR_COUNT(n) 
+FOR_COUNT(n)
 
 ```
-
-xinstance.h 仅仅用于实例化模板类，无其他作用。
