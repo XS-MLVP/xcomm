@@ -43,6 +43,9 @@ public:
     }
     const std::vector<PatternState> &States() const { return attempts; }
     void Clear();
+    void RemapExpressions(const std::vector<int> &mapping) {
+        if (program.root >= 0) program.root = mapping[program.root];
+    }
 
 private:
     PatternView program;

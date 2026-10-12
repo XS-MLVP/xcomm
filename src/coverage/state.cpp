@@ -9,6 +9,31 @@ namespace xspcomm {
 
 namespace detail {
 
+void CoverageState::ExpressionRoots(std::vector<int> &roots) const
+{
+    roots.push_back(gate); roots.push_back(abort);
+    for (const auto &item : points) roots.push_back(item.gate);
+    for (const auto &bin : bins) {
+        roots.push_back(bin.program.root);
+        for (const auto &step : bin.program.steps) roots.push_back(step.root);
+        for (const auto &transition : bin.program.transitions) roots.push_back(transition.root);
+    }
+}
+
+void CoverageState::RemapExpressions(const std::vector<int> &mapping)
+{
+    auto remap = [&](int &root) { if (root >= 0) root = mapping[root]; };
+    remap(gate); remap(abort);
+    for (auto &item : points) remap(item.gate);
+    for (auto &bin : bins) {
+        remap(bin.program.root);
+        for (auto &step : bin.program.steps) remap(step.root);
+        for (auto &transition : bin.program.transitions) remap(transition.root);
+    }
+    source_matcher.RemapExpressions(mapping);
+    for (auto &matcher : matchers) matcher.RemapExpressions(mapping);
+}
+
 static bool SameCoverageExecution(const XCoverageBin &a, const XCoverageBin &b)
 {
     if (std::tie(a.point_id, a.program.kind, a.program.root, a.program.mode, a.program.overlap, a.program.max_active,

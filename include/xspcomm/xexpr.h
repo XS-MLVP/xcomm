@@ -38,6 +38,8 @@ namespace xspcomm {
         SELECT = 22,
         WITHIN = 23,
         HOLD = 24,
+        CAST = 25,
+        TYPED = 26,
     };
 
     struct ExprNode{
@@ -70,6 +72,11 @@ namespace xspcomm {
         std::map<std::string, XData*> external_signal_xdata;
         std::vector<EvalFrame> eval_stack;
         std::vector<uint64_t> eval_vals;
+        struct BitsWorkspace;
+        std::unique_ptr<BitsWorkspace> bits_workspace;
+        const std::vector<unsigned char> &EvalBitsValue(int root);
+        uint64_t EvalBitsScalar(int root);
+        void ClearBitsWorkspace();
         uint64_t current_cycle = 0;
         uint64_t EvalNode(int id);
         bool IsKnownNode(int id);
@@ -83,6 +90,8 @@ namespace xspcomm {
         void ReorderShortCircuit(int id, const std::vector<int> &memo,
                                  const std::vector<int> &stateful);
     public:
+        ExprEngine();
+        ~ExprEngine();
         bool ValidRoot(int root) const { return root >= 0 && static_cast<size_t>(root) < nodes.size(); }
         int NewConst(uint64_t v);
         int NewSignal(XData* sig);
@@ -103,6 +112,11 @@ namespace xspcomm {
                                           std::vector<unsigned char> &mask);
         int NewWithin(int child, uint64_t window);
         int NewHold(int child, uint64_t window);
+        int NewBitsConst(uint32_t width, bool is_signed, std::vector<unsigned char> &value);
+        int NewBool(bool value);
+        int NewBitsSignal(XData *signal, bool is_signed);
+        int NewBits(ExprOp op, int lhs, int rhs, uint32_t width, bool is_signed);
+        std::vector<unsigned char> EvalBits(int root);
         XData* GetOrCreateSignal(XSignalCFG* cfg, const std::string &name);
         void RegisterExternalSignal(const std::string &name, XData* sig);
         void ResetState();
@@ -112,6 +126,11 @@ namespace xspcomm {
         void OptimizeShortCircuitOrder(int root);
         void SetCycle(uint64_t cycle){ this->current_cycle = cycle; }
         void Clear();
+        size_t NodeCount() const { return nodes.size(); }
+        size_t ConstantCount() const { return const_xdata.size(); }
+        // Explicit safe-point collection. All retained roots must be remapped
+        // using the returned old-to-new table; -1 denotes an unreachable node.
+        std::vector<int> Collect(const std::vector<int> &roots);
     };
 
 

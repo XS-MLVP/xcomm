@@ -503,6 +503,7 @@ TEST_CASE("XEngine rejects callback reentry and recovers from exceptions",
         REQUIRE_THROWS_AS(engine.SamplePhase(XPhase::DriveStable), std::logic_error);
         REQUIRE_THROWS_AS(engine.Clear(), std::logic_error);
         REQUIRE_THROWS_AS(engine.ClearExecutionState(), std::logic_error);
+        REQUIRE_THROWS_AS(engine.CollectExpressions({}), std::logic_error);
         REQUIRE_THROWS_AS(engine.ReleaseClock(), std::logic_error);
     });
     REQUIRE(engine.RunUntil(2).advanced_ticks == 2);
@@ -532,4 +533,35 @@ TEST_CASE("XEngine cannot take over a manual step already in progress", "[xtrigg
     REQUIRE(clock.GetHalfTick() == 3);
     runtime.AcquireClock();
     runtime.ReleaseClock();
+}
+
+TEST_CASE("Collection preserves an in-flight FSM and a fired registration awaiting rearm", "[xtrigger][collection]") {
+    XClock clock([](bool) { return 0; });
+    XEngine engine(clock);
+    engine.AcquireClock();
+    XData request(1, XData::InOut), response(1, XData::InOut);
+    request = 1; response = 0;
+    for (int i = 0; i < 32; ++i) engine.ExprNewConst(i);
+    const int req = engine.ExprNewSignal(&request), rsp = engine.ExprNewSignal(&response);
+    const auto handle = engine.ArmFsm(2, 0, {{0, req, 1, 0, false}, {1, rsp, 0, 7, true}});
+    REQUIRE(engine.RunUntil(2).hits.empty());
+    engine.CollectExpressions({});
+    REQUIRE(engine.ExpressionNodeCount() == 2);
+    request = 0; response = 1;
+    const auto first = engine.RunUntil(2);
+    REQUIRE(first.hits.size() == 1);
+    REQUIRE(first.hits[0].value == 7);
+    engine.CollectExpressions({}); // fired, but still owned and rearmable
+    REQUIRE(engine.ExpressionNodeCount() == 2);
+    REQUIRE(engine.Rearm(handle));
+    request = 1; response = 0;
+    REQUIRE(engine.RunUntil(2).hits.empty());
+    request = 0; response = 1;
+    const auto second = engine.RunUntil(2);
+    REQUIRE(second.hits.size() == 1);
+    REQUIRE(second.hits[0].value == 7);
+    REQUIRE(engine.Disarm(handle));
+    engine.CollectExpressions({});
+    REQUIRE(engine.ExpressionNodeCount() == 0);
+    engine.ReleaseClock();
 }

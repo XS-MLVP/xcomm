@@ -138,8 +138,52 @@ history; abort clears source and bin history. Reset can preserve counters while
 clearing execution history. Pattern ignore/illegal bins affect their own
 completion results; value points retain their classification priority rules.
 Crosses containing pattern points are rejected until completion correlation
-semantics are defined. Program reclamation during a long execution and complete
-expression width/signed/cast/four-state semantics remain separate work.
+semantics are defined.
+
+`CollectExpressions(retained_roots)` collects the existing expression DAG at an
+explicit safe point outside a running engine. It automatically retains all occupied registrations (also
+hit registrations awaiting rearm) and attached coverage conditions, gates,
+aborts and programs. It returns an old-to-new root mapping and updates native
+watcher/coverage references without changing matcher histories or counters.
+Direct C++ callers must pass their own retained roots and replace every stored
+root with its mapping; old integer roots are invalid after collection. Unused
+wide constants/masks are released; borrowed DUT XData objects are not owned.
+Node/constant count queries support lifecycle tests. Coverage descriptors stay
+at protocol 5. This unshipped branch continues its ABI 3 transition; rebuild
+native clients against these headers because ExprEngine now owns evaluation
+scratch storage.
+
+Typed expression nodes extend the same ExprEngine and reuse XData byte storage.
+Wide comparison reuses the common word readers and comparison helpers,
+including the existing signed byte comparison for byte-aligned operands.
+`src/expr/bits.cpp` implements the typed operations within ExprEngine; it does
+not create another trigger, coverage or range execution system.
+They carry width and signedness, support casts, fixed-width arithmetic, bitwise
+operations, comparisons and saturating shift counts; a signed right shift fills
+with the sign bit. Signed division truncates toward zero, remainder follows the
+dividend, and division by zero raises. `EvalBits` returns unsigned little-endian
+result bits; `Eval` retains its uint64 result contract. A wide Bits predicate is
+explicitly converted to a Bool root by the Python compiler. Existing untyped
+scalar expression operations retain their old semantics. Four-state expression
+changes are deferred.
+
+Typed evaluation uses an explicit stack and reuses per-node result buffers and
+division scratch. Shared DAG nodes are evaluated once per evaluation; results
+are never cached across calls, including calls at the same cycle after inputs
+change. XData leaves refresh once per visited node and then read the cached
+native words. Warm `Eval` calls do not allocate for a fixed, already visited
+program. `EvalBits` intentionally returns an owning byte vector and therefore
+copies the requested result. New nodes, newly visited branches and collection
+can require another workspace allocation. Collection and Clear release this
+scratch along with unreachable programs. Predicates preserve logical short
+circuiting, and a failed evaluation does not retain results for the next call.
+
+The existing `XRangeCheck` still handles directional unsigned tolerance checks,
+including wide values. Unsigned interval bins continue to compile to existing
+full-width comparisons. Typed operations are needed when intermediate results
+carry width/sign/cast semantics; range checks alone do not require them.
+The string-based `CompileExpr` API retains its existing scalar semantics; typed
+programs are constructed with NewBits/ExprNewBits APIs.
 
 ## Clock driving ownership
 

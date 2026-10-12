@@ -18,6 +18,7 @@ set(XSPCOMM_SOURCES
     core/util.cpp
     coverage/state.cpp
     expr/engine.cpp
+    expr/bits.cpp
     expr/parser.cpp
     trigger/executor.cpp
     coverage/registration.cpp

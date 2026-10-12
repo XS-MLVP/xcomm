@@ -69,6 +69,16 @@ public:
     XRegistrationHandle ArmSample(
         XPhase phase = XPhase::RisingStable, uint64_t source_id = 0);
     int ExprNewConst(uint64_t value);
+    int ExprNewBitsConst(uint32_t width, bool is_signed, std::vector<unsigned char> &value);
+    int ExprNewBool(bool value);
+    int ExprNewBitsSignal(XData *signal, bool is_signed);
+    int ExprNewBits(int op, int lhs, int rhs, uint32_t width, bool is_signed);
+    std::vector<unsigned char> ExprEvalBits(int root);
+    size_t ExpressionNodeCount() const;
+    size_t ExpressionConstantCount() const;
+    // Retains occupied registrations and attached coverage automatically.
+    // Additional client/cache roots are remapped by the returned table.
+    std::vector<int> CollectExpressions(const std::vector<int> &retained_roots);
     int ExprNewSignal(XData *signal);
     int ExprNewUnary(int op, int child);
     int ExprNewBinary(int op, int lhs, int rhs);

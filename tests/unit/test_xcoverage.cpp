@@ -6,6 +6,39 @@
 
 using namespace xspcomm;
 
+TEST_CASE("Collection keeps coverage gates aborts and wide bin constants", "[coverage]") {
+    XClock clock([](bool) { return 0; });
+    XTriggerEngine engine(clock, 4);
+    engine.AcquireClock();
+    for (int i = 0; i < 50; ++i) engine.ExprNewConst(i);
+    XData signal(128, XData::InOut), gate(1, XData::InOut), abort(1, XData::InOut);
+    signal = 1; gate = 1; abort = 0;
+    auto gate_root = engine.ExprNewSignal(&gate), abort_root = engine.ExprNewSignal(&abort);
+    std::vector<unsigned char> one(16); one[0] = 1;
+    XCoveragePoint item; item.signal = &signal; item.gate = gate_root;
+    XCoverageBin bin; bin.program.root = engine.ExprNewCompareSigConstBytes(int(ExprOp::EQ), &signal, one);
+    auto handle = engine.ArmSample(XPhase::RisingStable);
+    engine.AttachCoverage(handle, {item}, {bin}, gate_root, abort_root);
+    engine.CollectExpressions({});
+    REQUIRE(engine.ExpressionNodeCount() == 3);
+    REQUIRE(engine.ExpressionConstantCount() == 1);
+    auto waiter = engine.ArmClockCycles(1); engine.RunUntil(2); engine.Disarm(waiter);
+    REQUIRE(engine.CoverageSnapshot(handle).counters.back() == 1);
+    gate = 0;
+    waiter = engine.ArmClockCycles(1); engine.RunUntil(2); engine.Disarm(waiter);
+    REQUIRE(engine.CoverageSnapshot(handle).counters.back() == 1);
+    gate = 1; abort = 1;
+    engine.CollectExpressions({});
+    waiter = engine.ArmClockCycles(1); engine.RunUntil(2); engine.Disarm(waiter);
+    REQUIRE(engine.CoverageSnapshot(handle).counters.back() == 1);
+    abort = 0;
+    waiter = engine.ArmClockCycles(1); engine.RunUntil(2); engine.Disarm(waiter);
+    REQUIRE(engine.CoverageSnapshot(handle).counters.back() == 2);
+    engine.Disarm(handle); engine.CollectExpressions({});
+    REQUIRE(engine.ExpressionNodeCount() == engine.ExpressionConstantCount());
+    REQUIRE(engine.ExpressionNodeCount() == 0);
+}
+
 TEST_CASE("Coverage counts persist without returning ordinary hits", "[xtrigger][coverage]") {
     XClock clock([](bool) { return 0; });
     XTriggerEngine engine(clock, 4);
