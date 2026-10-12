@@ -11,9 +11,9 @@ namespace detail {
 
 static bool SameCoverageExecution(const XCoverageBin &a, const XCoverageBin &b)
 {
-    if (std::tie(a.item, a.program.kind, a.program.root, a.program.mode, a.program.overlap, a.program.max_active,
+    if (std::tie(a.point_id, a.program.kind, a.program.root, a.program.mode, a.program.overlap, a.program.max_active,
                  a.program.state_count, a.program.start_state) !=
-        std::tie(b.item, b.program.kind, b.program.root, b.program.mode, b.program.overlap, b.program.max_active,
+        std::tie(b.point_id, b.program.kind, b.program.root, b.program.mode, b.program.overlap, b.program.max_active,
                  b.program.state_count, b.program.start_state)) return false;
     if (a.program.steps.size() != b.program.steps.size() || a.program.transitions.size() != b.program.transitions.size()) return false;
     return std::equal(a.program.steps.begin(), a.program.steps.end(), b.program.steps.begin(), [](const auto &x, const auto &y) {
@@ -26,12 +26,12 @@ static bool SameCoverageExecution(const XCoverageBin &a, const XCoverageBin &b)
 }
 
 CoverageState::CoverageState(uint32_t generation, ExprEngine &expr, const PatternView &source,
-    const std::vector<XCoverageItem> &items, const std::vector<XCoverageBin> &bins,
+    const std::vector<XCoveragePoint> &points, const std::vector<XCoverageBin> &bins,
     int gate, int abort, bool raise_illegal, size_t diagnostic_capacity,
     bool overlap, size_t max_active, bool diagnostics)
     : source_matcher(source)
 {
-    if (items.empty() || bins.empty() || diagnostic_capacity == 0)
+    if (points.empty() || bins.empty() || diagnostic_capacity == 0)
         throw std::invalid_argument("empty coverage definition or diagnostic capacity");
     if (max_active == 0 || (!overlap && max_active != 1))
         throw std::invalid_argument("invalid coverage max_active");
@@ -44,32 +44,32 @@ CoverageState::CoverageState(uint32_t generation, ExprEngine &expr, const Patter
         if (r != -1 && !expr.ValidRoot(r)) throw std::invalid_argument("invalid coverage expression");
     };
     check(gate); check(abort);
-    for (size_t i = 0; i < items.size(); ++i) {
-        check(items[i].gate);
-        const auto &item = items[i];
-        switch (item.kind) {
-        case XCoverageItemKind::Value:
-            if (!item.signal || !item.dimensions.empty())
+    for (size_t i = 0; i < points.size(); ++i) {
+        check(points[i].gate);
+        const auto &point = points[i];
+        switch (point.kind) {
+        case XCoveragePointKind::Value:
+            if (!point.signal || !point.dimensions.empty())
                 throw std::invalid_argument("value point requires only a signal");
             break;
-        case XCoverageItemKind::Pattern:
-            if (item.signal || !item.dimensions.empty())
+        case XCoveragePointKind::Pattern:
+            if (point.signal || !point.dimensions.empty())
                 throw std::invalid_argument("pattern point cannot have a signal or dimensions");
             break;
-        case XCoverageItemKind::Cross:
-            if (item.signal || item.dimensions.empty())
+        case XCoveragePointKind::Cross:
+            if (point.signal || point.dimensions.empty())
                 throw std::invalid_argument("cross requires only dimensions");
             break;
         default:
-            throw std::invalid_argument("invalid coverage item kind");
+            throw std::invalid_argument("invalid coverage point kind");
         }
-        for (auto d : items[i].dimensions)
-            if (d >= i || items[d].kind != XCoverageItemKind::Value) throw std::invalid_argument("invalid cross point");
+        for (auto d : points[i].dimensions)
+            if (d >= i || points[d].kind != XCoveragePointKind::Value) throw std::invalid_argument("invalid cross point");
     }
     for (const auto &bin : bins) {
-        if (bin.item >= items.size() || static_cast<unsigned>(bin.kind) > 3) throw std::invalid_argument("invalid coverage bin");
+        if (bin.point_id >= points.size() || static_cast<unsigned>(bin.kind) > 3) throw std::invalid_argument("invalid coverage bin");
         check(bin.program.root);
-        const bool pattern = items[bin.item].kind == XCoverageItemKind::Pattern;
+        const bool pattern = points[bin.point_id].kind == XCoveragePointKind::Pattern;
         if (!pattern && !bin.program.steps.empty() && bin.program.kind != XTriggerProgramKind::Sequence)
             throw std::invalid_argument("transition bin requires a sequence program");
         if (pattern || bin.program.kind == XTriggerProgramKind::Sequence) {
@@ -91,29 +91,29 @@ CoverageState::CoverageState(uint32_t generation, ExprEngine &expr, const Patter
         if (!pattern) for (const auto &step : bin.program.steps)
             if (step.kind != XSequenceStepKind::Wait && step.kind != XSequenceStepKind::Next)
                 throw std::invalid_argument("coverage transition requires adjacent steps");
-        const auto &dims = items[bin.item].dimensions;
+        const auto &dims = points[bin.point_id].dimensions;
         if (bin.dimensions.size() != dims.size()) throw std::invalid_argument("invalid cross tuple");
         for (size_t j = 0; j < dims.size(); ++j) {
             auto d = bin.dimensions[j];
-            if (d >= bins.size() || bins[d].kind != XCoverageBinKind::Normal || bins[d].item != dims[j])
+            if (d >= bins.size() || bins[d].kind != XCoverageBinKind::Normal || bins[d].point_id != dims[j])
                 throw std::invalid_argument("invalid cross bin");
         }
     }
-    this->items = items; this->bins = bins; this->gate = gate; this->abort = abort;
+    this->points = points; this->bins = bins; this->gate = gate; this->abort = abort;
     this->raise_illegal = raise_illegal; this->diagnostic_capacity = diagnostic_capacity;
     this->overlap = overlap; this->max_active = max_active;
     // Grow only with observed starts, never reserve arbitrary max_active up front.
     if (diagnostics) snapshot.diagnostics.resize((1 + bins.size()) * CoverageState::DiagnosticCount);
     snapshot.generation = generation;
-    snapshot.counters.resize(2 + items.size() * 5 + bins.size());
+    snapshot.counters.resize(2 + points.size() * 5 + bins.size());
     delta.resize(snapshot.counters.size());
-    matched.resize(bins.size()); normal_counts.resize(items.size());
+    matched.resize(bins.size()); normal_counts.resize(points.size());
     matchers.resize(bins.size());
     owners.resize(bins.size());
     for (size_t i = 0; i < bins.size(); ++i) {
         owners[i] = i;
         if (bins[i].kind == XCoverageBinKind::Illegal) illegal_indices.push_back(i);
-        if ((items[bins[i].item].kind == XCoverageItemKind::Pattern)) {
+        if ((points[bins[i].point_id].kind == XCoveragePointKind::Pattern)) {
             for (size_t previous = 0; previous < i; ++previous) {
                 if (owners[previous] == previous && SameCoverageExecution(bins[i], bins[previous])) {
                     owners[i] = previous;
@@ -166,7 +166,7 @@ size_t CoverageState::ExecutionCount() const
 {
     size_t count = 0;
     for (size_t b = 0; b < bins.size(); ++b)
-        count += (items[bins[b].item].kind == XCoverageItemKind::Pattern) && owners[b] == b;
+        count += (points[bins[b].point_id].kind == XCoveragePointKind::Pattern) && owners[b] == b;
     return count;
 }
 
@@ -219,10 +219,10 @@ inline bool Enabled(ExprEngine &expr, int root) {
 
 void CoverageState::SampleCrossPoint(size_t i, size_t offset)
 {
-    const auto &item = items[i];
+    const auto &point = points[i];
     const size_t base = 2 + i * 5;
     uint64_t combinations = 1, hits = 0;
-    for (auto d : item.dimensions) {
+    for (auto d : point.dimensions) {
         const auto n = normal_counts[d];
         if (n && combinations > std::numeric_limits<uint64_t>::max() / n)
             throw std::overflow_error("coverage cross product overflow");
@@ -230,7 +230,7 @@ void CoverageState::SampleCrossPoint(size_t i, size_t offset)
     }
     for (size_t b = 0; b < bins.size(); ++b) {
         const auto &bin = bins[b];
-        if (bin.item != i) continue;
+        if (bin.point_id != i) continue;
         bool match = true;
         for (auto d : bin.dimensions) match = match && matched[d];
         if (!match) continue;
@@ -246,7 +246,7 @@ inline void CoverageState::SamplePatternPoint(ExprEngine &expr, size_t i, size_t
     bool any = false;
     for (size_t b = 0; b < bins.size(); ++b) {
         const auto &bin = bins[b];
-        if (bin.item != i) continue;
+        if (bin.point_id != i) continue;
         auto &matcher = matchers[owners[b]];
         if (owners[b] == b) {
             if (bin.program.kind == XTriggerProgramKind::Expr) matcher.AdvanceCondition(expr);
@@ -266,7 +266,7 @@ void CoverageState::SampleValuePoint(ExprEngine &expr, size_t i, size_t offset)
     int priority = -1;
     for (size_t b = 0; b < bins.size(); ++b) {
         const auto &bin = bins[b];
-        if (bin.item != i || bin.kind == XCoverageBinKind::Default) continue;
+        if (bin.point_id != i || bin.kind == XCoverageBinKind::Default) continue;
         bool hit = false;
         if (bin.program.steps.empty()) hit = Enabled(expr, bin.program.root);
         else {
@@ -279,7 +279,7 @@ void CoverageState::SampleValuePoint(ExprEngine &expr, size_t i, size_t offset)
     bool any = false;
     for (size_t b = 0; b < bins.size(); ++b) {
         const auto &bin = bins[b];
-        if (bin.item != i) continue;
+        if (bin.point_id != i) continue;
         const bool hit = priority < 0 ? bin.kind == XCoverageBinKind::Default : matched[b] && static_cast<int>(bin.kind) == priority;
         matched[b] = hit && bin.kind == XCoverageBinKind::Normal;
         if (matched[b]) ++normal_counts[i];
@@ -293,31 +293,31 @@ void CoverageState::Sample(ExprEngine &expr, uint64_t tick)
     std::fill(delta.begin(), delta.end(), 0);
     std::fill(matched.begin(), matched.end(), false);
     std::fill(normal_counts.begin(), normal_counts.end(), 0);
-    const size_t offset = 2 + items.size() * 5;
+    const size_t offset = 2 + points.size() * 5;
     if (!Enabled(expr, gate)) {
         delta[1] = 1;
         for (size_t b = 0; b < matchers.size(); ++b)
             if (owners[b] == b) ClearMatcher(b + 1, matchers[b], Cleared);
     } else {
         delta[0] = 1;
-        for (size_t i = 0; i < items.size(); ++i) {
-            const auto &item = items[i];
+        for (size_t i = 0; i < points.size(); ++i) {
+            const auto &point = points[i];
             const size_t base = 2 + i * 5;
-            const bool gate = Enabled(expr, item.gate);
+            const bool gate = Enabled(expr, point.gate);
             // U refreshes all native words; DataValid checks X/Z across the full width.
-            const bool known = !item.signal || (item.signal->U(), item.signal->DataValid());
+            const bool known = !point.signal || (point.signal->U(), point.signal->DataValid());
             if (!gate || !known) {
                 delta[base + 1] = 1;
                 if (gate && !known) delta[base + 4] = 1;
                 for (size_t b = 0; b < bins.size(); ++b)
-                    if (bins[b].item == i && owners[b] == b) ClearMatcher(b + 1, matchers[b], Cleared);
+                    if (bins[b].point_id == i && owners[b] == b) ClearMatcher(b + 1, matchers[b], Cleared);
                 continue;
             }
             delta[base] = 1;
-            switch (item.kind) {
-            case XCoverageItemKind::Value: SampleValuePoint(expr, i, offset); break;
-            case XCoverageItemKind::Pattern: SamplePatternPoint(expr, i, offset); break;
-            case XCoverageItemKind::Cross: SampleCrossPoint(i, offset); break;
+            switch (point.kind) {
+            case XCoveragePointKind::Value: SampleValuePoint(expr, i, offset); break;
+            case XCoveragePointKind::Pattern: SamplePatternPoint(expr, i, offset); break;
+            case XCoveragePointKind::Cross: SampleCrossPoint(i, offset); break;
             }
         }
     }
@@ -333,7 +333,7 @@ void CoverageState::Sample(ExprEngine &expr, uint64_t tick)
     for (auto b : illegal_indices) if (delta[offset + b]) {
         snapshot.illegal_bins.push_back(b);
         snapshot.illegal_ticks.push_back(tick);
-        auto *signal = items[bins[b].item].signal;
+        auto *signal = points[bins[b].point_id].signal;
         snapshot.illegal_values.push_back(signal ? signal->String() : "0");
     }
     if (illegal && raise_illegal) throw std::runtime_error("coverage illegal bin");

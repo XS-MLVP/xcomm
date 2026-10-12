@@ -92,7 +92,7 @@ namespace std {
 
 namespace std {
    %template(XBackendHitVector) vector<xspcomm::XBackendHit>;
-   %template(XCoverageItemVector) vector<xspcomm::XCoverageItem>;
+   %template(XCoveragePointVector) vector<xspcomm::XCoveragePoint>;
    %template(XCoverageBinVector) vector<xspcomm::XCoverageBin>;
    %template(XUInt32Vector) vector<unsigned int>;
    %template(XUInt64Vector) vector<unsigned long long>;

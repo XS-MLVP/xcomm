@@ -12,6 +12,15 @@ namespace xspcomm {
 
 using WatcherKind = detail::TriggerRegistration::Kind;
 
+namespace {
+class RunScope {
+    bool &running;
+public:
+    explicit RunScope(bool &running) : running(running) { running = true; }
+    ~RunScope() { running = false; }
+};
+} // namespace
+
 XEngine::XEngine(XClock *clock, size_t capacity)
     : clock(clock), capacity(capacity), expr_engine(std::make_unique<ExprEngine>())
 {
@@ -21,6 +30,7 @@ XEngine::XEngine(XClock *clock, size_t capacity)
     if (capacity == 0) {
         throw std::invalid_argument("XTriggerEngine capacity must be positive");
     }
+    clock_lifetime = clock->callback_lifetime.Observe();
     watchers.reserve(capacity);
     free_slots.reserve(capacity);
     hit_buffer.reserve(capacity);
@@ -28,10 +38,51 @@ XEngine::XEngine(XClock *clock, size_t capacity)
 
 XEngine::XEngine(XClock &clock, size_t capacity) : XEngine(&clock, capacity) {}
 
-XEngine::~XEngine() = default;
+XEngine::~XEngine()
+{
+    if (!clock_lifetime.expired() && clock->drive_control.owner == this) {
+        clock->drive_control.owner = nullptr;
+    }
+}
+
+void XEngine::CheckNotRunning() const
+{
+    if (running) throw std::logic_error("XEngine is already running");
+}
+
+void XEngine::CheckClockOwnership() const
+{
+    if (clock_lifetime.expired()) throw std::logic_error("XEngine clock has been destroyed");
+    if (clock->drive_control.owner != this) {
+        throw std::logic_error("XEngine must acquire its clock with AcquireClock first");
+    }
+}
+
+void XEngine::AcquireClock()
+{
+    CheckNotRunning();
+    if (clock_lifetime.expired()) throw std::logic_error("XEngine clock has been destroyed");
+    if (clock->in_callback || clock->drive_control.stepping) {
+        throw std::logic_error("cannot acquire XClock during a clock step or callback");
+    }
+    if (clock->drive_control.owner != nullptr && clock->drive_control.owner != this) {
+        throw std::logic_error("XClock is already controlled by another XEngine");
+    }
+    clock->drive_control.owner = this;
+}
+
+void XEngine::ReleaseClock()
+{
+    CheckNotRunning();
+    if (ActiveCount() != 0) throw std::logic_error("cannot release XClock with active registrations");
+    if (!clock_lifetime.expired() && clock->drive_control.owner == this) {
+        clock->drive_control.owner = nullptr;
+    }
+}
 
 XRegistrationHandle XEngine::Allocate()
 {
+    CheckClockOwnership();
     uint32_t slot;
     if (!free_slots.empty()) {
         slot = free_slots.back();
@@ -430,6 +481,10 @@ XRunResult XEngine::RunUntil(
     uint64_t max_half_ticks, uint64_t max_wall_time_ns,
     uint32_t budget_check_interval)
 {
+    CheckNotRunning();
+    CheckClockOwnership();
+    if (clock->in_callback) throw std::logic_error("cannot drive XEngine from a clock callback");
+    RunScope run(running);
     XRunResult result;
     result.stopped_phase = clock->GetPhase();
     hit_buffer.clear();
@@ -438,7 +493,7 @@ XRunResult XEngine::RunUntil(
     if (budget_check_interval == 0) budget_check_interval = 1;
 
     for (uint64_t i = 0; i < max_half_ticks; ++i) {
-        if (!clock->StepHalf()) {
+        if (!clock->_step_half_impl(true)) {
             result.stop_reason = XStopReason::BackendStop;
             result.hits = hit_buffer;
             return result;
@@ -483,6 +538,10 @@ XRunResult XEngine::RunUntil(
 
 XRunResult XEngine::SamplePhase(XPhase phase)
 {
+    CheckNotRunning();
+    CheckClockOwnership();
+    if (clock->in_callback) throw std::logic_error("cannot drive XEngine from a clock callback");
+    RunScope run(running);
     if (phase != XPhase::DriveStable ||
         clock->GetPhase() != XPhase::FallingStable) {
         throw std::logic_error(
@@ -513,6 +572,7 @@ size_t XEngine::ActiveCount() const
 
 void XEngine::ClearExecutionState()
 {
+    CheckNotRunning();
     if (ActiveCount() != 0) {
         throw std::logic_error(
             "cannot reset trigger runtime with active watchers");
@@ -532,6 +592,7 @@ void XEngine::ClearExecutionState()
 
 void XEngine::Clear()
 {
+    CheckNotRunning();
     watchers.clear();
     free_slots.clear();
     hit_buffer.clear();

@@ -13,11 +13,11 @@ TEST_CASE("Coverage samples independently of the trigger engine", "[coverage]") 
     value = 7;
     gate = 1;
     abort = 0;
-    XCoverageItem item;
-    item.signal = &value;
+    XCoveragePoint point;
+    point.signal = &value;
     XCoverageBin bin;
     bin.program.root = expr.NewConst(1);
-    CoverageState coverage(9, expr, {}, {item}, {bin},
+    CoverageState coverage(9, expr, {}, {point}, {bin},
         expr.NewSignal(&gate), expr.NewSignal(&abort), true, 32, false, 1, true);
 
     REQUIRE(coverage.BeginSample(expr, 1) == CoverageState::SampleStatus::Ready);
@@ -52,11 +52,11 @@ TEST_CASE("Coverage abort clears overlapping pattern history", "[coverage][patte
         {XSequenceStepKind::Wait, expr.NewSignal(&start)},
         {XSequenceStepKind::Within, expr.NewSignal(&done), 1, 3}};
     const detail::PatternView source{&steps};
-    XCoverageItem item;
-    item.signal = &value;
+    XCoveragePoint point;
+    point.signal = &value;
     XCoverageBin bin;
     bin.program.root = expr.NewConst(1);
-    CoverageState coverage(1, expr, source, {item}, {bin},
+    CoverageState coverage(1, expr, source, {point}, {bin},
         -1, expr.NewSignal(&abort), true, 32, true, 2, true);
 
     for (uint64_t tick = 1; tick <= 2; ++tick) {

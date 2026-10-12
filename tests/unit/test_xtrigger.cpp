@@ -9,6 +9,7 @@ using namespace xspcomm;
 TEST_CASE("XTriggerEngine broadcasts one edge occurrence", "[xtrigger]") {
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock, 8);
+    engine.AcquireClock();
     const auto first = engine.ArmEdge(XPhase::FallingStable);
     const auto second = engine.ArmEdge(XPhase::FallingStable);
 
@@ -26,6 +27,7 @@ TEST_CASE("XTriggerEngine broadcasts one edge occurrence", "[xtrigger]") {
 TEST_CASE("XTriggerEngine counts selected phases", "[xtrigger]") {
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmClockCycles(3);
 
     const auto result = engine.RunUntil(20);
@@ -44,6 +46,7 @@ TEST_CASE("XTriggerEngine evaluates value equality at a stable phase",
     XData ready(1, XData::InOut);
     ready = 1;
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmValueEq(
         &ready, 1, XPhase::RisingStable);
 
@@ -60,6 +63,7 @@ TEST_CASE("XTriggerEngine evaluates value equality at a stable phase",
 TEST_CASE("XTriggerEngine rejects stale generations", "[xtrigger]") {
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock, 1);
+    engine.AcquireClock();
     const auto old_handle = engine.ArmEdge(XPhase::FallingStable);
     REQUIRE(engine.Disarm(old_handle));
 
@@ -74,6 +78,7 @@ TEST_CASE("XTriggerEngine runtime reset preserves stale handle safety",
           "[xtrigger]") {
     XClock clock([](bool) { return 0; });
     XTriggerEngine engine(clock, 1);
+    engine.AcquireClock();
     auto stale = engine.ArmEdge(XPhase::RisingStable);
     REQUIRE(engine.Disarm(stale));
 
@@ -95,6 +100,7 @@ TEST_CASE("XTriggerEngine evaluates ExprEngine roots", "[xtrigger]") {
     flush = 0;
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
 
     const int valid_node = engine.ExprNewSignal(&valid);
     const int ready_node = engine.ExprNewSignal(&ready);
@@ -130,6 +136,7 @@ TEST_CASE("XTriggerEngine runs non-overlapping sequence state", "[xtrigger]") {
         return 0;
     });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const int req_root = engine.ExprNewSignal(&req);
     const int ack_root = engine.ExprNewSignal(&ack);
     const int valid_root = engine.ExprNewSignal(&valid);
@@ -153,6 +160,7 @@ TEST_CASE("XTriggerEngine rearms Python sampling without changing handle",
           "[xtrigger]") {
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmSample(XPhase::RisingStable);
 
     const auto first = engine.RunUntil(8);
@@ -171,6 +179,7 @@ TEST_CASE("XTriggerEngine rearms Python sampling without changing handle",
 TEST_CASE("XTriggerEngine rearms periodic cycle watchers", "[xtrigger]") {
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmClockCycles(2);
 
     const auto first = engine.RunUntil(8);
@@ -197,6 +206,7 @@ TEST_CASE("XTriggerEngine runs structured branching FSM", "[xtrigger]") {
         return 0;
     });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const int req_root = engine.ExprNewSignal(&req);
     const int ack_root = engine.ExprNewSignal(&ack);
     const std::vector<XFsmTransition> transitions = {
@@ -223,6 +233,7 @@ TEST_CASE("XTriggerEngine samples value changes at selected phase",
         return 0;
     });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmValueChange(
         &data, XPhase::RisingStable);
 
@@ -242,6 +253,7 @@ TEST_CASE("XTriggerEngine preserves four-state value changes", "[xtrigger]") {
         return 0;
     });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmValueChange(
         &data, XPhase::RisingStable);
 
@@ -260,6 +272,7 @@ TEST_CASE("XTriggerEngine does not match unknown equality", "[xtrigger]") {
         return 0;
     });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmValueEq(
         &data, 1, XPhase::RisingStable);
 
@@ -278,6 +291,7 @@ TEST_CASE("XTriggerEngine supports signals wider than uint64", "[xtrigger]") {
     data.SetVU8(expected);
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
 
     const auto value = engine.ArmValueEqBytes(
         &data, expected, XPhase::RisingStable, XConditionMode::Enter, 0);
@@ -325,6 +339,7 @@ TEST_CASE("XTriggerEngine condition enter state survives rearm", "[xtrigger]") {
     data = 1;
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmValueEq(
         &data, 1, XPhase::RisingStable, XConditionMode::Enter);
 
@@ -342,6 +357,7 @@ TEST_CASE("XTriggerEngine condition change emits both transitions", "[xtrigger]"
     XData data(1, XData::InOut);
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmValueEq(
         &data, 1, XPhase::RisingStable, XConditionMode::Change);
 
@@ -361,6 +377,7 @@ TEST_CASE("XTriggerEngine condition change emits both transitions", "[xtrigger]"
 TEST_CASE("XTriggerEngine yields on wall clock quantum", "[xtrigger]") {
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const auto handle = engine.ArmClockCycles(1000);
 
     const auto result = engine.RunUntil(1000, 1, 1);
@@ -377,6 +394,7 @@ TEST_CASE("XTriggerEngine samples DriveStable without advancing time",
     XData valid(1, XData::InOut);
     XClock clock([](bool){ return 0; });
     XTriggerEngine engine(clock);
+    engine.AcquireClock();
     const int root = engine.ExprNewSignal(&valid);
     const auto handle = engine.ArmExpr(
         root, XPhase::DriveStable, XConditionMode::EachSample);
@@ -396,4 +414,122 @@ TEST_CASE("XTriggerEngine samples DriveStable without advancing time",
     REQUIRE(sampled.hits[0].phase == XPhase::DriveStable);
     REQUIRE(sampled.hits[0].tick == 1);
     REQUIRE(engine.Disarm(handle));
+}
+
+
+TEST_CASE("XEngine explicitly leases a clock until release", "[xtrigger][ownership]") {
+    XClock clock([](bool) { return 0; });
+    XEngine first(clock), second(clock);
+    REQUIRE_FALSE(clock.IsControlled());
+    clock.Step(); // Construction leaves initialization under manual control.
+    REQUIRE_THROWS_AS(first.ArmEdge(XPhase::RisingStable), std::logic_error);
+    REQUIRE_THROWS_AS(first.RunUntil(2), std::logic_error);
+
+    first.AcquireClock();
+    first.AcquireClock(); // Idempotent for the same engine.
+    REQUIRE(clock.IsControlled());
+    REQUIRE_THROWS_AS(second.AcquireClock(), std::logic_error);
+    second.ReleaseClock(); // Never releases another engine's lease.
+    REQUIRE(clock.IsControlled());
+    XClock idle([](bool) { return 0; });
+    REQUIRE_THROWS_AS(XClock(clock), std::logic_error);
+    REQUIRE_THROWS_AS(idle = clock, std::logic_error);
+    REQUIRE_THROWS_AS(clock = idle, std::logic_error);
+    const auto tick = clock.GetHalfTick();
+    REQUIRE_THROWS_AS(clock.Step(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.StepHalf(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.RunStep(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.Reset(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.ReInit([](bool) { return 0; }), std::logic_error);
+    REQUIRE_THROWS_AS(clock.default_stop_on_rise(false), std::logic_error);
+    REQUIRE(clock.GetHalfTick() == tick);
+
+    const auto handle = first.ArmEdge(XPhase::FallingStable);
+    REQUIRE(first.RunUntil(8).hits.size() == 1);
+    REQUIRE_THROWS_AS(first.ReleaseClock(), std::logic_error); // Fired is still registered.
+    REQUIRE(first.Disarm(handle));
+    REQUIRE_THROWS_AS(clock.StepHalf(), std::logic_error); // Still leased between batches.
+    first.ClearExecutionState();
+    first.ReleaseClock();
+    REQUIRE_FALSE(clock.IsControlled());
+    REQUIRE(clock.GetPhase() == XPhase::FallingStable); // Release never advances time.
+    REQUIRE_FALSE(clock.IsAtCycleBoundary());
+    REQUIRE(clock.StepHalf());
+    REQUIRE(clock.IsAtCycleBoundary());
+    second.AcquireClock();
+    REQUIRE(second.RunUntil(2).advanced_ticks == 2);
+    second.ReleaseClock();
+    clock.Step();
+}
+
+TEST_CASE("XEngine releases ownership on destruction and checks clock lifetime",
+          "[xtrigger][ownership]") {
+    XClock clock([](bool) { return 0; });
+    {
+        XEngine engine(clock);
+        engine.AcquireClock();
+        engine.ArmEdge(XPhase::RisingStable);
+    }
+    REQUIRE_FALSE(clock.IsControlled());
+    clock.Step();
+
+    auto temporary = std::make_unique<XClock>([](bool) { return 0; });
+    XEngine engine(*temporary);
+    engine.AcquireClock();
+    temporary.reset();
+    REQUIRE_THROWS_AS(engine.RunUntil(2), std::logic_error);
+    REQUIRE_THROWS_AS(engine.AcquireClock(), std::logic_error);
+    REQUIRE_THROWS_AS(engine.ArmEdge(XPhase::RisingStable), std::logic_error);
+    engine.Clear();
+    REQUIRE_NOTHROW(engine.ReleaseClock());
+}
+
+TEST_CASE("XEngine rejects callback reentry and recovers from exceptions",
+          "[xtrigger][ownership]") {
+    XClock clock([](bool) { return 0; });
+    XEngine engine(clock);
+    clock.StepFal([&](uint64_t, void *) {
+        REQUIRE_THROWS_AS(engine.AcquireClock(), std::logic_error);
+        REQUIRE_THROWS_AS(engine.RunUntil(2), std::logic_error);
+    });
+    clock.Step();
+    clock.ClearFalCallBacks();
+    engine.AcquireClock();
+    unsigned callbacks = 0;
+    clock.StepFal([&](uint64_t, void *) {
+        ++callbacks;
+        REQUIRE_THROWS_AS(clock.Step(), std::logic_error);
+        REQUIRE_THROWS_AS(engine.RunUntil(2), std::logic_error);
+        REQUIRE_THROWS_AS(engine.SamplePhase(XPhase::DriveStable), std::logic_error);
+        REQUIRE_THROWS_AS(engine.Clear(), std::logic_error);
+        REQUIRE_THROWS_AS(engine.ClearExecutionState(), std::logic_error);
+        REQUIRE_THROWS_AS(engine.ReleaseClock(), std::logic_error);
+    });
+    REQUIRE(engine.RunUntil(2).advanced_ticks == 2);
+    REQUIRE(callbacks == 1);
+    clock.ClearFalCallBacks();
+    clock.StepFal([](uint64_t, void *) { throw std::runtime_error("callback failed"); });
+    REQUIRE_THROWS_WITH(engine.RunUntil(2), "callback failed");
+    clock.ClearFalCallBacks();
+    REQUIRE(engine.RunUntil(2).advanced_ticks == 2);
+    REQUIRE_NOTHROW(engine.ReleaseClock());
+}
+
+
+TEST_CASE("XEngine cannot take over a manual step already in progress", "[xtrigger][ownership]") {
+    XEngine *engine = nullptr;
+    XClock clock([&](bool) {
+        REQUIRE_THROWS_AS(engine->AcquireClock(), std::logic_error);
+        return 0;
+    });
+    XEngine runtime(clock);
+    engine = &runtime;
+    clock.Step();
+    REQUIRE_FALSE(clock.IsControlled());
+    REQUIRE(clock.GetHalfTick() == 2);
+    clock.StepHalf();
+    REQUIRE_FALSE(clock.IsControlled());
+    REQUIRE(clock.GetHalfTick() == 3);
+    runtime.AcquireClock();
+    runtime.ReleaseClock();
 }

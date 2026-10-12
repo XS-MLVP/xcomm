@@ -294,7 +294,12 @@ XClock.StepFal = XClock_StepFal
 
 XClock__old_Step = XClock.Step
 XClock.RawStep = XClock__old_Step
+def XClock_RequireManualControl(self):
+    if self.IsControlled():
+        raise RuntimeError("XClock is controlled by XEngine; use xreactor triggers inside Execution")
+
 def XClock_Step(self, cycle: int):
+    XClock_RequireManualControl(self)
     for i in range(cycle):
         XClock__old_Step(self, 1)
         XClock_Check_Exceptions(self)
@@ -302,18 +307,22 @@ def XClock_Step(self, cycle: int):
         self._step_event.clear()
 
 async def XClock_AStep(self, cycle: int):
+    XClock_RequireManualControl(self)
     for i in range(cycle):
         await self._step_event.wait()
 
 async def XClock_ACondition(self, condition):
+    XClock_RequireManualControl(self)
     assert callable(condition), "condition must be callable"
     while not condition():
         await self._step_event.wait()
 
 async def XClock_ANext(self):
+    XClock_RequireManualControl(self)
     return await self._step_event.wait()
 
 async def XClock_RunStep(self, cycle: int):
+    XClock_RequireManualControl(self)
     for i in range(cycle):
         await tick_clock_ready()
         XClock_Step(self, 1)

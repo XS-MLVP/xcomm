@@ -15,7 +15,7 @@ class CoverageState {
 public:
     enum class SampleStatus { Ready, Skip, Aborted };
     CoverageState(uint32_t generation, ExprEngine &expr, const PatternView &source,
-                  const std::vector<XCoverageItem> &items,
+                  const std::vector<XCoveragePoint> &points,
                   const std::vector<XCoverageBin> &bins,
                   int gate, int abort, bool raise_illegal, size_t diagnostic_capacity,
                   bool overlap, size_t max_active, bool diagnostics);
@@ -39,12 +39,12 @@ public:
 
 private:
     void RecordDiagnostics(size_t pattern, const MatchUpdate &update);
-    void SampleValuePoint(ExprEngine &expr, size_t item, size_t offset);
-    inline void SamplePatternPoint(ExprEngine &expr, size_t item, size_t offset);
-    void SampleCrossPoint(size_t item, size_t offset);
+    void SampleValuePoint(ExprEngine &expr, size_t point, size_t offset);
+    inline void SamplePatternPoint(ExprEngine &expr, size_t point, size_t offset);
+    void SampleCrossPoint(size_t point, size_t offset);
     size_t Advance(ExprEngine &expr, PatternMatcher &matcher,
                    size_t pattern, bool overlap, size_t max_active);
-    std::vector<XCoverageItem> items;
+    std::vector<XCoveragePoint> points;
     std::vector<XCoverageBin> bins;
     PatternMatcher source_matcher;
     std::vector<PatternMatcher> matchers;

@@ -101,8 +101,9 @@ comparison enum, now exposed with the same name in language bindings.
 `xinstance.h` and its `test_xdata()` helper are removed from the production SDK;
 that test implementation is compiled into `test_xdata` instead. Python-only
 third-call declarations live beside the Python wrapper. Existing signal
-access and clock stepping interfaces are retained. Coverage descriptors and
-clock/checker/runtime layouts have changed, so native clients must rebuild against ABI 5;
+access and manual clock stepping interfaces remain available outside an owned
+execution. Coverage descriptors and clock/checker/runtime layouts have changed,
+so native clients must rebuild against ABI 3;
 source clients must also update the includes above.
 
 ## Trigger programs and coverage
@@ -112,14 +113,17 @@ expression, sequence or FSM, with event mode and execution capacity. The trigger
 and coverage paths use the same validator and advancement kernel. Matching state
 belongs to each execution and is independent of the immutable program description.
 
-`XCoverageItem.kind` selects Value, Pattern or Cross. Value points require an
+`XCoveragePoint.kind` selects Value, Pattern or Cross. Value points require an
 XData source; pattern points have no synthetic source; crosses name preceding
 value points. `XCoverageBin.kind` selects Normal, Ignore, Illegal or Default,
 while `XCoverageBin.program` supplies matching and `terminals` selects FSM
 completion results. Impossible field combinations are rejected at registration.
 `CoverageVersion() == 5` identifies this descriptor protocol; the native library
-ABI is independently versioned as 5. Protocol 4 frontends must migrate flat bin
-program fields to `bin.program` and replace `item.pattern` with an explicit kind.
+ABI is independently versioned as 3. Protocol 4 frontends must migrate flat bin
+program fields to `bin.program` and replace `point.pattern` with an explicit kind.
+The public descriptor is `XCoveragePoint`,
+with `XCoveragePointKind` / `XCoveragePointVector` in bindings; a bin names its
+parent through `point_id`. The unshipped `XCoverageItem` names are removed.
 
 Equivalent programs within one point share an execution when their roots,
 steps/transitions, event mode and overlap capacity agree. Terminal selection,
@@ -136,6 +140,30 @@ completion results; value points retain their classification priority rules.
 Crosses containing pattern points are rejected until completion correlation
 semantics are defined. Program reclamation during a long execution and complete
 expression width/signed/cast/four-state semantics remain separate work.
+
+## Clock driving ownership
+
+Constructing `XEngine` leaves its clock available for manual initialization.
+Call `AcquireClock()` before registering watchers or running the engine, and
+hold it for the whole execution, including pauses between `RunUntil` calls.
+Only one engine can acquire a given clock. While owned, manual `Step`,
+`StepHalf`, `RunStep`, `Reset`, `ReInit`, changes to the default stopping edge,
+and copying or assigning that clock throw before changing its state.
+Idle clocks retain their existing copy behavior.
+
+`ReleaseClock()` requires all registrations to be disarmed, including fired
+registrations. It preserves the clock's tick and phase; if released mid-cycle,
+finish with `StepHalf()` before calling legacy whole-cycle `Step`.
+Destruction also releases the lease, and a destroyed clock is detected before
+subsequent engine access. Recursive runs and clearing/releasing a running
+engine are rejected. These are single-threaded simulation ownership checks,
+not synchronization between host threads.
+
+The xreactor backend acquires on Execution entry and releases after cleanup,
+including exceptional exit. Legacy Python clock wait/run helpers cannot be
+mixed with an owned engine; use xreactor triggers within Execution instead.
+The phase/matcher loop retains native batch stepping without per-tick Python
+ownership callbacks or locks.
 
 ## Monitor callback ownership
 

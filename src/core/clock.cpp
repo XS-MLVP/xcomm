@@ -1,6 +1,32 @@
 #include "xspcomm/xclock.h"
 
+#include <stdexcept>
+
 namespace xspcomm {
+
+namespace {
+class StepScope {
+    bool &stepping;
+public:
+    explicit StepScope(bool &stepping) : stepping(stepping) {
+        if (stepping) throw std::logic_error("XClock is already stepping");
+        stepping = true;
+    }
+    ~StepScope() { stepping = false; }
+};
+} // namespace
+
+XClock::DriveControl::DriveControl(const DriveControl &other)
+{
+    if (other.owner) throw std::logic_error("cannot copy an XClock controlled by XEngine");
+}
+
+XClock::DriveControl &XClock::DriveControl::operator=(const DriveControl &other)
+{
+    if (owner || other.owner) throw std::logic_error("cannot assign an XClock controlled by XEngine");
+    return *this;
+}
+
 #if ENABLE_XCOROUTINE
 XStep::XStep(XClock &clk, u_int64_t step,
              std::map<std::coroutine_handle<>, _XAWait *> *p) :
@@ -54,8 +80,13 @@ void XClock::_call_back(std::vector<XClockCallBack> &list)
         return;
     }
     this->in_callback = true;
-    for (auto &e : list) {
-        if (e.func) e.func(this->clk, e.args);
+    try {
+        for (auto &e : list) {
+            if (e.func) e.func(this->clk, e.args);
+        }
+    } catch (...) {
+        this->in_callback = false;
+        throw;
     }
     this->in_callback = false;
     if (callbacks_removed) {
@@ -80,6 +111,7 @@ void XClock::_add_cb(std::vector<XClockCallBack> &cblist,
 
 void XClock::default_stop_on_rise(bool rise)
 {
+    CheckManualStep();
     Assert(!this->half_cycle_open,
            "Cannot change stop_on_rise in the middle of a clock cycle");
     this->stop_on_rise = rise;
@@ -122,6 +154,7 @@ void XClock::ReInit(xfunction<int, bool> stepfunc,
                     std::initializer_list<xspcomm::XData *> clock_pins,
                     std::initializer_list<xspcomm::XPort *> ports)
 {
+    CheckManualStep();
     this->step_fc = stepfunc;
     for (auto &d : clock_pins) { this->Add(d); }
     for (auto &d : ports) { this->Add(d); }
@@ -174,13 +207,23 @@ XClock& XClock::Add(xspcomm::XPort &d)
     return *this;
 }
 
+void XClock::CheckManualStep() const
+{
+    if (drive_control.owner != nullptr) {
+        throw std::logic_error(
+            "XClock is controlled by XEngine; use the owning Execution to advance it");
+    }
+}
+
 void XClock::Step(int s)
 {
+    CheckManualStep();
     if (unlikely(this->is_disable)) return;
     if (unlikely(this->in_callback == true)) {
         Warn("Cannot call XClock.Step in callbacks, Ignore!");
         return;
     }
+    StepScope step(drive_control.stepping);
     for (int i = 0; i < s; i++) {
         if (unlikely(this->is_disable)) return;
         Assert(!this->half_cycle_open,
@@ -195,10 +238,12 @@ void XClock::Step(int s)
 
 bool XClock::StepHalf()
 {
+    CheckManualStep();
     if (unlikely(this->in_callback == true)) {
         Warn("Cannot call XClock.StepHalf in callbacks, Ignore!");
         return false;
     }
+    StepScope step(drive_control.stepping);
     return this->_step_half_impl(true);
 }
 
@@ -298,6 +343,7 @@ void XClock::eval_t()
 
 void XClock::Reset()
 {
+    CheckManualStep();
     this->clk = 0;
     this->half_tick = 0;
     this->half_cycle_open = false;

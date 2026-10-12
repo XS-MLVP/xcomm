@@ -10,13 +10,14 @@ namespace xspcomm {
 
 void XEngine::CheckCoverageHandle(XRegistrationHandle handle) const
 {
+    CheckClockOwnership();
     if (!handle.IsValid() || handle.slot >= watchers.size() ||
         !watchers[handle.slot].occupied || watchers[handle.slot].generation != handle.generation ||
         !watchers[handle.slot].coverage) throw std::invalid_argument("stale coverage handle");
 }
 
 void XEngine::AttachCoverage(XRegistrationHandle handle,
-    const std::vector<XCoverageItem> &items, const std::vector<XCoverageBin> &bins,
+    const std::vector<XCoveragePoint> &points, const std::vector<XCoverageBin> &bins,
     int gate, int abort, bool raise_illegal, size_t diagnostic_capacity,
     bool overlap, size_t max_active, bool diagnostics)
 {
@@ -25,7 +26,7 @@ void XEngine::AttachCoverage(XRegistrationHandle handle,
         watchers[handle.slot].coverage) throw std::invalid_argument("invalid coverage registration");
     auto &watcher = watchers[handle.slot];
     watcher.coverage = std::make_shared<detail::CoverageState>(
-        handle.generation, *expr_engine, watcher.CoverageSource(), items, bins,
+        handle.generation, *expr_engine, watcher.CoverageSource(), points, bins,
         gate, abort, raise_illegal, diagnostic_capacity, overlap, max_active, diagnostics);
 }
 
