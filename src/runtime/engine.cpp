@@ -38,6 +38,30 @@ XEngine::XEngine(XClock *clock, size_t capacity)
 
 XEngine::XEngine(XClock &clock, size_t capacity) : XEngine(&clock, capacity) {}
 
+size_t XEngine::ExpressionNodeCount() const { return expr_engine->NodeCount(); }
+size_t XEngine::ExpressionConstantCount() const { return expr_engine->ConstantCount(); }
+
+std::vector<int> XEngine::CollectExpressions(const std::vector<int> &retained_roots)
+{
+    CheckNotRunning();
+    std::vector<int> roots = retained_roots;
+    for (const auto &watcher : watchers) if (watcher.occupied) {
+        roots.push_back(watcher.program.root);
+        for (const auto &step : watcher.program.steps) roots.push_back(step.root);
+        for (const auto &transition : watcher.program.transitions) roots.push_back(transition.root);
+        if (watcher.coverage) watcher.coverage->ExpressionRoots(roots);
+    }
+    auto mapping = expr_engine->Collect(roots);
+    auto remap = [&](int &root) { if (root >= 0) root = mapping[root]; };
+    for (auto &watcher : watchers) if (watcher.occupied) {
+        remap(watcher.program.root);
+        for (auto &step : watcher.program.steps) remap(step.root);
+        for (auto &transition : watcher.program.transitions) remap(transition.root);
+        if (watcher.coverage) watcher.coverage->RemapExpressions(mapping);
+    }
+    return mapping;
+}
+
 XEngine::~XEngine()
 {
     if (!clock_lifetime.expired() && clock->drive_control.owner == this) {
@@ -225,6 +249,17 @@ int XEngine::ExprNewConst(uint64_t value)
 {
     return expr_engine->NewConst(value);
 }
+
+int XEngine::ExprNewBitsConst(uint32_t width, bool is_signed, std::vector<unsigned char> &value)
+{ return expr_engine->NewBitsConst(width, is_signed, value); }
+int XEngine::ExprNewBool(bool value)
+{ return expr_engine->NewBool(value); }
+int XEngine::ExprNewBitsSignal(XData *signal, bool is_signed)
+{ return expr_engine->NewBitsSignal(signal, is_signed); }
+int XEngine::ExprNewBits(int op, int lhs, int rhs, uint32_t width, bool is_signed)
+{ return expr_engine->NewBits(static_cast<ExprOp>(op), lhs, rhs, width, is_signed); }
+std::vector<unsigned char> XEngine::ExprEvalBits(int root)
+{ return expr_engine->EvalBits(root); }
 
 int XEngine::ExprNewSignal(XData *signal)
 {

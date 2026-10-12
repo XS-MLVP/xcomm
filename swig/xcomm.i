@@ -53,6 +53,7 @@
 %ignore xspcomm::XPort::SelectPins(std::initializer_list<std::string>);
 
 namespace std {
+   %template(XIntVector) vector<int>;
    %template(StringVector) vector<string>;
    %template(XDataVector) vector<std::shared_ptr<xspcomm::XData>>;
    %template(DictStrBool) map<string, bool>;

@@ -5,8 +5,56 @@
 #include <algorithm>
 #include <stdexcept>
 #include <utility>
+#include <unordered_set>
 
 namespace xspcomm {
+std::vector<int> ExprEngine::Collect(const std::vector<int> &roots)
+{
+    std::vector<int> mapping(nodes.size(), -1), pending;
+    std::vector<bool> live(nodes.size(), false);
+    for (int root : roots) {
+        if (root == -1) continue;
+        if (!ValidRoot(root)) throw std::invalid_argument("invalid retained expression root");
+        pending.push_back(root);
+    }
+    while (!pending.empty()) {
+        int id = pending.back(); pending.pop_back();
+        if (live[id]) continue;
+        live[id] = true;
+        const auto &node = nodes[id];
+        auto retain = [&](int child) {
+            if (child < 0) return;
+            if (!ValidRoot(child)) throw std::invalid_argument("invalid expression child");
+            pending.push_back(child);
+        };
+        retain(node.lhs); retain(node.rhs);
+        if (node.op == ExprOp::SELECT) retain(static_cast<int>(node.imm));
+    }
+    std::vector<ExprNode> compact;
+    compact.reserve(std::count(live.begin(), live.end(), true));
+    std::unordered_set<XData *> constants;
+    for (size_t i = 0; i < nodes.size(); ++i) if (live[i]) {
+        mapping[i] = static_cast<int>(compact.size());
+        compact.push_back(nodes[i]);
+        constants.insert(nodes[i].lhs_xdata);
+        constants.insert(nodes[i].rhs_xdata);
+        constants.insert(nodes[i].mask_xdata);
+    }
+    for (auto &node : compact) {
+        if (node.lhs >= 0) node.lhs = mapping[node.lhs];
+        if (node.rhs >= 0) node.rhs = mapping[node.rhs];
+        if (node.op == ExprOp::SELECT) node.imm = mapping[node.imm];
+    }
+    // All allocations and validation precede mutation. XData objects retained
+    // by live nodes keep their addresses; borrowed DUT signals are never freed.
+    nodes.swap(compact);
+    const_xdata.erase(std::remove_if(const_xdata.begin(), const_xdata.end(),
+        [&](const auto &data) { return !constants.count(data.get()); }), const_xdata.end());
+    eval_stack.clear(); eval_vals.clear();
+    ClearBitsWorkspace();
+    return mapping;
+}
+
 int ExprEngine::NewConst(uint64_t v){
     ExprNode n;
     n.op = ExprOp::CONST;
@@ -168,6 +216,12 @@ bool ExprEngine::IsKnown(int root){
 bool ExprEngine::IsKnownNode(int id){
     if(id < 0 || id >= (int)this->nodes.size()) return false;
     const ExprNode &n = this->nodes[id];
+    if(n.op == ExprOp::TYPED){
+        auto op = static_cast<ExprOp>(uint32_t(n.imm));
+        if(op == ExprOp::CONST) return true;
+        if(op == ExprOp::SIGNAL){ n.sig->U(); return n.sig->DataValid(); }
+        return IsKnownNode(n.lhs) && (n.rhs < 0 || IsKnownNode(n.rhs));
+    }
     if(n.op == ExprOp::CONST) return true;
     if(n.op == ExprOp::SIGNAL){
         if(!n.sig) return false;
@@ -192,6 +246,7 @@ bool ExprEngine::IsKnownNode(int id){
 }
 
 void ExprEngine::Clear(){
+    ClearBitsWorkspace();
     this->nodes.clear();
     this->const_xdata.clear();
     this->signal_xdata.clear();
@@ -202,6 +257,8 @@ uint64_t ExprEngine::EvalNode(int id){
     if(id < 0 || id >= (int)this->nodes.size()) return 0;
     const ExprNode &n = this->nodes[id];
     switch(n.op){
+    case ExprOp::TYPED:
+        return EvalBitsScalar(id);
     case ExprOp::CONST:
         return n.imm;
     case ExprOp::SIGNAL:
@@ -323,6 +380,10 @@ uint64_t ExprEngine::EvalIterative(int root){
         }
         ExprNode &n = this->nodes[f.id];
         switch(n.op){
+        case ExprOp::TYPED:
+            vals.push_back(EvalBitsScalar(f.id));
+            stack.pop_back();
+            break;
         case ExprOp::CONST:
             vals.push_back(n.imm);
             stack.pop_back();

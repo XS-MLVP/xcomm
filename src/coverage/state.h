@@ -33,6 +33,8 @@ public:
     void Sample(ExprEngine &expr, uint64_t tick);
     void SamplePattern(ExprEngine &expr, uint64_t tick);
     size_t ExecutionCount() const;
+    void ExpressionRoots(std::vector<int> &roots) const;
+    void RemapExpressions(const std::vector<int> &mapping);
     void ClearHistory(bool aborted = false);
     void ResetCounters();
     XCoverageSnapshot Snapshot(uint64_t tick, bool progress) const;
