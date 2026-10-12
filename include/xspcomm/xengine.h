@@ -21,6 +21,8 @@ class XEngine {
     struct Watcher;
 
     XClock *clock = nullptr;
+    std::weak_ptr<const int> clock_lifetime;
+    bool running = false;
     size_t capacity = 0;
     uint64_t next_event_id = 1;
     std::vector<Watcher> watchers;
@@ -29,6 +31,8 @@ class XEngine {
     std::unique_ptr<ExprEngine> expr_engine;
     XPhase evaluation_phase = XPhase::RisingStable;
 
+    void CheckClockOwnership() const;
+    void CheckNotRunning() const;
     XRegistrationHandle Allocate();
     void EvaluatePhase(XPhase phase);
     bool HasArmedPhase(XPhase phase) const;
@@ -42,6 +46,10 @@ public:
     explicit XEngine(XClock *clock, size_t capacity = 1024);
     explicit XEngine(XClock &clock, size_t capacity = 1024);
     ~XEngine();
+
+    // Hold the clock for the entire execution, including pauses between batches.
+    void AcquireClock();
+    void ReleaseClock();
 
     XRegistrationHandle ArmEdge(XPhase phase, uint64_t source_id = 0);
     XRegistrationHandle ArmClockCycles(
@@ -85,7 +93,7 @@ public:
         XPhase phase = XPhase::RisingStable, uint64_t source_id = 0);
     static uint32_t CoverageVersion() { return 5; }
     void AttachCoverage(XRegistrationHandle handle,
-                        const std::vector<XCoverageItem> &items,
+                        const std::vector<XCoveragePoint> &points,
                         const std::vector<XCoverageBin> &bins,
                         int gate = -1, int abort = -1,
                         bool raise_illegal = true, size_t diagnostic_capacity = 1024,

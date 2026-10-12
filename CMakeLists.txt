@@ -10,8 +10,9 @@ else()
     set(XSPCOMM_PACKAGE_VERSION "${PROJECT_VERSION}")
 endif()
 
-# Increment only when the native C++ ABI becomes incompatible.
-set(XSPCOMM_ABI_VERSION 5)
+# Increment for incompatibility with master / published native ABIs.
+# Unreleased changes on this branch share one ABI transition.
+set(XSPCOMM_ABI_VERSION 3)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

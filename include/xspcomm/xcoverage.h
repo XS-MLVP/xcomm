@@ -10,19 +10,19 @@ namespace xspcomm {
 
 class XData;
 
-enum class XCoverageItemKind : uint8_t { Value = 0, Pattern = 1, Cross = 2 };
+enum class XCoveragePointKind : uint8_t { Value = 0, Pattern = 1, Cross = 2 };
 enum class XCoverageBinKind : uint8_t { Normal = 0, Ignore = 1, Illegal = 2, Default = 3 };
 
 // Coverage owns classification and statistics; trigger programs own matching.
-struct XCoverageItem {
-    XCoverageItemKind kind = XCoverageItemKind::Value;
+struct XCoveragePoint {
+    XCoveragePointKind kind = XCoveragePointKind::Value;
     int gate = -1;
     XData *signal = nullptr; // Value only
     std::vector<unsigned int> dimensions; // Cross only; preceding value point IDs
 };
 
 struct XCoverageBin {
-    uint32_t item = 0;
+    uint32_t point_id = 0;
     XCoverageBinKind kind = XCoverageBinKind::Normal;
     XTriggerProgram program;
     std::vector<unsigned int> terminals; // FSM completion selection; empty selects all
@@ -33,7 +33,7 @@ struct XCoverageSnapshot {
     uint32_t generation = 0;
     uint64_t epoch = 0;
     uint64_t tick = 0;
-    // group samples/gated; samples/gated/ignored/unmatched/unknown per item;
+    // group samples/gated; samples/gated/ignored/unmatched/unknown per point;
     // then bin counts in declaration order.
     std::vector<unsigned long long> counters;
     std::vector<unsigned int> illegal_bins;

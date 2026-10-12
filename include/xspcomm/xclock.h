@@ -18,6 +18,7 @@ uint64_t TEST_get_u64_step_func();
 uint64_t TEST_get_u64_ris_fal_cblback_func();
 
 class XClock;
+class XEngine;
 #if ENABLE_XCOROUTINE
 class XStep : public _XAWait
 {
@@ -58,6 +59,16 @@ enum class FastMode {
 class XClock
 {
     friend class XStepCallback;
+    friend class XEngine;
+    // Idle clocks remain copyable; copying an actively controlled clock would
+    // create a second stepping entry point for the same DUT.
+    struct DriveControl {
+        XEngine *owner = nullptr;
+        bool stepping = false;
+        DriveControl() = default;
+        DriveControl(const DriveControl &other);
+        DriveControl &operator=(const DriveControl &other);
+    } drive_control;
     detail::Lifetime callback_lifetime;
     xfunction<int, bool> step_fc;
 #if ENABLE_XCOROUTINE
@@ -74,6 +85,7 @@ class XClock
     uint64_t half_tick = 0;
     XPhase phase = XPhase::RisingStable;
 
+    void CheckManualStep() const;
     virtual void _step(bool d);
     void _shchedule_await();
     bool _step_half_impl(bool honor_disable);
@@ -119,6 +131,7 @@ public:
     }
     void RefreshComb(){this->eval();}
     void RefreshCombT(){this->eval_t();}
+    bool IsControlled() const { return drive_control.owner != nullptr; }
     void Step(int s = 1);
     bool StepHalf();
     uint64_t GetHalfTick() const { return this->half_tick; }
