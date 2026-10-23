@@ -1,4 +1,4 @@
-name: Release Python wheel
+name: Release Python distributions
 
 on:
   repository_dispatch:
@@ -11,8 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: read
+  contents: read
 
 concurrency:
   group: xspcomm-release
@@ -20,8 +19,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  validate:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,43 +46,64 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/${TAG}^{commit}")"
           git fetch origin master:refs/remotes/origin/master --tags
           python scripts/release/tag_policy.py verify HEAD
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-      - name: Build and verify release wheel
+
+  distributions:
+    needs: validate
+    uses: ./.github/workflows/build-python.yml
+    with:
+      ref: ${{ needs.validate.outputs.tag }}
+      artifact-prefix: xspcomm-release
+
+  github-release:
+    needs: [validate, distributions]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: xspcomm-release-*
+          merge-multiple: true
+          path: dist
+      - run: python -m pip install 'packaging>=24' 'twine>=6,<7'
+      - name: Check complete release matrix
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.validate.outputs.version }}
         run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build swig
-          python -m pip install 'build>=1,<2'
-          export CMAKE_BUILD_PARALLEL_LEVEL="$(nproc)"
-          python -m build --wheel
-          python -m venv /tmp/xspcomm-release-test
-          /tmp/xspcomm-release-test/bin/python -m pip install --no-index --find-links=dist "xspcomm==${VERSION}"
-          /tmp/xspcomm-release-test/bin/python -m pip check
-          /tmp/xspcomm-release-test/bin/python - <<'PY'
-          import os
-          from importlib.metadata import version
-          import xspcomm
-          assert version("xspcomm") == os.environ["VERSION"]
-          assert xspcomm.version() == version("xspcomm")
-          signal = xspcomm.XData(8, xspcomm.XData.InOut)
-          signal.Set(0xA5)
-          assert signal.U() == 0xA5
-          clock = xspcomm.XClock(lambda _: 0)
-          clock.Step(2)
-          assert clock.clk == 2
-          assert xspcomm.abi_version() > 0
-          from pathlib import Path
-          from subprocess import check_output
-          binary = Path(xspcomm.__file__).parent / "_pyxspcomm.so"
-          dynamic = check_output(["readelf", "-d", str(binary)], text=True)
-          assert "Library runpath: [$ORIGIN/]" in dynamic
-          assert "/home/" not in dynamic and "/usr/local/lib" not in dynamic
-          PY
+          python scripts/release/check_distributions.py dist "$VERSION"
+          python -m twine check --strict dist/*
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.client_payload.tag || inputs.tag }}
-          files: dist/*.whl
+          tag_name: ${{ needs.validate.outputs.tag }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
           fail_on_unmatched_files: true
-          overwrite_files: true
+          overwrite_files: false
+
+  pypi:
+    needs: github-release
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/xspcomm
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: xspcomm-release-*
+          merge-multiple: true
+          path: dist
+      - name: Publish to PyPI with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
