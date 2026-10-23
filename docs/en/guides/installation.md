@@ -62,7 +62,9 @@ Wheel builds automatically enable Python and disable native unit-test compilatio
 
 ## C++ SDK
 
-Choose an installation prefix with appropriate permissions:
+The wheel includes an SDK for Picker and other C++ consumers. Official wheels use libstdc++'s C++11 ABI (`_GLIBCXX_USE_CXX11_ABI=1`); clients need a compatible C++20 toolchain. Some older distribution toolchains force ABI 0 even when the macro is set. In that case, use a compatible compiler or install xspcomm from source with the same toolchain as the client. GLIBC compatibility alone does not guarantee C++ ABI compatibility.
+
+For a raw CMake build, choose an installation prefix with appropriate permissions:
 
 ```sh
 cmake --install build --prefix "$HOME/.local/xcomm"

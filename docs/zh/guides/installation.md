@@ -62,7 +62,9 @@ wheel 自动启用 Python 绑定，并关闭原生单元测试的编译。原始
 
 ## C++ SDK
 
-使用独立的安装 prefix，按实际权限安装：
+wheel 内含供 Picker 等 C++ 消费者使用的 SDK。官方 wheel 使用 libstdc++ 的 C++11 ABI（`_GLIBCXX_USE_CXX11_ABI=1`），客户端需要兼容的 C++20 工具链。部分旧发行版工具链会强制使用 ABI 0，即使设置该宏也无法切换；此时应换用兼容编译器，或使用与客户端相同的工具链源码安装 xspcomm。GLIBC 兼容不等于 C++ ABI 兼容。
+
+原始 CMake 构建使用独立的安装 prefix，按实际权限安装：
 
 ```sh
 cmake --install build --prefix "$HOME/.local/xcomm"
