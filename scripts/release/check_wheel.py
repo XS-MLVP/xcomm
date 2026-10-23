@@ -21,7 +21,7 @@ if args.static_libstdcxx:
 if args.cxx11_abi:
     compiler_flags.append(f"-DEXPECTED_CXX11_ABI={args.cxx11_abi}")
 
-assert xs.version() == version("xspcomm")
+assert xs.version() == version("uc-xcomm")
 signal = xs.XData(8, xs.XData.InOut)
 signal.Set(0xA5)
 assert signal.U() == 0xA5
@@ -79,4 +79,4 @@ int main() {
     subprocess.run(["c++", "-std=c++20", "-fcoroutines", *compiler_flags, str(source), "-I", str(include),
                     "-L", str(library), f"-Wl,-rpath,{library}", "-lxspcomm", "-o", str(executable)], check=True)
     subprocess.run([str(executable)], check=True)
-print(f"Installed xspcomm {version('xspcomm')}: Python binding and public C++ SDK passed")
+print(f"Installed uc-xcomm {version('uc-xcomm')}: Python binding and public C++ SDK passed")

@@ -1,6 +1,6 @@
 # 安装 xcomm
 
-Python 发行包名和导入名均为 `xspcomm`。预编译包覆盖 Linux x86-64、CPython 3.11 和 3.12，分别提供 GLIBC 2.17 与 2.28 基线。每个版本还提供一份源码包（sdist）。其他 Python 版本和平台暂不在此 wheel 矩阵内。
+Python 发行包名是 `uc-xcomm`，导入名是 `xspcomm`。预编译包覆盖 Linux x86-64、CPython 3.11 和 3.12，分别提供 GLIBC 2.17 与 2.28 基线。每个版本还提供一份源码包（sdist）。其他 Python 版本和平台暂不在此 wheel 矩阵内。
 
 ## Python wheel
 
@@ -10,12 +10,12 @@ Python 发行包名和导入名均为 `xspcomm`。预编译包覆盖 Linux x86-6
 python3.12 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install xspcomm
+python -m pip install uc-xcomm
 python -m pip check
 python -c 'import xspcomm as xs; print(xs.version(), xs.abi_version())'
 ```
 
-相同的 wheel 和源码包也会附在 [GitHub Releases](https://github.com/XS-MLVP/xcomm/releases) 中；下载匹配的 wheel 后，可运行 `python -m pip install ./xspcomm-*.whl`。pip 根据解释器、架构和 GLIBC 选择 wheel。安装预编译包无需编译器或 SWIG。xcomm 本身不包含 RTL 仿真器。
+相同的 wheel 和源码包也会附在 [GitHub Releases](https://github.com/XS-MLVP/xcomm/releases) 中；下载匹配的 wheel 后，可运行 `python -m pip install ./uc_xcomm-*.whl`。pip 根据解释器、架构和 GLIBC 选择 wheel。安装预编译包无需编译器或 SWIG。xcomm 本身不包含 RTL 仿真器。
 
 官方 x86-64 wheel 使用 `-march=x86-64 -mtune=generic`。GLIBC 基线和 CPU 指令集是两个独立的兼容性条件。
 
@@ -24,13 +24,13 @@ python -c 'import xspcomm as xs; print(xs.version(), xs.abi_version())'
 系统需要提供 C++20 编译器、CMake >=3.15、make 或 Ninja，以及与当前 Python 匹配的开发头文件。pip 在隔离构建环境中安装 SWIG 4.5.1 和 Python 构建后端。SWIG 是 xspcomm 的构建依赖，不是运行依赖。
 
 ```sh
-python -m pip install --no-binary=xspcomm --no-cache-dir xspcomm
+python -m pip install --no-binary=uc-xcomm --no-cache-dir uc-xcomm
 ```
 
 pip 自动编译并安装源码包。源码构建默认 `XSPCOMM_NATIVE=ON`，在支持的 CPU 上使用 `-march=native -mtune=native`，面向本机优化。需要将环境或 wheel 转移到其他机器时，可显式关闭：
 
 ```sh
-python -m pip install --no-binary=xspcomm --no-cache-dir xspcomm \
+python -m pip install --no-binary=uc-xcomm --no-cache-dir uc-xcomm \
   -Ccmake.define.XSPCOMM_NATIVE=OFF
 ```
 

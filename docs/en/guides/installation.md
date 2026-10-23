@@ -1,6 +1,6 @@
 # Install xcomm
 
-The Python distribution and import name are `xspcomm`. The release wheels target Linux x86-64, CPython 3.11 and 3.12, with both GLIBC 2.17 and 2.28 baselines. Each version also includes a source distribution (sdist). Other Python versions and platforms are not part of this wheel matrix.
+The Python distribution is `uc-xcomm`; import it as `xspcomm`. The release wheels target Linux x86-64, CPython 3.11 and 3.12, with both GLIBC 2.17 and 2.28 baselines. Each version also includes a source distribution (sdist). Other Python versions and platforms are not part of this wheel matrix.
 
 ## Python wheel
 
@@ -10,12 +10,12 @@ After the first [PyPI release is configured](../development/releases.md#pypi-set
 python3.12 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install xspcomm
+python -m pip install uc-xcomm
 python -m pip check
 python -c 'import xspcomm as xs; print(xs.version(), xs.abi_version())'
 ```
 
-The same wheels and sdist are attached to [GitHub Releases](https://github.com/XS-MLVP/xcomm/releases). Download a matching wheel and install it with `python -m pip install ./xspcomm-*.whl` if using GitHub assets. Pip selects a wheel matching the interpreter, architecture and GLIBC. Installing a wheel needs neither a compiler nor SWIG. xcomm does not include an RTL simulator.
+The same wheels and sdist are attached to [GitHub Releases](https://github.com/XS-MLVP/xcomm/releases). Download a matching wheel and install it with `python -m pip install ./uc_xcomm-*.whl` if using GitHub assets. Pip selects a wheel matching the interpreter, architecture and GLIBC. Installing a wheel needs neither a compiler nor SWIG. xcomm does not include an RTL simulator.
 
 Official x86-64 wheels use `-march=x86-64 -mtune=generic`. The GLIBC baseline and CPU instruction set are independent compatibility requirements.
 
@@ -24,13 +24,13 @@ Official x86-64 wheels use `-march=x86-64 -mtune=generic`. The GLIBC baseline an
 Prepare a C++20 compiler, CMake >=3.15, make or Ninja, and development headers matching the active Python interpreter. Pip installs SWIG 4.5.1 and the Python build backend in an isolated build environment. SWIG is a build dependency, not a runtime dependency of xspcomm.
 
 ```sh
-python -m pip install --no-binary=xspcomm --no-cache-dir xspcomm
+python -m pip install --no-binary=uc-xcomm --no-cache-dir uc-xcomm
 ```
 
 Pip builds and installs the sdist automatically. Source builds default to `XSPCOMM_NATIVE=ON`, using `-march=native -mtune=native` on supported CPUs. This targets the build machine; use the following option when producing an environment or wheel for other machines:
 
 ```sh
-python -m pip install --no-binary=xspcomm --no-cache-dir xspcomm \
+python -m pip install --no-binary=uc-xcomm --no-cache-dir uc-xcomm \
   -Ccmake.define.XSPCOMM_NATIVE=OFF
 ```
 

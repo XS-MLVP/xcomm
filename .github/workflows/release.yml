@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: pypi
-      url: https://pypi.org/p/xspcomm
+      url: https://pypi.org/p/uc-xcomm
     permissions:
       id-token: write
     steps:

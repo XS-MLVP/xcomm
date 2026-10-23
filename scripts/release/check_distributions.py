@@ -23,7 +23,7 @@ def main():
     assert len(wheels) == 4, wheels
     for wheel in wheels:
         name, version, _, tags = parse_wheel_filename(wheel.name)
-        assert name == "xspcomm" and version == args.version, wheel
+        assert name == "uc-xcomm" and version == args.version, wheel
         matches = {(tag.interpreter, tag.platform) for tag in tags
                    if tag.interpreter == tag.abi and (tag.interpreter, tag.platform) in expected}
         assert len(matches) == 1 and not found.intersection(matches), (wheel, tags)
@@ -34,13 +34,13 @@ def main():
     assert found == expected, (found, expected)
     sdists = list(args.directory.glob("*.tar.gz"))
     assert len(sdists) == 1, sdists
-    assert parse_sdist_filename(sdists[0].name) == ("xspcomm", args.version)
+    assert parse_sdist_filename(sdists[0].name) == ("uc-xcomm", args.version)
     with tarfile.open(sdists[0]) as archive:
         metadata, = [member for member in archive.getmembers() if member.name.count("/") == 1
                      and member.name.endswith("/PKG-INFO")]
         assert Version(BytesParser().parsebytes(archive.extractfile(metadata).read())["Version"]) == args.version
     assert len(list(args.directory.iterdir())) == 5, list(args.directory.iterdir())
-    print(f"Validated xspcomm {args.version}: four Linux wheels and one sdist")
+    print(f"Validated uc-xcomm {args.version}: four Linux wheels and one sdist")
 
 
 if __name__ == "__main__":

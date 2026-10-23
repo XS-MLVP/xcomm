@@ -18,13 +18,13 @@ PyPI 使用 GitHub OIDC 可信发布和 `pypi` 环境，首次发行前需完成
 
 | 字段 | 值 |
 | --- | --- |
-| PyPI 项目名 | `xspcomm` |
+| PyPI 项目名 | `uc-xcomm` |
 | Owner | `XS-MLVP` |
 | Repository | `xcomm` |
 | Workflow filename | `release.yml` |
 | Environment | `pypi` |
 
-首次成功上传时创建项目；登记待创建的发布者不会预留包名。若账户下已存在 `xspcomm`，在该项目的 Publishing 设置中登记相同字段。GitHub Secrets 无需存放 PyPI API token 或密码。创建仓库环境 `pypi`；若配置部署规则，需允许从 `master` 执行发行工作流。
+首次成功上传时创建项目；登记待创建的发布者不会预留包名。若账户下已存在 `uc-xcomm`，在该项目的 Publishing 设置中登记相同字段。GitHub Secrets 无需存放 PyPI API token 或密码。创建仓库环境 `pypi`；若配置部署规则，需允许从 `master` 执行发行工作流。
 
 带正确标签的 PR 合并后沿用现有自动打版本标签流程。未配置 PyPI 发布者时，GitHub Release 可以成功而 PyPI 任务失败；补齐配置后重跑失败任务即可。重试跳过已经上传的文件；已发布版本的内容需要修改时应创建新版本，不覆盖原文件。TestPyPI 可选，账户和发布者配置与正式 PyPI 独立。
 

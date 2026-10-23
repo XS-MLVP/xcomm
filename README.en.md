@@ -2,7 +2,7 @@
 
 English | [中文](README.cn.md)
 
-xcomm is a C++20 library for hardware simulation, providing four-state signals, port collections, clocks, expressions, temporal events, and functional coverage. The Python package is named `xspcomm`; bindings are also available for Java, Scala, Go, Lua, and JavaScript.
+xcomm is a C++20 library for hardware simulation, providing four-state signals, port collections, clocks, expressions, temporal events, and functional coverage. Install the Python distribution as `uc-xcomm` and import it as `xspcomm`; bindings are also available for Java, Scala, Go, Lua, and JavaScript.
 
 ## Get started
 

@@ -10,7 +10,7 @@ sdist.include = ["scripts/release/**"]
 BUILD_TESTING = "OFF"
 
 [project]
-name = "xspcomm"
+name = "uc-xcomm"
 dynamic = ["version"]
 description = "Native signal, clock, trigger and coverage runtime for hardware verification"
 readme = "README.en.md"

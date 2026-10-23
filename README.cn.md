@@ -2,7 +2,7 @@
 
 中文 | [English](README.en.md)
 
-xcomm 是硬件仿真的 C++20 组件库，提供四态信号、端口集合、时钟、表达式、时序事件和功能覆盖率。Python 包名为 `xspcomm`，也支持 Java、Scala、Go、Lua 和 JavaScript。
+xcomm 是硬件仿真的 C++20 组件库，提供四态信号、端口集合、时钟、表达式、时序事件和功能覆盖率。Python 发行包名为 `uc-xcomm`，导入名为 `xspcomm`，也支持 Java、Scala、Go、Lua 和 JavaScript。
 
 ## 开始使用
 

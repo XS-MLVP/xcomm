@@ -4,7 +4,7 @@
 
 ```sh
 python3 -c 'import xspcomm as x; print(x.__file__, x.version(), x.abi_version(), x.XTriggerEngine.CoverageVersion())'
-python3 -m pip show xspcomm
+python3 -m pip show uc-xcomm
 ```
 
 v1.0.0 的预期版本是 1.0.0 / ABI 3 / Coverage 5。

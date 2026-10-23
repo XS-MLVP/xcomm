@@ -18,13 +18,13 @@ For the first publication, sign in to the intended PyPI owner account (with a ve
 
 | Field | Value |
 | --- | --- |
-| PyPI project name | `xspcomm` |
+| PyPI project name | `uc-xcomm` |
 | Owner | `XS-MLVP` |
 | Repository | `xcomm` |
 | Workflow filename | `release.yml` |
 | Environment | `pypi` |
 
-A pending publisher creates the project on the first successful upload; it does not reserve the name. If `xspcomm` already exists under your account, add the same publisher in the project's Publishing settings. No PyPI API token or password is stored in GitHub secrets. Create the GitHub repository environment `pypi`; any deployment rules must allow the release workflow to run from `master`.
+A pending publisher creates the project on the first successful upload; it does not reserve the name. If `uc-xcomm` already exists under your account, add the same publisher in the project's Publishing settings. No PyPI API token or password is stored in GitHub secrets. Create the GitHub repository environment `pypi`; any deployment rules must allow the release workflow to run from `master`.
 
 Merging a correctly labeled PR preserves the existing automatic version-tag flow. Until the PyPI publisher is configured, the GitHub release can succeed while the PyPI job fails; configure the publisher and rerun that failed job. Existing uploaded files are skipped on retries. Do not overwrite a published version with changed artifacts: make a new version instead. TestPyPI is optional and has separate accounts and publisher settings.
 
@@ -43,7 +43,7 @@ python3 -m venv /tmp/xspcomm-package-build
 /tmp/xspcomm-package-build/bin/python -m pip install build
 /tmp/xspcomm-package-build/bin/python -m build --wheel
 python3 -m venv /tmp/xspcomm-package-test
-/tmp/xspcomm-package-test/bin/python -m pip install --no-index --find-links=dist xspcomm
+/tmp/xspcomm-package-test/bin/python -m pip install --no-index --find-links=dist uc-xcomm
 /tmp/xspcomm-package-test/bin/python -m pip check
 /tmp/xspcomm-package-test/bin/python -c 'import xspcomm as x; print(x.version(), x.abi_version(), x.XTriggerEngine.CoverageVersion())'
 ```
