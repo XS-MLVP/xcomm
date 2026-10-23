@@ -1,0 +1,117 @@
+site_name: xcomm
+repo_url: https://github.com/XS-MLVP/xcomm
+edit_uri: edit/master/docs/
+docs_dir: docs
+site_dir: build/docs-site
+theme:
+  name: material
+  language: zh
+  font: false
+  palette:
+    primary: teal
+  features:
+  - navigation.tabs
+  - navigation.sections
+  - navigation.top
+  - toc.follow
+  - content.code.copy
+  - content.action.edit
+  - search.suggest
+  - search.highlight
+plugins:
+- i18n:
+    docs_structure: folder
+    fallback_to_default: false
+    languages:
+    - locale: zh
+      default: true
+      name: 中文
+      build: true
+    - locale: en
+      name: English
+      build: true
+      nav_translations:
+        文档首页: Overview
+        入门教程: Tutorials
+        第一个信号与事件: Your first signal and event
+        使用指南: How-to guides
+        安装: Installation
+        事件与覆盖率: Events and coverage
+        宽位运算与回收: Typed expressions and collection
+        接口参考: Reference
+        API 索引: API index
+        XData: XData
+        XPort: XPort
+        XClock: XClock
+        表达式: Expressions
+        XEngine: XEngine
+        Trigger: Trigger
+        Coverage: Coverage
+        Monitor: Monitor
+        信号配置: Signal configuration
+        语言绑定: Language bindings
+        TLM: TLM
+        公共工具与协程: Utilities and coroutines
+        兼容性与迁移: Compatibility and migration
+        故障排查: Troubleshooting
+        原理与设计: Design
+        架构与 IR: Architecture and IR
+        性能与内存: Performance and memory
+        开发与贡献: Development
+        贡献与测试: Contribute and test
+        维护发行: Maintain releases
+        文档与 Wiki: Documentation and Wiki
+- search: {}
+nav:
+- 文档首页: index.md
+- 入门教程:
+  - 第一个信号与事件: tutorials/first-simulation.md
+- 使用指南:
+  - 安装: guides/installation.md
+  - 事件与覆盖率: guides/events-coverage.md
+  - 宽位运算与回收: guides/typed-expressions.md
+- 接口参考:
+  - API 索引: reference/api-index.md
+  - XData: reference/xdata.md
+  - XPort: reference/xport.md
+  - XClock: reference/xclock.md
+  - 表达式: reference/expressions.md
+  - XEngine: reference/engine.md
+  - Trigger: reference/triggers.md
+  - Coverage: reference/coverage.md
+  - Monitor: reference/monitors.md
+  - 信号配置: reference/signal-config.md
+  - 语言绑定: reference/bindings.md
+  - TLM: reference/tlm.md
+  - 公共工具与协程: reference/utilities.md
+  - 兼容性与迁移: reference/compatibility.md
+  - 故障排查: reference/troubleshooting.md
+- 原理与设计:
+  - 架构与 IR: explanation/architecture.md
+  - 性能与内存: explanation/performance.md
+- 开发与贡献:
+  - 贡献与测试: development/contributing.md
+  - 维护发行: development/releases.md
+  - 文档与 Wiki: development/documentation.md
+validation:
+  nav:
+    not_found: warn
+    omitted_files: warn
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn
+exclude_docs: |
+  /APIs.cn.md
+  /architecture.md
+  /maintainer-guidance.md
+  /xdata_xclock_optimizations.md
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
