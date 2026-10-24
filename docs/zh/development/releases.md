@@ -34,7 +34,7 @@ PR CI 与发行共用 `build-python.yml`。先生成一份 sdist，再从不含 
 
 两种 wheel 基线统一使用 libstdc++ 的 C++11 ABI（`_GLIBCXX_USE_CXX11_ABI=1`）。固定的 manylinux2014 Devtoolset 10 虽然在静态运行库中包含两种 ABI，实现声明却被配置头关闭；发行准备脚本仅在一次性容器中启用这些声明，GLIBC 2.17 构建静态链接 libstdc++。GLIBC 仍为动态链接，由 auditwheel 校验。源码安装的编译器不受影响，用户也无需改用旧 C++ ABI。wheel 测试覆盖跨 SDK 边界的字符串、容器、回调和异常传播。
 
-本地及 pip 源码构建默认 `XSPCOMM_NATIVE=ON`；cibuildwheel 配置显式关闭。CI 检查实际编译命令：发行包为 `-march=x86-64 -mtune=generic`，源码安装为 `-march=native -mtune=native`，并确认协程支持仍启用。CMake Release 优化与该开关独立。源码安装任务通过隔离构建约束，验证 CPython 3.11、3.12 与 SWIG 4.2.1、4.5.1 的组合，不安装系统 SWIG。
+本地及 pip 源码构建默认 `XSPCOMM_NATIVE=ON`；cibuildwheel 配置显式关闭。CI 检查实际编译命令：发行包为 `-march=x86-64 -mtune=generic`，源码安装为 `-march=native -mtune=native`，并确认协程支持仍启用。CMake Release 优化与该开关独立。源码安装任务验证 CPython 3.11、3.12，使用 `swig>=4.2.1,<5` 范围内的最新版本，不额外增加 SWIG 版本矩阵，也不安装系统 SWIG。
 
 ## ABI、协议与安装边界
 

@@ -19,7 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11", "3.12"]
-        swig: ["4.2.1", "4.5.1"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,10 +38,7 @@ jobs:
           CMAKE_BUILD_PARALLEL_LEVEL: "4"
         run: |
           python -m venv /tmp/xspcomm-source-test
-          /tmp/xspcomm-source-test/bin/python -m pip install --upgrade 'pip>=25.3'
-          echo 'swig==${{ matrix.swig }}' > /tmp/xspcomm-build-constraints.txt
           /tmp/xspcomm-source-test/bin/python -m pip install --no-cache-dir dist/*.tar.gz \
-            --build-constraint /tmp/xspcomm-build-constraints.txt \
             -Ccmake.define.BUILD_TESTING=ON \
             -Ccmake.define.CMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -Cbuild-dir=/tmp/xspcomm-source-build
