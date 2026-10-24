@@ -1,6 +1,11 @@
 # xcomm
 
-[![PyPI](https://img.shields.io/pypi/v/uc-xcomm)](https://pypi.org/project/uc-xcomm/)
+[![PyPI](https://img.shields.io/pypi/v/uc-xcomm?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/uc-xcomm/)
+[![Python](https://img.shields.io/pypi/pyversions/uc-xcomm?style=flat-square&logo=python&logoColor=white)](https://github.com/XS-MLVP/xcomm/wiki/zh-guides-installation)
+[![CI](https://img.shields.io/github/actions/workflow/status/XS-MLVP/xcomm/python-wheel.yml?branch=master&style=flat-square&label=CI&logo=github)](https://github.com/XS-MLVP/xcomm/actions/workflows/python-wheel.yml?query=branch%3Amaster)
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-blue?style=flat-square)](https://github.com/XS-MLVP/xcomm/blob/master/LICENSE)
+[![Wiki](https://img.shields.io/badge/docs-Wiki-0A7EA4?style=flat-square)](https://github.com/XS-MLVP/xcomm/wiki/zh-Home)
+[![GitHub Stars](https://img.shields.io/github/stars/XS-MLVP/xcomm?style=social)](https://github.com/XS-MLVP/xcomm)
 
 中文 | [English](https://github.com/XS-MLVP/xcomm/blob/master/README.en.md)
 
