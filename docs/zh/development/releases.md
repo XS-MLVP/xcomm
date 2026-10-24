@@ -1,30 +1,40 @@
-# 维护发行
+# 发行维护
 
-xspcomm 的 Python 包版本取自本仓库 vX.Y.Z 标签；原生 ABI 在 CMakeLists.txt 中单独维护。普通 PR/push CI 生成开发 wheel，不创建稳定发行。
+xspcomm 的 Python 版本取自仓库 `vX.Y.Z` 标签；CMakeLists.txt 中单独维护原生 ABI。普通 PR/push CI 验证与发行相同的打包矩阵。
 
 ## 自动流程
 
-1. 指向 master 的 PR 选择且仅选择 release:patch/minor/major。
-2. 合并后 Version policy 根据标签计算版本，在 master 的已合并 PR 结果提交上创建 tag，并发送 version-tagged 事件。
-3. Release Python wheel 校验已有 tag，构建并在干净环境安装 wheel，检查版本、信号/时钟和原生库，再附加到 GitHub Release。
+1. 面向 master 的 PR 必须且只能带一个 `release:patch/minor/major` 标签。
+2. 合并后 Version policy 计算版本，在 master 上为合并结果打标签并发出 `version-tagged`。
+3. Release Python distributions 验证已有标签，构建一份源码包与四个 Linux x86-64 wheel（GLIBC 2.17/2.28 × CPython 3.11/3.12），检查安装后的绑定和 C++ SDK，将五个文件附到 GitHub Release，再发布到 PyPI。
 
-每个带标签的合并 PR，包括纯文档修改，都会进入版本流程；直接 push 不自动生成版本。workflow 本身不会阻止合并，仓库应将 Version policy / release-label 和所需 wheel 检查设为 required，并要求 PR 同步最新基线。启用 merge queue 前，先为检查添加 merge_group 支持。
+文档修改也进入此流程。直接 push 不会自动创建版本。工作流本身不阻止合并：应配置 Version policy / release-label 及 wheel 检查为必要状态，并要求 PR 保持最新；启用 merge queue 前需补充 merge_group 检查。
 
-该流程不自动发布 PyPI。Picker 依赖新 xcomm 时，先完成 xcomm Release，再发布 Picker。恢复失败的发布时，对**相同已有 tag**手动重跑 Release Python wheel；缺失合并事件可使用 Version policy 的手动 bump，不能随意移动已发布 tag。
+PyPI 使用 GitHub OIDC 可信发布和 `pypi` 环境，首次发行前需完成下方配置。Picker 依赖新版 xcomm 时，先发行 xcomm。恢复失败发行时，使用**同一个已有标签**重新运行 Release Python distributions；漏掉合并事件时使用 Version policy 的手动 bump，不移动已发布标签。
 
-## 本地包检查
+## PyPI 配置
 
-```sh
-python3 -m venv /tmp/xspcomm-package-build
-/tmp/xspcomm-package-build/bin/python -m pip install build
-/tmp/xspcomm-package-build/bin/python -m build --wheel
-python3 -m venv /tmp/xspcomm-package-test
-/tmp/xspcomm-package-test/bin/python -m pip install --no-index --find-links=dist xspcomm
-/tmp/xspcomm-package-test/bin/python -m pip check
-/tmp/xspcomm-package-test/bin/python -c 'import xspcomm as x; print(x.version(), x.abi_version(), x.XTriggerEngine.CoverageVersion())'
-```
+使用计划持有项目的 PyPI 账户登录，验证邮箱并启用双因素认证，在[账户 Publishing 页面](https://pypi.org/manage/account/publishing/)添加待创建项目的 GitHub 发布者：
 
-构建需要 C++20、CMake、SWIG>=4.2 和对应 Python 开发头。发布检查还要核对 Python 包版本与原生 version() 一致，并检查动态库搜索路径不泄漏构建机路径。CI 从 sdist 重建 wheel，确保离开 .git 后仍保留版本；wheel 按 CPython 小版本构建。
+| 字段 | 值 |
+| --- | --- |
+| PyPI 项目名 | `uc-xcomm` |
+| Owner | `XS-MLVP` |
+| Repository | `xcomm` |
+| Workflow filename | `release.yml` |
+| Environment | `pypi` |
+
+首次成功上传时创建项目；登记待创建的发布者不会预留包名。若账户下已存在 `uc-xcomm`，在该项目的 Publishing 设置中登记相同字段。GitHub Secrets 无需存放 PyPI API token 或密码。创建仓库环境 `pypi`；若配置部署规则，需允许从 `master` 执行发行工作流。
+
+带正确标签的 PR 合并后沿用现有自动打版本标签流程。未配置 PyPI 发布者时，GitHub Release 可以成功而 PyPI 任务失败；补齐配置后重跑失败任务即可。重试跳过已经上传的文件；已发布版本的内容需要修改时应创建新版本，不覆盖原文件。TestPyPI 可选，账户和发布者配置与正式 PyPI 独立。
+
+## 构建与验证策略
+
+PR CI 与发行共用 `build-python.yml`。先生成一份 sdist，再从不含 `.git` 的源码包构建全部 wheel；manylinux 镜像固定 digest，SWIG 由构建依赖提供。`auditwheel repair` 校验所选平台基线。修复后的 wheel 在对应 manylinux 容器中安装并运行 Python 检查，同时编译链接仅使用包内公开 SDK 的 C++ 客户端。同时使用 Ubuntu 宿主编译器编译运行 SDK 客户端，检查与现代 Picker/DUT 编译器的兼容性。发行前核对四种 wheel 标签、唯一源码包及其版本。
+
+两种 wheel 基线统一使用 libstdc++ 的 C++11 ABI（`_GLIBCXX_USE_CXX11_ABI=1`）。固定的 manylinux2014 Devtoolset 10 虽然在静态运行库中包含两种 ABI，实现声明却被配置头关闭；发行准备脚本仅在一次性容器中启用这些声明，GLIBC 2.17 构建静态链接 libstdc++。GLIBC 仍为动态链接，由 auditwheel 校验。源码安装的编译器不受影响，用户也无需改用旧 C++ ABI。wheel 测试覆盖跨 SDK 边界的字符串、容器、回调和异常传播。
+
+本地及 pip 源码构建默认 `XSPCOMM_NATIVE=ON`；cibuildwheel 配置显式关闭。CI 检查实际编译命令：发行包为 `-march=x86-64 -mtune=generic`，源码安装为 `-march=native -mtune=native`，并确认协程支持仍启用。CMake Release 优化与该开关独立。源码安装任务验证 CPython 3.11、3.12，使用 `swig>=4.2.1,<5` 范围内的最新版本，不额外增加 SWIG 版本矩阵，也不安装系统 SWIG。
 
 ## ABI、协议与安装边界
 

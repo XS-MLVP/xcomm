@@ -3,7 +3,14 @@ import sys
 from .pyxspcomm import version
 
 def path_root():
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    # Wheels install the public SDK under picker/. Raw builds stage it beside
+    # python/, while prefix installations may already have include/ and lib/.
+    for candidate in (os.path.join(root, "picker"), root, os.path.dirname(root)):
+        if (os.path.isfile(os.path.join(candidate, "include", "xspcomm", "xconfig.h"))
+                and os.path.isdir(os.path.join(candidate, "lib"))):
+            return candidate
+    return root
 
 def path_include():
     return os.path.join(path_root(), "include")

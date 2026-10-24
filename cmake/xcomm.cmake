@@ -8,6 +8,23 @@
 # 7. set install location prefix
 
 function(init_xspcomm)
+option(XSPCOMM_NATIVE "Optimize for the build machine's CPU" ON)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" xspcomm_processor)
+set(xspcomm_cpu_flags "")
+if(xspcomm_processor MATCHES "^(x86_64|amd64|aarch64|arm64)$" AND NOT XSPCOMM_WASM_LIB)
+    if(XSPCOMM_NATIVE)
+        if(CMAKE_CROSSCOMPILING)
+            message(FATAL_ERROR "Cross-compilation requires -DXSPCOMM_NATIVE=OFF")
+        endif()
+        set(xspcomm_cpu_flags "-march=native -mtune=native")
+    elseif(xspcomm_processor MATCHES "^(x86_64|amd64)$")
+        set(xspcomm_cpu_flags "-march=x86-64 -mtune=generic")
+    else()
+        set(xspcomm_cpu_flags "-march=armv8-a -mtune=generic")
+    endif()
+endif()
+message(STATUS "XSPCOMM_NATIVE=${XSPCOMM_NATIVE}: ${xspcomm_cpu_flags}")
+
 string(TOLOWER "$ENV{CMAKE_CXX_COMPILER}" cmake_cxx_compiler)
 if (NOT "${cmake_cxx_compiler}" STREQUAL "")
 set(CMAKE_CXX_COMPILER ${cmake_cxx_compiler} PARENT_SCOPE)
@@ -34,7 +51,7 @@ endif()
 
 # Native signal buffers are accessed through both 32-bit and 64-bit views.
 # Keep those accesses dependent under optimization, including wheel builds.
-set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -fno-strict-aliasing -ftree-vectorize -mtune=native -funroll-loops -funswitch-loops -fomit-frame-pointer")
+set(CFLAGS "$ENV{CFLAGS} -ftls-model=global-dynamic -flto -O3 -fno-strict-aliasing -ftree-vectorize ${xspcomm_cpu_flags} -funroll-loops -funswitch-loops -fomit-frame-pointer")
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++20" COMPILER_SUPPORTS_CXX20)

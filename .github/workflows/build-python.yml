@@ -1,0 +1,89 @@
+name: Build Python distributions
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        default: ""
+      artifact-prefix:
+        type: string
+        default: xspcomm
+
+permissions:
+  contents: read
+
+jobs:
+  sdist:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install 'build>=1,<2' 'twine>=6,<7'
+      - run: python -m build --sdist
+      - run: python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-prefix }}-sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  wheel:
+    needs: sdist
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: [cp311, cp312]
+        policy: [manylinux_2_17, manylinux_2_28]
+        include:
+          - policy: manylinux_2_17
+            image: quay.io/pypa/manylinux2014_x86_64@sha256:3a591c1109773dbd79f16c038588fd1867d9f2f708b360dab5715852c7f96ef0
+            ldflags: -static-libstdc++
+            prepare: python {project}/scripts/release/prepare_manylinux2014.py
+            sdk-flags: --static-libstdcxx
+          - policy: manylinux_2_28
+            image: quay.io/pypa/manylinux_2_28_x86_64@sha256:076b19ef6e698f28649fa817c49d14443201e01da85240e8e52f93e8daa49bff
+            ldflags: ""
+            prepare: ""
+            sdk-flags: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python == 'cp311' && '3.11' || '3.12' }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-prefix }}-sdist
+          path: source
+      - run: python -m pip install 'cibuildwheel==3.4.1' 'twine>=6,<7'
+      - name: Build, audit and test wheel from sdist
+        env:
+          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.image }}
+          # CentOS 7's default libstdc++ ABI is 0. Use ABI 1 consistently with
+          # modern Picker/DUT compilers and bundle its runtime on GLIBC 2.17.
+          CIBW_ENVIRONMENT_LINUX: >-
+            CMAKE_BUILD_PARALLEL_LEVEL=4 CMAKE_GENERATOR="Unix Makefiles"
+            CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=1" LDFLAGS="${{ matrix.ldflags }}"
+          CIBW_BEFORE_ALL_LINUX: ${{ matrix.prepare }}
+          CIBW_TEST_COMMAND: python {project}/scripts/release/check_wheel.py --cxx11-abi=1 ${{ matrix.sdk-flags }}
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: auditwheel repair --only-plat --plat ${{ matrix.policy }}_x86_64 -w {dest_dir} {wheel}
+        run: python -m cibuildwheel --only '${{ matrix.python }}-manylinux_x86_64' --output-dir wheelhouse source/*.tar.gz
+      - name: Check SDK with the host compiler
+        run: |
+          python -m pip install --no-index wheelhouse/*.whl
+          python -m pip check
+          python scripts/release/check_wheel.py
+      - run: python -m twine check --strict wheelhouse/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ matrix.policy }}-${{ matrix.python }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
