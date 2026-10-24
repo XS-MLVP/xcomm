@@ -1,6 +1,6 @@
 # xcomm documentation
 
-xcomm provides C++ components for hardware simulation: signal access, port collections, clock advancement, expression evaluation, temporal event matching, and functional coverage. The Python package is named `xspcomm`; bindings are also available for Java, Scala, Go, Lua, and JavaScript.
+xcomm provides C++ components for hardware simulation: signal access, port collections, clock advancement, expression evaluation, temporal event matching, and functional coverage. The Python distribution is `uc-xcomm`, imported as `xspcomm`; bindings are also available for Java, Scala, Go, Lua, and JavaScript.
 
 Start with [installation](guides/installation.md) and [your first signal and event](tutorials/first-simulation.md). The tutorial uses a small script to introduce wide signals, clocks, and event waits.
 

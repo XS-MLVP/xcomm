@@ -26,6 +26,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/XS-MLVP/xcomm"
+Documentation = "https://github.com/XS-MLVP/xcomm/wiki"
 Source = "https://github.com/XS-MLVP/xcomm"
 Issues = "https://github.com/XS-MLVP/xcomm/issues"
 

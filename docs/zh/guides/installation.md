@@ -4,7 +4,7 @@ Python 发行包名是 `uc-xcomm`，导入名是 `xspcomm`。预编译包覆盖 
 
 ## Python wheel
 
-完成首次 [PyPI 发布配置](../development/releases.md#pypi) 后，在实际运行仿真的 Python 环境中安装：
+在实际运行仿真的 Python 环境中，从 [PyPI](https://pypi.org/project/uc-xcomm/) 安装：
 
 ```sh
 python3.12 -m venv .venv

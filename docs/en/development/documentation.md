@@ -35,7 +35,7 @@ python3 -m venv /tmp/docs-venv
 
 Open `http://127.0.0.1:8000` to check language switching, navigation, full-text search, and code rendering. The static site is written to `build/docs-site`.
 
-`check` validates translated page sets, navigation, links, anchors, and Python syntax. Mark complete executable blocks with `<!-- runnable:python -->` or `<!-- runnable:cpp -->`, then run:
+`check` validates translated page sets, navigation, links, anchors, and Python syntax. README links must use absolute URLs so they also work on PyPI; links into this repository's Wiki must name an exported page. Mark complete executable blocks with `<!-- runnable:python -->` or `<!-- runnable:cpp -->`, then run:
 
 ```sh
 /tmp/docs-venv/bin/python scripts/docs.py test --python /path/to/runtime/bin/python
@@ -43,14 +43,26 @@ Open `http://127.0.0.1:8000` to check language switching, navigation, full-text 
 
 Run examples with a Python environment containing xspcomm. For C++ examples, pass SDK header and library directories with `--include` and `--lib`, and optionally choose a compiler with `--cxx`.
 
-## Export a GitHub Wiki
+## Publish the GitHub Wiki
 
-The site and Wiki are generated from the same Markdown. Export into an empty directory:
+The [GitHub Wiki](https://github.com/XS-MLVP/xcomm/wiki/Home) and the site are generated from the same Markdown. Export into an empty directory:
 
 ```sh
-/tmp/docs-venv/bin/python scripts/docs.py wiki --output /tmp/xcomm-wiki
+/tmp/docs-venv/bin/python scripts/docs.py wiki --output /tmp/xcomm-wiki-export
 ```
 
-The output includes bilingual pages, a home page, sidebar, footer, and file manifest. Links are converted to Wiki page names. After review, maintainers can sync these files to `xcomm.wiki.git`. See [GitHub's Wiki documentation](https://docs.github.com/en/communities/documenting-your-project-with-wikis/adding-or-editing-wiki-pages) for editing the separate repository.
+The output includes bilingual pages, a home page, sidebar, footer, and file manifest. Page links become absolute GitHub Wiki URLs; source and image links point to the main repository. After reviewing the export, maintainers publish it to GitHub's separate Wiki repository:
 
-Documentation CI runs for PRs targeting master, documentation changes pushed to master or `docs/**` branches, and manual dispatches. It checks translated pages, links, and example syntax, then builds the site and exports the Wiki as review artifacts.
+```sh
+git clone https://github.com/XS-MLVP/xcomm.wiki.git /tmp/xcomm-wiki-checkout
+cp /tmp/xcomm-wiki-export/*.md /tmp/xcomm-wiki-export/manifest.json /tmp/xcomm-wiki-checkout/
+git -C /tmp/xcomm-wiki-checkout diff
+git -C /tmp/xcomm-wiki-checkout status --short
+git -C /tmp/xcomm-wiki-checkout add -- '*.md' manifest.json
+git -C /tmp/xcomm-wiki-checkout commit -m "Sync documentation from xcomm"
+git -C /tmp/xcomm-wiki-checkout push
+```
+
+Compare manifests when pages are renamed or removed, and remove only obsolete generated files from the Wiki checkout. Keep unrelated Wiki content. See [GitHub's Wiki documentation](https://docs.github.com/en/communities/documenting-your-project-with-wikis/adding-or-editing-wiki-pages) for editing the separate repository.
+
+Documentation CI runs for PRs targeting master, documentation changes pushed to master or `docs/**` branches, and manual dispatches. It checks translated pages, links, and example syntax, then builds the site and exports the Wiki as review artifacts. CI does not push to the Wiki; publishing requires the separate Git push above.
