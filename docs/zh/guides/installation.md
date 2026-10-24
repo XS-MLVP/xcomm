@@ -21,7 +21,7 @@ python -c 'import xspcomm as xs; print(xs.version(), xs.abi_version())'
 
 ## pip 源码编译安装
 
-系统需要提供 C++20 编译器、CMake >=3.15、make 或 Ninja，以及与当前 Python 匹配的开发头文件。pip 在隔离构建环境中安装 SWIG 4.5.1 和 Python 构建后端。SWIG 是 xspcomm 的构建依赖，不是运行依赖。
+系统需要提供 C++20 编译器、CMake >=3.15、make 或 Ninja，以及与当前 Python 匹配的开发头文件。pip 在隔离构建环境中安装 `swig>=4.2.1,<5` 和 Python 构建后端。SWIG 是 xspcomm 的构建依赖，不是运行依赖。
 
 ```sh
 python -m pip install --no-binary=uc-xcomm --no-cache-dir uc-xcomm

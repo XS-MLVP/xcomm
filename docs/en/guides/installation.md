@@ -21,7 +21,7 @@ Official x86-64 wheels use `-march=x86-64 -mtune=generic`. The GLIBC baseline an
 
 ## Compile during pip installation
 
-Prepare a C++20 compiler, CMake >=3.15, make or Ninja, and development headers matching the active Python interpreter. Pip installs SWIG 4.5.1 and the Python build backend in an isolated build environment. SWIG is a build dependency, not a runtime dependency of xspcomm.
+Prepare a C++20 compiler, CMake >=3.15, make or Ninja, and development headers matching the active Python interpreter. Pip installs `swig>=4.2.1,<5` and the Python build backend in an isolated build environment. SWIG is a build dependency, not a runtime dependency of xspcomm.
 
 ```sh
 python -m pip install --no-binary=uc-xcomm --no-cache-dir uc-xcomm

@@ -34,7 +34,7 @@ Merging a correctly labeled PR preserves the existing automatic version-tag flow
 
 Both wheel baselines use libstdc++'s C++11 ABI (`_GLIBCXX_USE_CXX11_ABI=1`). The pinned manylinux2014 Devtoolset 10 header disables dual ABI even though its static runtime includes both implementations. A release-only preparation script enables those declarations in the disposable container, and the GLIBC 2.17 build links libstdc++ statically. GLIBC remains dynamic and is checked by auditwheel. This does not modify source-install toolchains or require users to compile with the old C++ ABI. Wheel tests exercise strings, containers, callbacks and exception propagation across the SDK boundary.
 
-`XSPCOMM_NATIVE` defaults to `ON` for local and pip source builds. The cibuildwheel configuration explicitly sets it `OFF` for distributed wheels. CI checks the actual compile commands (`-march=x86-64 -mtune=generic` for release wheels, `-march=native -mtune=native` for source installs) and requires coroutine support to remain enabled. CMake Release optimization is independent of this option. The source-install jobs test CPython 3.11 and 3.12 with no system SWIG installation.
+`XSPCOMM_NATIVE` defaults to `ON` for local and pip source builds. The cibuildwheel configuration explicitly sets it `OFF` for distributed wheels. CI checks the actual compile commands (`-march=x86-64 -mtune=generic` for release wheels, `-march=native -mtune=native` for source installs) and requires coroutine support to remain enabled. CMake Release optimization is independent of this option. The source-install jobs test CPython 3.11 and 3.12 with SWIG 4.2.1 and 4.5.1, using isolated build constraints and no system SWIG installation.
 
 ## Local package checks
 
