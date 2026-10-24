@@ -4,7 +4,7 @@ The Python distribution is `uc-xcomm`; import it as `xspcomm`. The release wheel
 
 ## Python wheel
 
-After the first [PyPI release is configured](../development/releases.md#pypi-setup), install into the environment that will run the simulation:
+Install from [PyPI](https://pypi.org/project/uc-xcomm/) into the environment that will run the simulation:
 
 ```sh
 python3.12 -m venv .venv

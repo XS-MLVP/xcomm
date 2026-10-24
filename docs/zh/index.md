@@ -1,6 +1,6 @@
 # xcomm 文档
 
-xcomm 提供硬件仿真中常用的 C++ 组件：信号读写、端口分组、时钟推进、表达式求值、时序事件匹配和功能覆盖率。Python 包名为 `xspcomm`，也提供 Java、Scala、Go、Lua 和 JavaScript 绑定。
+xcomm 提供硬件仿真中常用的 C++ 组件：信号读写、端口分组、时钟推进、表达式求值、时序事件匹配和功能覆盖率。Python 发行包名为 `uc-xcomm`，导入名为 `xspcomm`，也提供 Java、Scala、Go、Lua 和 JavaScript 绑定。
 
 第一次使用，从[安装](guides/installation.md)和[第一个信号与事件](tutorials/first-simulation.md)开始。教程用一个小脚本演示宽信号、时钟和事件等待。
 
