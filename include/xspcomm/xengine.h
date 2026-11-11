@@ -39,7 +39,7 @@ class XEngine {
     void AppendHit(uint32_t slot, Watcher &watcher, XHitKind kind,
                    uint64_t value, uint64_t event_id = 0,
                    uint64_t x_mask = 0);
-    bool EvaluateCoverage(Watcher &watcher);
+    bool EvaluateCoverage(Watcher &watcher, uint64_t sample_id);
     void CheckCoverageHandle(XRegistrationHandle handle) const;
 
 public:
@@ -118,6 +118,9 @@ public:
         uint64_t max_half_ticks, uint64_t max_wall_time_ns = 0,
         uint32_t budget_check_interval = 64);
     XRunResult SamplePhase(XPhase phase);
+    // Protocol 1: independent zero-time sampling and exclusive manual refresh.
+    static uint32_t CombinationalVersion() { return 1; }
+    void RefreshComb();
     size_t ActiveCount() const;
     size_t Capacity() const { return capacity; }
     void ClearExecutionState();

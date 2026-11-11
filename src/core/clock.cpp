@@ -333,11 +333,15 @@ void XClock::_step_ris()
 
 void XClock::eval()
 {
+    CheckManualStep();
+    StepScope step(drive_control.stepping);
     this->_step(false);
 }
 
 void XClock::eval_t()
 {
+    CheckManualStep();
+    StepScope step(drive_control.stepping);
     this->_step(true);
 }
 

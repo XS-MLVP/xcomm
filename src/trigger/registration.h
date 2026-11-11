@@ -45,7 +45,8 @@ struct TriggerRegistration : PatternState {
         switch (kind) {
         case Kind::Edge:
             return {true, phase == XPhase::RisingStable ? XHitKind::ClockRise :
-                          phase == XPhase::DriveStable ? XHitKind::DriveStable : XHitKind::ClockFall};
+                          phase == XPhase::DriveStable ? XHitKind::DriveStable :
+                          phase == XPhase::CombStable ? XHitKind::CombStable : XHitKind::ClockFall};
         case Kind::ClockCycles:
             if (--remaining == 0) return {true, XHitKind::ClockCycles};
             break;

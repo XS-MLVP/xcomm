@@ -6,6 +6,30 @@
 
 using namespace xspcomm;
 
+TEST_CASE("CombStable coverage counts independent samples at the same tick", "[coverage][comb]") {
+    XClock clock([](bool) { return 0; });
+    XEngine engine(clock);
+    engine.AcquireClock();
+    XData value(8, XData::InOut);
+    XCoveragePoint point;
+    point.signal = &value;
+    XCoverageBin bin;
+    bin.program.root = engine.ExprNewCompare(static_cast<int>(ExprOp::EQ),
+        engine.ExprNewSignal(&value), engine.ExprNewConst(1));
+    auto handle = engine.ArmEdge(XPhase::CombStable);
+    engine.AttachCoverage(handle, {point}, {bin});
+    for (unsigned i = 0; i < 4; ++i) {
+        value = i % 2;
+        REQUIRE(engine.SamplePhase(XPhase::CombStable).hits.empty());
+    }
+    const auto snapshot = engine.CoverageSnapshot(handle);
+    REQUIRE(snapshot.counters.front() == 4);
+    REQUIRE(snapshot.counters.back() == 2);
+    REQUIRE(clock.GetHalfTick() == 0);
+    REQUIRE(engine.Disarm(handle));
+    engine.ReleaseClock();
+}
+
 TEST_CASE("Collection keeps coverage gates aborts and wide bin constants", "[coverage]") {
     XClock clock([](bool) { return 0; });
     XTriggerEngine engine(clock, 4);

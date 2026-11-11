@@ -468,10 +468,10 @@ bool XEngine::HasArmedPhase(XPhase phase) const
 }
 
 // Keep the sampling adapter visible to the phase loop so it can inline.
-inline bool XEngine::EvaluateCoverage(Watcher &watcher)
+inline bool XEngine::EvaluateCoverage(Watcher &watcher, uint64_t sample_id)
 {
     auto &coverage = *watcher.coverage;
-    switch (coverage.BeginSample(*expr_engine, clock->GetHalfTick())) {
+    switch (coverage.BeginSample(*expr_engine, sample_id)) {
     case detail::CoverageState::SampleStatus::Skip:
         return true;
     case detail::CoverageState::SampleStatus::Aborted:
@@ -492,7 +492,9 @@ inline bool XEngine::EvaluateCoverage(Watcher &watcher)
 void XEngine::EvaluatePhase(XPhase phase)
 {
     evaluation_phase = phase;
-    uint64_t edge_event_id = 0;
+    // A phase occurrence has an identity even when no ordinary trigger hits.
+    // Coverage must distinguish repeated zero-time samples at the same tick.
+    const uint64_t sample_id = next_event_id++;
     expr_engine->SetCycle(clock->GetHalfTick());
     for (uint32_t slot = 0; slot < watchers.size(); ++slot) {
         auto &watcher = watchers[slot];
@@ -500,13 +502,12 @@ void XEngine::EvaluatePhase(XPhase phase)
             watcher.phase != phase) {
             continue;
         }
-        if (watcher.coverage && EvaluateCoverage(watcher)) continue;
+        if (watcher.coverage && EvaluateCoverage(watcher, sample_id)) continue;
         const auto match = watcher.Evaluate(*expr_engine, phase);
         if (!match.hit) continue;
         uint64_t event_id = 0;
         if (watcher.kind == WatcherKind::Edge) {
-            if (edge_event_id == 0) edge_event_id = next_event_id++;
-            event_id = edge_event_id;
+            event_id = sample_id;
         }
         AppendHit(slot, watcher, match.kind, match.value, event_id, match.x_mask);
     }
@@ -577,8 +578,8 @@ XRunResult XEngine::SamplePhase(XPhase phase)
     CheckClockOwnership();
     if (clock->in_callback) throw std::logic_error("cannot drive XEngine from a clock callback");
     RunScope run(running);
-    if (phase != XPhase::DriveStable ||
-        clock->GetPhase() != XPhase::FallingStable) {
+    if (phase != XPhase::CombStable && (phase != XPhase::DriveStable ||
+        clock->GetPhase() != XPhase::FallingStable)) {
         throw std::logic_error(
             "DriveStable may only be sampled after FallingStable");
     }
@@ -586,13 +587,24 @@ XRunResult XEngine::SamplePhase(XPhase phase)
     result.stopped_phase = phase;
     result.stop_reason = XStopReason::EdgeBarrier;
     hit_buffer.clear();
-    clock->RefreshComb();
+    // Engine-owned evaluation bypasses the public manual-control entry point.
+    // No clock pin, half-tick, cycle boundary or edge callback is changed.
+    clock->_step(false);
     EvaluatePhase(phase);
     if (!hit_buffer.empty()) {
         result.stop_reason = XStopReason::TriggerHit;
     }
     result.hits = hit_buffer;
     return result;
+}
+
+void XEngine::RefreshComb()
+{
+    CheckNotRunning();
+    CheckClockOwnership();
+    if (clock->in_callback) throw std::logic_error("cannot drive XEngine from a clock callback");
+    RunScope run(running);
+    clock->_step(false);
 }
 
 
