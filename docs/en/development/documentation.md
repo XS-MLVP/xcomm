@@ -45,24 +45,36 @@ Run examples with a Python environment containing xspcomm. For C++ examples, pas
 
 ## Publish the GitHub Wiki
 
-The [GitHub Wiki](https://github.com/XS-MLVP/xcomm/wiki/Home) and the site are generated from the same Markdown. Export into an empty directory:
+The site and Wiki are generated from the same Markdown. Preview the export in an empty directory:
 
 ```sh
 /tmp/docs-venv/bin/python scripts/docs.py wiki --output /tmp/xcomm-wiki-export
 ```
 
-The output includes bilingual pages, a home page, sidebar, footer, and file manifest. Page links become absolute GitHub Wiki URLs; source and image links point to the main repository. After reviewing the export, maintainers publish it to GitHub's separate Wiki repository:
+The export includes bilingual pages, a home page, sidebar, footer, and a SHA-256 manifest.
+Page links become absolute GitHub Wiki URLs; source and image links point to the main repository.
+
+The **Documentation** workflow validates links, tests the documentation tools, builds the site,
+and uploads the site and Wiki export as review artifacts. After a documentation change reaches
+`master`, its **Sync GitHub Wiki** job publishes the checked export to `xcomm.wiki.git`.
+PRs and `docs/**` branches only build previews. To retry synchronization, run **Documentation**
+manually with `master` selected. Exports superseded by newer documentation changes are skipped.
+
+The publishing job uses the built-in `GITHUB_TOKEN` with `contents: write`; no PAT or additional
+secret is needed. GitHub requires the Wiki to be enabled and its first page to be created once
+through the web UI before Actions can check out the Wiki repository. See
+[GitHub's Wiki documentation](https://docs.github.com/en/communities/documenting-your-project-with-wikis/adding-or-editing-wiki-pages).
+
+Edit generated pages in `docs/zh` and `docs/en`, since the next sync replaces them from source.
+The first sync replaces the initial Home/sidebar/footer. Other manually maintained pages are preserved;
+conflicting page names require manual resolution. Removed or renamed generated pages are deleted only
+if they still match the previous manifest. Manual edits to such obsolete pages stop the job for review.
+An unchanged export creates no commit, and pushes never force-update Wiki history.
+
+To review the same synchronization locally without publishing:
 
 ```sh
 git clone https://github.com/XS-MLVP/xcomm.wiki.git /tmp/xcomm-wiki-checkout
-cp /tmp/xcomm-wiki-export/*.md /tmp/xcomm-wiki-export/manifest.json /tmp/xcomm-wiki-checkout/
+python scripts/sync_wiki.py --export /tmp/xcomm-wiki-export --checkout /tmp/xcomm-wiki-checkout
 git -C /tmp/xcomm-wiki-checkout diff
-git -C /tmp/xcomm-wiki-checkout status --short
-git -C /tmp/xcomm-wiki-checkout add -- '*.md' manifest.json
-git -C /tmp/xcomm-wiki-checkout commit -m "Sync documentation from xcomm"
-git -C /tmp/xcomm-wiki-checkout push
 ```
-
-Compare manifests when pages are renamed or removed, and remove only obsolete generated files from the Wiki checkout. Keep unrelated Wiki content. See [GitHub's Wiki documentation](https://docs.github.com/en/communities/documenting-your-project-with-wikis/adding-or-editing-wiki-pages) for editing the separate repository.
-
-Documentation CI runs for PRs targeting master, documentation changes pushed to master or `docs/**` branches, and manual dispatches. It checks translated pages, links, and example syntax, then builds the site and exports the Wiki as review artifacts. CI does not push to the Wiki; publishing requires the separate Git push above.
