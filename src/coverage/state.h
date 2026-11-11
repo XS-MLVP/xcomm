@@ -19,11 +19,11 @@ public:
                   const std::vector<XCoverageBin> &bins,
                   int gate, int abort, bool raise_illegal, size_t diagnostic_capacity,
                   bool overlap, size_t max_active, bool diagnostics);
-    SampleStatus BeginSample(ExprEngine &expr, uint64_t tick)
+    SampleStatus BeginSample(ExprEngine &expr, uint64_t sample_id)
     {
-        if (sampled && evaluated_tick == tick) return SampleStatus::Skip;
+        if (sampled && evaluated_tick == sample_id) return SampleStatus::Skip;
         sampled = true;
-        evaluated_tick = tick;
+        evaluated_tick = sample_id;
         if (abort >= 0 && expr.IsKnown(abort) && expr.Eval(abort)) {
             ClearHistory(true);
             return SampleStatus::Aborted;

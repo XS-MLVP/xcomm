@@ -33,8 +33,18 @@ Keep the borrowed clock and signals alive while the engine uses them. Acquisitio
 | --- | --- |
 | `RunUntil(max_half_ticks, max_wall_time_ns=0, budget_check_interval=64)` | Advance up to a half-cycle budget; may return without hits. Zero wall-time budget disables that limit. |
 | `SamplePhase(XPhase::DriveStable)` | Allowed after FallingStable; refresh combinational logic and sample without advancing half ticks. |
+| `SamplePhase(XPhase::CombStable)` | Independently evaluate and sample at the current tick, without a preceding edge or changes to clock pins, edge phase, or cycle boundary. Supports native conditions, Sequence/FSM and Coverage. |
+| `RefreshComb()` | Engine-owned evaluation without sampling or hits, for protocol-driver internals. |
+| `CombinationalVersion()` | Returns 1, identifying independent combinational sampling and exclusive manual-refresh control. |
 
 Wall-time checks are periodic, so actual return time may exceed the budget. RunUntil returns for ordinary hits, DriveStable barriers, disabled clocks or budget exhaustion. One phase may produce multiple hits. At a DriveStable boundary, drive inputs, call SamplePhase(DriveStable), then continue; the engine does not generate stimulus.
+
+CombStable is explicitly requested by the frontend, never repeatedly scheduled merely because
+registrations exist. Consecutive requests at the same tick are distinct samples counted separately
+by Coverage; Sequence/FSM windows count these samples, not clock cycles. Write modes are retained:
+use immediate writes for combinational inputs; edge-deferred writes are not committed early.
+XClock RefreshComb/RefreshCombT/eval/eval_t reject manual calls while controlled. Engine evaluation
+retains the lease and rejects callback reentry.
 
 ## Results
 

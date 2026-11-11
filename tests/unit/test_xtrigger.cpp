@@ -440,6 +440,10 @@ TEST_CASE("XEngine explicitly leases a clock until release", "[xtrigger][ownersh
     REQUIRE_THROWS_AS(clock.StepHalf(), std::logic_error);
     REQUIRE_THROWS_AS(clock.RunStep(), std::logic_error);
     REQUIRE_THROWS_AS(clock.Reset(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.RefreshComb(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.RefreshCombT(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.eval(), std::logic_error);
+    REQUIRE_THROWS_AS(clock.eval_t(), std::logic_error);
     REQUIRE_THROWS_AS(clock.ReInit([](bool) { return 0; }), std::logic_error);
     REQUIRE_THROWS_AS(clock.default_stop_on_rise(false), std::logic_error);
     REQUIRE(clock.GetHalfTick() == tick);
@@ -460,6 +464,78 @@ TEST_CASE("XEngine explicitly leases a clock until release", "[xtrigger][ownersh
     REQUIRE(second.RunUntil(2).advanced_ticks == 2);
     second.ReleaseClock();
     clock.Step();
+    REQUIRE_NOTHROW(clock.RefreshComb());
+}
+
+TEST_CASE("CombStable samples before any edge and repeatedly at either edge", "[xtrigger][comb]") {
+    XData a(8, XData::InOut), sum(8, XData::InOut), clk(1, XData::InOut);
+    unsigned evaluations = 0, callbacks = 0;
+    XClock clock([&](bool) { ++evaluations; sum = a.U() + 1; return 0; });
+    clock.Add(clk);
+    clk = 1;
+    clock.StepFal([&](uint64_t, void *) { ++callbacks; });
+    clock.StepRis([&](uint64_t, void *) { ++callbacks; });
+    XEngine engine(clock);
+    engine.AcquireClock();
+    for (unsigned i = 0; i < 3; ++i) {
+        a = i;
+        auto first = engine.ArmEdge(XPhase::CombStable);
+        auto second = engine.ArmEdge(XPhase::CombStable);
+        auto value = engine.ArmValueEq(&sum, i + 1, XPhase::CombStable);
+        const auto result = engine.SamplePhase(XPhase::CombStable);
+        REQUIRE(result.advanced_ticks == 0);
+        REQUIRE(result.IsPhaseBarrier());
+        REQUIRE(result.stopped_phase == XPhase::CombStable);
+        REQUIRE(result.hits.size() == 3);
+        uint64_t occurrence = 0;
+        for (const auto &hit : result.hits) {
+            REQUIRE(hit.tick == 0);
+            if (hit.slot == first.slot || hit.slot == second.slot) {
+                REQUIRE(hit.kind == XHitKind::CombStable);
+                if (occurrence) REQUIRE(hit.event_id == occurrence);
+                occurrence = hit.event_id;
+            }
+        }
+        REQUIRE(occurrence != 0);
+        REQUIRE(clock.GetHalfTick() == 0);
+        REQUIRE(clock.GetPhase() == XPhase::RisingStable);
+        REQUIRE(clk.U() == 1);
+        REQUIRE(callbacks == 0);
+        REQUIRE(engine.Disarm(first));
+        REQUIRE(engine.Disarm(second));
+        REQUIRE(engine.Disarm(value));
+    }
+    REQUIRE(evaluations == 3);
+    REQUIRE(engine.RunUntil(1).advanced_ticks == 1);
+    REQUIRE_NOTHROW(engine.SamplePhase(XPhase::CombStable));
+    REQUIRE_NOTHROW(engine.SamplePhase(XPhase::DriveStable));
+    REQUIRE(clock.GetHalfTick() == 1);
+    REQUIRE(engine.RunUntil(1).advanced_ticks == 1);
+    REQUIRE_NOTHROW(engine.SamplePhase(XPhase::CombStable));
+    REQUIRE_THROWS_AS(engine.SamplePhase(XPhase::DriveStable), std::logic_error);
+    REQUIRE_NOTHROW(engine.RefreshComb());
+    engine.ReleaseClock();
+    REQUIRE_NOTHROW(clock.RefreshComb());
+}
+
+TEST_CASE("CombStable rejects reentry and recovers after failed evaluation", "[xtrigger][comb]") {
+    XEngine *engine = nullptr;
+    bool fail = true;
+    XClock clock([&](bool) {
+        REQUIRE_THROWS_AS(engine->SamplePhase(XPhase::CombStable), std::logic_error);
+        REQUIRE_THROWS_AS(engine->RefreshComb(), std::logic_error);
+        REQUIRE_THROWS_AS(clock.RefreshComb(), std::logic_error);
+        if (fail) throw std::runtime_error("comb evaluation failed");
+        return 0;
+    });
+    XEngine runtime(clock);
+    engine = &runtime;
+    runtime.AcquireClock();
+    REQUIRE_THROWS_WITH(runtime.SamplePhase(XPhase::CombStable), "comb evaluation failed");
+    fail = false;
+    REQUIRE_NOTHROW(runtime.SamplePhase(XPhase::CombStable));
+    REQUIRE(clock.GetHalfTick() == 0);
+    runtime.ReleaseClock();
 }
 
 TEST_CASE("XEngine releases ownership on destruction and checks clock lifetime",

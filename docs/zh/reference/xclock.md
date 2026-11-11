@@ -28,7 +28,10 @@
 | `SetFastMode/GetFastMode` | 选择哪些刷新/执行步骤可省略，见下表。 |
 | `CSelf()` | 地址桥接。 |
 
-接管期间 `Step/StepHalf/RunStep/Reset/ReInit/default_stop_on_rise` 被拒绝，受控时钟的复制和赋值也被拒绝。`RawStep()` 仍经过原生所有权检查。避免直接改公共 `clk/stop_on_rise` 或调用以下划线开头的辅助方法来推进。
+接管期间 `Step/StepHalf/RunStep/Reset/ReInit/default_stop_on_rise` 及
+`RefreshComb/RefreshCombT/eval/eval_t` 被拒绝，受控时钟的复制和赋值也被拒绝。
+`RawStep()` 仍经过原生所有权检查。组合求值由拥有控制权的 XEngine 执行。
+避免直接改公共 `clk/stop_on_rise` 或调用以下划线开头的辅助方法来推进。
 
 ## 回调
 

@@ -11,6 +11,7 @@ enum class XPhase {
     FallingStable = 0,
     RisingStable = 1,
     DriveStable = 2,
+    CombStable = 3,
 };
 
 enum class XHitKind : uint8_t {
@@ -22,6 +23,7 @@ enum class XHitKind : uint8_t {
     Fsm = 5,
     ValueChange = 6,
     DriveStable = 7,
+    CombStable = 8,
 };
 
 enum class XStopReason : uint8_t {
@@ -65,7 +67,8 @@ struct XRunResult {
     std::vector<XBackendHit> hits;
 
     bool IsPhaseBarrier() const {
-        return advanced_ticks != 0 || stopped_phase == XPhase::DriveStable;
+        return advanced_ticks != 0 || stopped_phase == XPhase::DriveStable ||
+               stopped_phase == XPhase::CombStable;
     }
 };
 

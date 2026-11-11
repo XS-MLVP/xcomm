@@ -33,10 +33,19 @@ Engine 不拥有 XClock，也不自动持有绑定信号。先销毁 clock 时�
 | --- | --- |
 | `RunUntil(max_half_ticks, max_wall_time_ns=0, budget_check_interval=64)` | 最多推进指定半周期；没有命中也可返回，时间预算为 0 表示不使用墙钟预算。 |
 | `SamplePhase(XPhase::DriveStable)` | 只允许在 FallingStable 后调用；刷新组合逻辑并采样 DriveStable，不推进 half tick。 |
+| `SamplePhase(XPhase::CombStable)` | 在当前 tick 独立求值和采样，不要求先有边沿，不改变 clock pin、边沿相位或周期边界；支持原生条件、Sequence/FSM 和 Coverage。 |
+| `RefreshComb()` | 拥有控制权的 engine 执行一次组合求值，不采样或产生 hit；供协议驱动内部使用。 |
+| `CombinationalVersion()` | 返回 1，标识独立组合采样及手动刷新控制权检查协议。 |
 
 墙钟预算按 check interval 周期性检查，实际返回时间可能超过预算。RunUntil 在普通 hit、DriveStable 边界、Disable 或预算结束时返回；同一相位可带回多条 hit。
 
 DriveStable 的使用顺序是：在下降稳定相位停下，前端写入驱动信号，然后 SamplePhase(DriveStable)，随后继续 RunUntil。它不会自动写入用户想要的激励。
+
+CombStable 由前端显式请求，不因组合注册存在就自动循环。连续请求即使 tick 相同也属于
+不同采样，Coverage 分别计数；Sequence/FSM 的步骤窗口按这些采样推进，不代表时钟周期。
+输入写入模式保持不变；纯组合驱动应使用立即写入，不会提前提交边沿延迟写入。
+控制权持有期间不能调用 XClock 的 RefreshComb/RefreshCombT/eval/eval_t；engine 内部求值
+不释放 lease，也不允许回调递归进入 engine。
 
 ## 返回结果
 

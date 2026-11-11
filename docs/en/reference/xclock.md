@@ -28,7 +28,10 @@ The execution callback's `bool dump` argument selects execution/recording behavi
 | `SetFastMode/GetFastMode` | Select omitted work as below. |
 | `CSelf()` | Native address bridge. |
 
-Owned clocks reject Step/StepHalf/RunStep/Reset/ReInit/default_stop_on_rise and copying/assignment. RawStep still checks native ownership. Do not bypass it by editing clk/stop_on_rise or calling underscore-prefixed helpers.
+Owned clocks reject Step/StepHalf/RunStep/Reset/ReInit/default_stop_on_rise,
+RefreshComb/RefreshCombT/eval/eval_t, and copying/assignment. RawStep still checks native ownership.
+The owning XEngine performs combinational evaluation. Do not bypass ownership by editing
+clk/stop_on_rise or calling underscore-prefixed helpers.
 
 ## Callbacks
 
