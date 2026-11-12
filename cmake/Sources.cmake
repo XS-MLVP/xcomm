@@ -10,6 +10,7 @@ set(XSPCOMM_SOURCES
     core/coroutine.cpp
     data/data.cpp
     data/backends.cpp
+    data/array.cpp
     data/value.cpp
     data/vpi.cpp
     data/pin.cpp

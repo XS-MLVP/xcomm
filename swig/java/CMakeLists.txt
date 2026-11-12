@@ -10,6 +10,11 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_javaswig)
 set_property(SOURCE java.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(javaxspcomm LANGUAGE java SOURCES java.i)
+set_property(TARGET javaxspcomm PROPERTY SWIG_DEPENDS
+    "${PROJECT_SOURCE_DIR}/swig/xcomm.i"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xarray.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xdata.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xsignal_cfg.h")
 target_link_libraries(javaxspcomm PRIVATE xspcomm)
 
 # set buld output directory
@@ -91,6 +96,24 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
     DEPENDS javaxspcomm_jar_lnk
 )
+
+if(BUILD_TESTING)
+    set(XARRAY_TEST_CLASSES ${CMAKE_CURRENT_BINARY_DIR}/array-test)
+    set(XARRAY_TEST_SOURCE ${PROJECT_SOURCE_DIR}/tests/bindings/java/test_xarray.java)
+    add_custom_command(
+        OUTPUT ${XARRAY_TEST_CLASSES}/com/xspcomm/tests/test_xarray.class
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${XARRAY_TEST_CLASSES}
+        COMMAND ${Java_JAVAC_EXECUTABLE} -cp ${XCOMM_LIB_DIR}/../xspcomm-java.jar
+                -d ${XARRAY_TEST_CLASSES} ${XARRAY_TEST_SOURCE}
+        DEPENDS _DummyTarget_create_javaxspcomm_so_link ${XARRAY_TEST_SOURCE})
+    add_custom_target(test_xarray_java_classes ALL
+        DEPENDS ${XARRAY_TEST_CLASSES}/com/xspcomm/tests/test_xarray.class)
+    add_test(NAME test_xarray_java
+        COMMAND ${Java_JAVA_EXECUTABLE} -ea -cp
+                "${XCOMM_LIB_DIR}/../xspcomm-java.jar:${XARRAY_TEST_CLASSES}"
+                com.xspcomm.tests.test_xarray)
+endif()
+
 # Install
 install(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.${PROJECT_VERSION}.jar ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/xspcomm-java.jar
         DESTINATION ${XSPCOMM_INSTALL_PREFIX}share/picker/java)

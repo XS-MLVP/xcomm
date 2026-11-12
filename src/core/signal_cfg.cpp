@@ -1,6 +1,7 @@
 #include "xspcomm/xsignal_cfg.h"
 #include "xspcomm/xexpr.h"
 #include "fkyaml/node.hpp"
+#include <stdexcept>
 
 namespace xspcomm
 {
@@ -146,6 +147,35 @@ namespace xspcomm
         cfg.mem_bytes = var["mem_bytes"].get_value<uint32_t>();
         cfg.rtl_width = var["rtl_width"].get_value<uint32_t>();
         if(var.contains("array_size"))cfg.array_size = var["array_size"].get_value<uint64_t>();
+        if(var.contains("array_dimensions")) {
+            for (const auto &dimension : var["array_dimensions"])
+                cfg.array_dimensions.push_back(dimension.get_value<int>());
+        }
+        if(var.contains("array_strides")) {
+            for (const auto &stride : var["array_strides"])
+                cfg.array_strides.push_back(stride.get_value<uint64_t>());
+        }
+        if (cfg.array_size && cfg.array_dimensions.empty()) {
+            owner.init_error_msg = "array dimensions are required: " + cfg_key;
+            return false;
+        }
+        if (!cfg.array_dimensions.empty()) {
+            uint64_t size = 1;
+            for (int dimension : cfg.array_dimensions) {
+                if (dimension <= 0 || size > UINT64_MAX / uint64_t(dimension)) {
+                    owner.init_error_msg = "invalid array dimensions: " + cfg_key;
+                    return false;
+                }
+                size *= uint64_t(dimension);
+            }
+            if (size != cfg.array_size || cfg.array_strides.size() != cfg.array_dimensions.size()) {
+                owner.init_error_msg = "array shape/stride/count mismatch: " + cfg_key;
+                return false;
+            }
+        } else if (!cfg.array_strides.empty()) {
+            owner.init_error_msg = "array strides without dimensions: " + cfg_key;
+            return false;
+        }
         if(var.contains("type"))cfg.type = var["type"].get_value<std::string>();
         Assert(cfg_key.empty() == false, "cfg_key is empty, check prefix and name");
         owner.cfg_map[cfg_key] = cfg;
@@ -272,6 +302,7 @@ namespace xspcomm
         if(xname.empty())xname = name;
         auto &meta = metaIt->second;
         if(meta.bindable){
+            if (this->cfg_map[name].array_size) return this->NewXData(name, 0, xname);
             s_xsignal_cfg cfg;
             auto xdata = new_empty_xdata(name, xname, cfg);
             if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset);
@@ -304,22 +335,41 @@ namespace xspcomm
     }
 
     XData* XSignalCFG::NewXData(std::string name, int array_index, std::string xname){
+        auto array = NewXDataArrayView(name);
+        if (!array) return nullptr;
+        if (array_index < 0 || uint64_t(array_index) >= array->Size())
+            throw std::out_of_range("Native array index out of range");
         s_xsignal_cfg cfg;
         auto xdata = new_empty_xdata(name, xname, cfg);
-        if(xdata)xdata->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * array_index);
+        if(xdata)array->BindElement(*xdata, uint64_t(array_index));
         return xdata;
+    }
+
+    std::shared_ptr<XDataArray> XSignalCFG::NewXDataArrayView(std::string name) {
+        auto found = native_arrays.find(name);
+        if (found != native_arrays.end()) return found->second;
+        const auto cfg = At(name);
+        if (cfg.is_empty || !cfg.array_size) return nullptr;
+        std::vector<int> left(cfg.array_dimensions.size(), 0), right;
+        for (int dimension : cfg.array_dimensions) right.push_back(dimension - 1);
+        auto array = std::make_shared<XDataArray>(cfg.rtl_width == 1 ? 0 : cfg.rtl_width, left, right);
+        if (cfg.offset > UINT64_MAX - cfg_base_address) throw std::overflow_error("Native array base overflow");
+        array->BindNativeData(cfg_base_address + cfg.offset, cfg.array_strides);
+        native_arrays.emplace(name, array);
+        return array;
     }
 
     std::vector<std::shared_ptr<XData>> XSignalCFG::NewXDataArray(std::string name, std::string xname){
         std::vector<std::shared_ptr<XData>> vec;
         if(xname.empty())xname = name;
-        s_xsignal_cfg cfg;
-        auto xdata = new_empty_xdata(name, xname, cfg, true);
-        if(xdata){
-            for(uint64_t i = 0; i < cfg.array_size; i++){
-                auto x = new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname + "_" + std::to_string(i));
-                x->BindNativeData(this->cfg_base_address + cfg.offset + cfg.mem_bytes * i);
-                vec.push_back(std::shared_ptr<XData>(x));
+        auto array = NewXDataArrayView(name);
+        if(array){
+            const auto cfg = At(name);
+            for(uint64_t i = 0; i < array->Size(); i++){
+                auto x = std::make_shared<XData>(cfg.rtl_width == 1 ? 0 : cfg.rtl_width,
+                    XData::InOut, xname + "_" + std::to_string(i));
+                array->BindElement(*x, i);
+                vec.push_back(x);
             }
         }
         return vec;

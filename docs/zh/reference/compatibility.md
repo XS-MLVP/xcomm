@@ -14,6 +14,10 @@ Picker v2.1.0 源码依赖范围为 xspcomm>=1.0.0.dev0,<2，原生构建固定�
 
 发布 wheel 按 CPython 小版本及平台构建。1.0.0 的 GitHub 资产提供 CPython 3.12 / Linux x86-64；其他环境按源码构建。CMake 的无包元数据默认版本只是构建回退值，不能用它替代 Git 标签/发行包版本。
 
+未发布的定长数组后端改变 `XData` 和 `XSignalCFG` 布局，使用**原生 ABI 4**，与上面已发布的
+v1.0.0/ABI 3 基线不同。Picker 与 xcomm 配套升级；旧 DUT 和旧布局 YAML 不再支持，
+使用当前工具链重新生成模型产物。详见 XData 的数组说明。
+
 ## 旧头文件与名称迁移
 
 删除的路径没有转发头；直接更新 include：

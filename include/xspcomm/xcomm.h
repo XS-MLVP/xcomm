@@ -6,6 +6,7 @@
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/xdata.h"
+#include "xspcomm/xarray.h"
 #include "xspcomm/xclock.h"
 #include "xspcomm/xexpr.h"
 #include "xspcomm/xtrigger.h"
