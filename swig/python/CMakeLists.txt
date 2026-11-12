@@ -52,9 +52,11 @@ target_include_directories(pyxspcomm PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set(XCOMM_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/../python/xspcomm)
 if(BUILD_TESTING)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    configure_file(${PROJECT_SOURCE_DIR}/tests/bindings/python/test_xarray.py
+        ${CMAKE_CURRENT_BINARY_DIR}/test_xarray.py COPYONLY)
     add_test(NAME test_xarray_python
         COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${XCOMM_LIB_DIR}/.."
-            ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/bindings/python/test_xarray.py -v)
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_xarray.py -v)
 endif()
 set(STAGE_NATIVE_LIBRARY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../StageSharedLibrary.cmake)
 # set rpath prefix
