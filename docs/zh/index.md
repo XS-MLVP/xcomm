@@ -18,7 +18,7 @@ xcomm 提供硬件仿真中常用的 C++ 组件：信号读写、端口分组、
 
 | 组件 | 用途 |
 | --- | --- |
-| [XData](reference/xdata.md) | 表示四态信号，读写值、位切片和宽数据 |
+| [XData](reference/xdata.md) | 表示四态信号和定长 unpacked 数组，读写值、位切片和宽数据 |
 | [XPort](reference/xport.md) | 按名称组织信号，批量刷新 |
 | [XClock](reference/xclock.md) | 连接模拟器执行函数，管理时钟和边沿回调 |
 | [ExprEngine](reference/expressions.md) | 构造和求值表达式 |
@@ -26,7 +26,7 @@ xcomm 提供硬件仿真中常用的 C++ 组件：信号读写、端口分组、
 | [Trigger](reference/triggers.md) | 匹配条件、Sequence 和 FSM |
 | [Coverage](reference/coverage.md) | 定义 point、bin 和 cross，记录命中次数 |
 | [Monitor](reference/monitors.md) | 在时钟回调中运行检查器 |
-| [XSignalCFG](reference/signal-config.md) | 根据布局信息绑定原生信号 |
+| [XSignalCFG](reference/signal-config.md) | 根据布局信息绑定原生信号和数组 |
 | [语言绑定](reference/bindings.md)、[TLM](reference/tlm.md) | 多语言接口和事务通信 |
 
 完整类型和头文件列表见 [API 索引](reference/api-index.md)。实现修改和优化可参考[开发与测试](development/contributing.md)、[性能说明](explanation/performance.md)。文档编辑、网站预览和 Wiki 导出见[文档维护](development/documentation.md)。

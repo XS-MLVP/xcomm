@@ -11,6 +11,10 @@
 
 xcomm 是硬件仿真的 C++20 组件库，提供四态信号、端口集合、时钟、表达式、时序事件和功能覆盖率。Python 发行包名为 `uc-xcomm`，导入名为 `xspcomm`，也支持 Java、Scala、Go、Lua 和 JavaScript。
 
+[定长多维 unpacked 数组](https://github.com/XS-MLVP/xcomm/wiki/zh-reference-xdata#unpacked-arrays)
+通过 `XDataArray` 使用共享的索引 DPI 或原生内存绑定，数组 RTL 回归已在
+Verilator 5.026、5.048、5.052 上验证。
+
 ## 开始使用
 
 完成[安装](https://github.com/XS-MLVP/xcomm/wiki/zh-guides-installation)后，可以直接创建和读写宽信号：

@@ -1,6 +1,6 @@
 # XSignalCFG：从布局创建信号
 
-头文件：[xsignal_cfg.h](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/include/xspcomm/xsignal_cfg.h)。XSignalCFG 将名称、位宽、原生内存偏移映射为 XData，并可创建只读常量或表达式信号。它使用已有内存布局，不负责申请 DUT 内存或从 RTL 推导地址。
+头文件：[xsignal_cfg.h](https://github.com/XS-MLVP/xcomm/blob/master/include/xspcomm/xsignal_cfg.h)。XSignalCFG 将名称、位宽、原生内存偏移映射为 XData，并可创建只读常量或表达式信号。它使用已有内存布局，不负责申请 DUT 内存或从 RTL 推导地址。
 
 ## 原生布局
 
@@ -19,19 +19,36 @@ variables:
 | --- | --- |
 | name | 列表模式的名称；映射模式由嵌套 key 拼成名称 |
 | offset | 相对于 base_address 的字节偏移 |
-| mem_bytes | 一个元素的存储长度，数组下标使用它作为 stride |
+| mem_bytes | 布局记录的单元素存储长度；数组寻址使用 array_strides |
 | rtl_width | RTL 位宽；1 会创建 width=0 的 scalar XData |
-| array_size | 数组元素数量 |
+| array_size | 数组元素数量；非零时必须同时提供 array_dimensions 和 array_strides |
+| array_dimensions | 各维的元素数量；乘积须等于 array_size |
+| array_strides | 从外到内的字节步长；rank 须与 array_dimensions 一致 |
 | type | 布局类型说明；不能靠它覆盖 BindNativeData 的内存约定 |
+
+array_size 非零时，array_dimensions 和 array_strides 均为必填；布局不完整会在解析阶段失败。
+
+```yaml
+variables:
+  - name: Top.mem
+    type: VlWide<3>
+    offset: 0
+    mem_bytes: 12
+    rtl_width: 65
+    array_size: 6
+    array_dimensions: [2, 3]
+    array_strides: [80, 24]
+```
 
 ## API
 
 | API | 用途与约束 |
 | --- | --- |
 | `XSignalCFG(path_or_yaml, base_address=0)` | 接受存在的文件路径或 YAML 字符串，第一次查询/构造时解析。 |
-| `NewXData(name, xname="")` | 创建并绑定信号，失败可返回 nullptr；C++ 调用方管理返回对象。 |
-| `NewXData(name, index, xname="")` | 数组元素地址为 base + offset + mem_bytes*index，调用方核对索引和实际存储范围。 |
-| `NewXDataArray(name, xname="")` | 创建 array_size 个信号，C++ 返回 shared_ptr vector。 |
+| `NewXData(name, xname="")` | 创建信号；数组名称创建扁平下标 0 的元素。失败可返回 nullptr；C++ 调用方管理返回对象。 |
+| `NewXData(name, index, xname="")` | 按扁平、从零开始的存储下标创建数组元素；下标必须小于数组大小并会检查，越界抛出异常。非数组名称返回 nullptr。 |
+| `NewXDataArray(name, xname="")` | 从同一共享视图按扁平顺序创建全部元素；C++ 返回 shared_ptr vector。非数组名称返回空 vector。 |
+| `NewXDataArrayView(name)` | 返回缓存的 XDataArray 视图，边界从零开始；名称不存在或不是数组时返回 nullptr。 |
 | `GetSignalNames(pattern="")` | 列出名称；pattern 按名称子串筛选。 |
 | `At(name)`；`operator[]` | 原生布局查询；不存在时 is_empty=true，Python 包装成 None。 |
 | `Address(name)` | 返回 base+offset；先核对 At 的存在性，不能用这个结果判断信号是否存在。 |
@@ -59,7 +76,7 @@ signal.ImmSet(0x55)
 assert memory.value == 0x55
 ```
 
-memory 必须比所有绑定它的信号活得更久。相对地址、mem_bytes 与位宽应与实际模拟器布局匹配，尤其不能将窄 C 对象当成任意宽 word 数组。
+memory 必须比所有绑定它的信号活得更久。相对地址、mem_bytes、位宽、维度和步长应与实际模拟器布局匹配，尤其不能将窄 C 对象当成任意宽 word 数组。
 
 ## 只读派生信号
 

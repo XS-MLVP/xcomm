@@ -7,11 +7,11 @@ python3 -c 'import xspcomm as x; print(x.__file__, x.version(), x.abi_version(),
 python3 -m pip show uc-xcomm
 ```
 
-v1.0.0 的预期版本是 1.0.0 / ABI 3 / Coverage 5。
+原生接口使用 ABI 4、Coverage 协议 5；`version()` 报告实际安装包的构建版本。
 
 | 现象 | 核对项 | 处理 |
 | --- | --- | --- |
-| import 失败、undefined symbol、找不到 libxspcomm.so.3 | Python 小版本、平台、库搜索路径、DUT 编译时 ABI | 安装匹配 wheel；在同一环境重建 DUT，不混用旧 SDK |
+| import 失败、undefined symbol、找不到 libxspcomm.so.3 或 libxspcomm.so.4 | Python 小版本、平台、库搜索路径、DUT 编译时 ABI | 安装匹配 wheel；在同一环境重建 DUT，不混用旧 SDK |
 | 手动 Step 抛出 ownership 错误 | 是否有 engine AcquireClock | 在当前 engine 中推进；结束后 Clear/ReleaseClock 再手动推进 |
 | ReleaseClock 失败 | 是否还有已触发但未 Disarm 的注册 | Disarm 每个 handle 或 Clear，检查 ActiveCount 已为零 |
 | Coverage 不增长 | engine 是否推进/采样、phase、gate、点顺序、程序是否完成 | 从 [最小事件与覆盖率示例](../guides/events-coverage.md) 缩减复现；区分匹配与分类计数 |

@@ -11,7 +11,7 @@ else()
 endif()
 
 # Increment for incompatibility with master / published native ABIs.
-# Unreleased changes on this branch share one ABI transition.
+# Commits implementing one ABI change share a single transition.
 set(XSPCOMM_ABI_VERSION 4)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)

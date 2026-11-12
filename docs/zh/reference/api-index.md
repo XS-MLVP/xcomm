@@ -4,7 +4,7 @@
 
 | 模块 | 公开类型/入口 | 详细说明 |
 | --- | --- | --- |
-| 信号 | XData、PinBind、IOType、WriteMode、XDataBackendKind、xsvLogic、xsvLogicVecVal | [XData](xdata.md) |
+| 信号 | XData、XDataArray、PinBind、IOType、WriteMode、XDataBackendKind、xsvLogic、xsvLogicVecVal | [XData](xdata.md) |
 | 端口 | XPort | [XPort](xport.md) |
 | 时钟 | XClock、FastMode、XStep | [XClock](xclock.md) |
 | 表达式 | ExprEngine、ExprOp、ExprNode、NewBits、EvalBits、Collect | [ExprEngine](expressions.md) |
@@ -36,7 +36,7 @@
 
 ## 头文件选择
 
-普通应用可用 xcomm.h 汇总核心 API；需要检查器时使用 xmonitor.h。减少依赖时直接包含所属头文件：xdata.h、xport.h、xclock.h、xexpr.h、xengine.h、xpattern.h、xcoverage.h、xsignal_cfg.h，以及 monitor/*、tlm/*、common/*。
+普通应用可用 xcomm.h 汇总核心 API；需要检查器时使用 xmonitor.h。减少依赖时直接包含所属头文件：xdata.h、xarray.h、xport.h、xclock.h、xexpr.h、xengine.h、xpattern.h、xcoverage.h、xsignal_cfg.h，以及 monitor/*、tlm/*、common/*。
 
 runtime/types.h 仅定义运行协议数据类型；它不要求引入整个时钟和运行时实现。xtrigger.h 提供历史入口别名。
 

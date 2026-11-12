@@ -1,12 +1,13 @@
 # Language bindings and calling conventions
 
-The shared interface is [xcomm.i](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/swig/xcomm.i); Python conveniences live in [xcomm.py](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/swig/python/xcomm.py). Distinguish the C++ API from wrappers: matching method names do not guarantee identical argument and return types.
+The shared interface is [xcomm.i](https://github.com/XS-MLVP/xcomm/blob/master/swig/xcomm.i); Python conveniences live in [xcomm.py](https://github.com/XS-MLVP/xcomm/blob/master/swig/python/xcomm.py). Distinguish the C++ API from wrappers: matching method names do not guarantee identical argument and return types.
 
 ## Names and containers
 
 - C++ uses XEngine; bindings currently expose XTriggerEngine. The C++ XTriggerEngine name is an alias.
 - Python enums are generally flattened, such as XPhase_RisingStable, ExprOp_EQ and XCoveragePointKind_Pattern. XData.In/Out/InOut are direction conveniences.
 - Descriptor arrays use XCoveragePointVector, XCoverageBinVector, XSequenceStepVector and XFsmTransitionVector. Index containers include XIntVector/XUInt32Vector/XUInt64Vector; hit lists use XBackendHitVector.
+- Python and Java expose XDataArray. Python accepts lists for bounds, indices and strides; Java uses XIntVector/XUInt64Vector.
 - Python vector<unsigned char> arguments use bytes, not arbitrary lists. Byte results also use bytes.
 - Native pointers stored in another object do not automatically keep other language proxies alive. Retain clocks, signals, ports and callbacks explicitly.
 

@@ -39,12 +39,12 @@ A root is an index within one graph. Collect/CollectExpressions removes unreacha
 
 | Directory/entry | Responsibility and boundary |
 | --- | --- |
-| include/xspcomm/xdata.h, xport.h, xclock.h | Signals, ports and clocks |
+| include/xspcomm/xdata.h, xarray.h, xport.h, xclock.h | Signals, fixed unpacked arrays, ports and clocks |
 | xexpr.h, xpattern.h, xcoverage.h, xengine.h | Expressions, matching descriptors, coverage descriptors and execution |
 | runtime/types.h | Phase/handle/hit/result protocol, independent of clock implementation |
 | common/ | Comparisons, exact-width memory access, strings/memory and public-template helpers |
 | monitor/, xmonitor.h | Condition, range, expression, text-FSM and output callbacks |
-| src/data/ | Storage, values/comparison, native/DPI/VPI backends and PinBind; native_memory.h is private |
+| src/data/ | Storage, values/comparison, fixed-array, native/DPI/VPI backends and PinBind; native_memory.h is private |
 | src/core/ | Clock, port, coroutines and YAML configuration; YAML dependencies stay out of public headers |
 | src/expr/ | Graph construction, scalar/typed evaluation, compilation and collection |
 | src/trigger/ | Program validation, single-execution advancement, overlapping matchers and ordinary registrations; no Coverage dependency |

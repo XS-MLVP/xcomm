@@ -15,11 +15,12 @@ PYTHONPATH=build/python python3 tests/bindings/python/test_python.py
 
 Default `make` runs rbuild and cleans build/dist first. Use the CMake commands above to retain incremental artifacts. Use build/python with the native library from the same build. Python bindings require SWIG>=4.2 and Python development headers.
 
-Native CTest currently registers 11 targets:
+Native CTest currently registers 12 targets:
 
 | Test | Main coverage |
 | --- | --- |
 | test_xdata | Signal values, widths, writes and memory boundaries |
+| test_xarray | Fixed unpacked array bounds, DPI/native binding, lifetimes and trigger refresh |
 | test_xclock | Stepping, callbacks and ownership |
 | test_xtrigger | Registration, execution and event protocol |
 | test_xcoverage | Coverage integrated with the engine |
@@ -31,6 +32,8 @@ Native CTest currently registers 11 targets:
 | test_expr_allocations | Warm expression allocation constraints |
 | test_coverage_core | Independent statistical policy and execution state |
 
+With Python or Java bindings enabled, CTest also registers `test_xarray_python` and `test_xarray_java`.
+
 ## Choosing validation
 
 Signal/memory changes need narrow, unaligned, full-width and rebinding coverage. Clock changes need manual/owned execution, exceptional exit and destruction order. Coverage changes need classification, gate/abort, same-sample Cross, counter layout and shared matching. Wide arithmetic needs signs, partial words, division/shift errors and root remapping after collection.
@@ -41,4 +44,4 @@ Run the corresponding tests/bindings for wrapper changes. Compile a minimal clie
 
 PRs explain the triggering problem, final behavior, evidence for performance impact and actual validation scope. New APIs need [both language references](documentation.md), complete examples, lifetimes and error semantics. State whether each error returns false, throws, or terminates the process.
 
-Evaluate ABI changes using the [release guide](releases.md); evaluate Coverage protocol changes separately. A group of unpublished branch changes shares one ABI transition. PRs targeting master need exactly one release:patch/minor/major label.
+Evaluate ABI changes using the [release guide](releases.md); evaluate Coverage protocol changes separately. Commits implementing one ABI change share a single transition. PRs targeting master need exactly one release:patch/minor/major label.

@@ -1,22 +1,25 @@
 # 版本、兼容性与迁移
 
-本文对应 **xcomm v1.0.0**。包名为 xspcomm，仓库名为 xcomm。v1.0.0 已发布；发行包与源码构建的区别见[安装](../guides/installation.md)。
+本文说明 xcomm 的 API、原生 ABI 和描述协议。Python 发行包名为 `uc-xcomm`，
+导入名为 `xspcomm`。wheel 与源码构建方式见[安装](../guides/installation.md)。
 
-## 三种独立的版本
+## 版本层次
 
-| 层次 | 当前值 | 用途 |
+| 层次 | 取值/查询方式 | 用途 |
 | --- | --- | --- |
-| Python 包/原生版本字符串 | 1.0.0 | 安装与发行识别；`version()`、包元数据 |
-| 原生 C++ ABI | 3 | 对象布局与动态链接；`abi_version()`、libxspcomm.so.3 |
+| Python 包/原生版本字符串 | `version()` 与包元数据 | 标识包的构建版本 |
+| 原生 C++ ABI | 4 | 对象布局与动态链接；`abi_version()`、libxspcomm.so.4 |
 | Coverage 描述协议 | 5 | 前端生成 point/bin/program 的结构；`XTriggerEngine.CoverageVersion()` |
 
-Picker v2.1.0 源码依赖范围为 xspcomm>=1.0.0.dev0,<2，原生构建固定到 c39db6652cd08d46df05d08f0bb5a033b83e4d2f；该提交与 xcomm v1.0.0 的源码树一致。包版本满足范围不代表任意已编译 DUT 都兼容：升级 ABI 时需重新构建 DUT 和原生客户端，并检查实际加载的库。
+Picker 与 xcomm 使用匹配的工具链。Picker 在 `.build-config.yml` 中记录原生源码依赖；
+升级工具链后重新生成 DUT 和布局 YAML。
 
-发布 wheel 按 CPython 小版本及平台构建。1.0.0 的 GitHub 资产提供 CPython 3.12 / Linux x86-64；其他环境按源码构建。CMake 的无包元数据默认版本只是构建回退值，不能用它替代 Git 标签/发行包版本。
+发布 wheel 按 CPython 小版本及平台构建，矩阵覆盖 Linux x86-64、CPython 3.11/3.12 和
+GLIBC 2.17/2.28。源码构建及 C++ SDK 用法见安装指南。
 
-未发布的定长数组后端改变 `XData` 和 `XSignalCFG` 布局，使用**原生 ABI 4**，与上面已发布的
-v1.0.0/ABI 3 基线不同。Picker 与 xcomm 配套升级；旧 DUT 和旧布局 YAML 不再支持，
-使用当前工具链重新生成模型产物。详见 XData 的数组说明。
+定长多维 unpacked 数组使用共享的 DPI 或原生内存绑定。DPI/native 数组路径面向
+**Verilator 5.026 及更新版本**，回归验证版本为 **5.026、5.048、5.052**。详见
+[定长 unpacked 数组](xdata.md#unpacked-arrays)。
 
 ## 旧头文件与名称迁移
 

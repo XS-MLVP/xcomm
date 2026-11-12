@@ -11,6 +11,10 @@ English | [中文](https://github.com/XS-MLVP/xcomm/blob/master/README.cn.md)
 
 xcomm is a C++20 library for hardware simulation, providing four-state signals, port collections, clocks, expressions, temporal events, and functional coverage. Install the Python distribution as `uc-xcomm` and import it as `xspcomm`; bindings are also available for Java, Scala, Go, Lua, and JavaScript.
 
+[Fixed multidimensional unpacked arrays](https://github.com/XS-MLVP/xcomm/wiki/en-reference-xdata#fixed-unpacked-arrays)
+use `XDataArray` with shared indexed DPI or native-memory bindings. Array RTL
+regressions cover Verilator 5.026, 5.048, and 5.052.
+
 ## Get started
 
 After [installation](https://github.com/XS-MLVP/xcomm/wiki/en-guides-installation), create and read a wide signal:

@@ -39,12 +39,12 @@ ExprEngine 同时提供旧 uint64 节点、完整宽度比较和 typed Bits/Bool
 
 | 目录/入口 | 职责与边界 |
 | --- | --- |
-| include/xspcomm/xdata.h、xport.h、xclock.h | 信号、端口和时钟接口 |
+| include/xspcomm/xdata.h、xarray.h、xport.h、xclock.h | 信号、定长 unpacked 数组、端口和时钟接口 |
 | xexpr.h、xpattern.h、xcoverage.h、xengine.h | 表达式、匹配描述、覆盖率描述、运行入口 |
 | runtime/types.h | phase/handle/hit/result 协议；不依赖时钟实现 |
 | common/ | 比较、精确宽度内存访问、字符串/内存及公共模板需要的辅助类型 |
 | monitor/、xmonitor.h | 条件、范围、表达式、文本 FSM 与打印回调 |
-| src/data/ | 存储、值/比较、native/DPI/VPI backend、PinBind；native_memory.h 为私有适配器 |
+| src/data/ | 存储、值/比较、定长数组、native/DPI/VPI backend、PinBind；native_memory.h 为私有适配器 |
 | src/core/ | clock、port、协程、YAML 配置；YAML 库不进入公共头依赖 |
 | src/expr/ | 图构造、标量/typed 求值、编译与回收 |
 | src/trigger/ | 程序验证、单 execution 推进、重叠 matcher、普通注册；不依赖 Coverage |

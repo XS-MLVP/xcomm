@@ -1,24 +1,29 @@
 # Versions, compatibility and migration
 
-This documentation targets **xcomm v1.0.0**, published as the xspcomm package. See [installation](../guides/installation.md) for release assets and source builds.
+This page describes xcomm's API, native ABI, and descriptor protocols. The Python
+distribution is `uc-xcomm`, imported as `xspcomm`. See
+[installation](../guides/installation.md) for wheels and source builds.
 
-## Three independent versions
+## Version layers
 
-| Layer | Current value | Purpose |
+| Layer | Value / query | Purpose |
 | --- | --- | --- |
-| Python package/native version string | 1.0.0 | Installation and release identity; `version()` and package metadata |
-| Native C++ ABI | 3 | Object layout and dynamic linking; `abi_version()` and libxspcomm.so.3 |
+| Python package/native version string | `version()` and package metadata | Identifies the package build |
+| Native C++ ABI | 4 | Object layout and dynamic linking; `abi_version()` and libxspcomm.so.4 |
 | Coverage descriptor protocol | 5 | Frontend point/bin/program structure; `XTriggerEngine.CoverageVersion()` |
 
-Picker v2.1.0 sources require xspcomm>=1.0.0.dev0,<2 and pin native builds to c39db6652cd08d46df05d08f0bb5a033b83e4d2f, whose tree matches xcomm v1.0.0. Satisfying the package range does not guarantee compatibility with every existing compiled DUT. Rebuild DUTs and native clients when upgrading the ABI, and check which library is actually loaded.
+Picker and xcomm use a matched toolchain. Picker records its native source
+dependency in `.build-config.yml`; regenerate DUTs and layout YAML after
+toolchain upgrades.
 
-Release wheels target a CPython minor version and platform. The 1.0.0 GitHub asset targets CPython 3.12 / Linux x86-64. Build from source for other environments. For source builds, use the Git tag or package metadata to identify the release; CMake supplies a fallback when package metadata is absent.
+Release wheels target a CPython minor version and platform. The wheel matrix
+covers Linux x86-64, CPython 3.11/3.12, and GLIBC 2.17/2.28. See the installation
+guide for source builds and the C++ SDK.
 
-The unreleased fixed-array backend changes `XData` and `XSignalCFG` layouts and
-uses **native ABI 4**, distinct from the released v1.0.0/ABI-3 baseline above.
-Picker and xcomm are upgraded together. Old DUTs and layout YAML are unsupported;
-regenerate model artifacts with the current matched toolchain. See
-[fixed arrays](xdata.md#fixed-unpacked-arrays-unreleased-abi-4).
+Fixed multidimensional unpacked arrays use shared DPI or native-memory bindings.
+The DPI/native array paths target **Verilator 5.026 and newer**, with regression
+coverage on **5.026, 5.048, and 5.052**. See
+[fixed unpacked arrays](xdata.md#fixed-unpacked-arrays).
 
 ## Header and name migration
 
