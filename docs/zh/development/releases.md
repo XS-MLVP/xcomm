@@ -38,7 +38,7 @@ PR CI 与发行共用 `build-python.yml`。先生成一份 sdist，再从不含 
 
 ## ABI、协议与安装边界
 
-XSPCOMM_ABI_VERSION 设置 libxspcomm.so.N 的 SONAME，并通过 abi_version() 暴露。相对已发布 ABI 或 master 有不兼容布局/符号变化时评估递增；同一未发布分支的迭代共享一次迁移。升级后重建原生消费者和 DUT，更新 Picker 支持范围；Python 包范围不能替代 ABI 检查。
+XSPCOMM_ABI_VERSION 设置 libxspcomm.so.N 的 SONAME，并通过 abi_version() 暴露。相对已发布 ABI 或 master 有不兼容布局/符号变化时评估递增；同一次 ABI 变更的一组提交共享一次迁移。升级后重建原生消费者和 DUT，更新 Picker 支持范围；Python 包范围不能替代 ABI 检查。
 
 CoverageVersion 标识 point/bin/program 协议，与包版本和 ABI 分开。描述结构变化时同步前端 lowering 和[迁移说明](../reference/compatibility.md)。安装树只包含公共 SDK 及公共模板所需辅助头；matcher、coverage state、native memory 实现不应因发版而进入 SDK。
 

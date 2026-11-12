@@ -18,7 +18,7 @@ Start with [installation](guides/installation.md) and [your first signal and eve
 
 | Component | Purpose |
 | --- | --- |
-| [XData](reference/xdata.md) | Four-state signals, values, bit slices, and wide data |
+| [XData](reference/xdata.md) | Four-state signals, fixed unpacked arrays, values, bit slices, and wide data |
 | [XPort](reference/xport.md) | Named signal collections and batch refresh |
 | [XClock](reference/xclock.md) | Simulator execution callbacks, clocks, and edge callbacks |
 | [ExprEngine](reference/expressions.md) | Expression construction and evaluation |
@@ -26,7 +26,7 @@ Start with [installation](guides/installation.md) and [your first signal and eve
 | [Trigger](reference/triggers.md) | Condition, Sequence, and FSM matching |
 | [Coverage](reference/coverage.md) | Points, bins, crosses, and hit counts |
 | [Monitor](reference/monitors.md) | Checkers run through clock callbacks |
-| [XSignalCFG](reference/signal-config.md) | Native signal binding from layout information |
+| [XSignalCFG](reference/signal-config.md) | Native signal and array binding from layout information |
 | [Language bindings](reference/bindings.md), [TLM](reference/tlm.md) | Language interfaces and transaction communication |
 
 See the [API index](reference/api-index.md) for types and headers. For implementation changes and optimization, see [development and testing](development/contributing.md) and [performance](explanation/performance.md). [Documentation maintenance](development/documentation.md) covers editing, site previews, and Wiki export.

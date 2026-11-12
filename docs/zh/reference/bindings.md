@@ -1,12 +1,13 @@
 # 语言绑定与调用差异
 
-公共 SWIG 定义见 [xcomm.i](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/swig/xcomm.i)，Python 的便捷行为见 [xcomm.py](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/swig/python/xcomm.py)。C++ 接口与语言包装应分别理解；同名方法不一定保持同样的参数/返回形式。
+公共 SWIG 定义见 [xcomm.i](https://github.com/XS-MLVP/xcomm/blob/master/swig/xcomm.i)，Python 的便捷行为见 [xcomm.py](https://github.com/XS-MLVP/xcomm/blob/master/swig/python/xcomm.py)。C++ 接口与语言包装应分别理解；同名方法不一定保持同样的参数/返回形式。
 
 ## 命名与容器
 
 - C++ 使用 XEngine，绑定当前使用 XTriggerEngine；C++ 的 XTriggerEngine 是别名。
 - Python 枚举通常展平，例如 XPhase_RisingStable、ExprOp_EQ、XCoveragePointKind_Pattern；XData.In/Out/InOut 是方向便捷常量。
 - 描述数组使用 XCoveragePointVector、XCoverageBinVector、XSequenceStepVector、XFsmTransitionVector；索引容器为 XIntVector/XUInt32Vector/XUInt64Vector，命中列表为 XBackendHitVector。
+- Python 和 Java 暴露 XDataArray；Python 的边界、索引和步长参数使用 list，Java 使用 XIntVector/XUInt64Vector。
 - Python 的 vector<unsigned char> 参数使用 bytes，不把任意 list 当作通用替代；输出字节也为 bytes。
 - 跨语言对象里保存的原生指针不自动延长其他 proxy 的生命周期；应用显式保留 clock、signals、ports 和 callbacks。
 

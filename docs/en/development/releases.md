@@ -52,7 +52,7 @@ Builds require C++20, CMake, SWIG>=4.2 and matching Python development headers. 
 
 ## ABI, protocol and installation boundaries
 
-XSPCOMM_ABI_VERSION sets the libxspcomm.so.N SONAME and is exposed by abi_version(). Evaluate an increment for incompatible layout/symbol changes against master or a published ABI. Iterations on one unpublished branch share a transition. Rebuild native consumers and DUTs and update Picker's supported range; a Python package range cannot replace ABI checks.
+XSPCOMM_ABI_VERSION sets the libxspcomm.so.N SONAME and is exposed by abi_version(). Evaluate an increment for incompatible layout/symbol changes against master or a published ABI. Commits implementing one ABI change share a single transition. Rebuild native consumers and DUTs and update Picker's supported range; a Python package range cannot replace ABI checks.
 
 CoverageVersion identifies the point/bin/program protocol independently of package version and ABI. Descriptor changes need matching frontend lowering and [migration notes](../reference/compatibility.md). Install only the public SDK and helpers required by public templates; release packaging should not expose matcher, coverage-state or native-memory implementation headers.
 
