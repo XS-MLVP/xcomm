@@ -2,6 +2,7 @@
 %{
 #include "xspcomm/xclock.h"
 #include "xspcomm/xdata.h"  
+#include "xspcomm/xarray.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xsignal_cfg.h"
@@ -48,12 +49,14 @@
 #if !defined(SWIGGO) && !defined(SWIGLUA) && !defined(SWIGJAVASCRIPT)
 %include std_shared_ptr.i
 %shared_ptr(xspcomm::XData)
+%shared_ptr(xspcomm::XDataArray)
 #endif
 
 %ignore xspcomm::XPort::SelectPins(std::initializer_list<std::string>);
 
 namespace std {
    %template(XIntVector) vector<int>;
+   %template(XUInt64Vector) vector<unsigned long long>;
    %template(StringVector) vector<string>;
    %template(XDataVector) vector<std::shared_ptr<xspcomm::XData>>;
    %template(DictStrBool) map<string, bool>;
@@ -65,6 +68,9 @@ namespace std {
     catch (const std::invalid_argument &error) {
         SWIG_exception(SWIG_ValueError, error.what());
     }
+    catch (const std::out_of_range &error) {
+        SWIG_exception(SWIG_IndexError, error.what());
+    }
     catch (const std::exception &error) {
         SWIG_exception(SWIG_RuntimeError, error.what());
     }
@@ -72,6 +78,7 @@ namespace std {
 %include "xspcomm/runtime/types.h"
 %include "xspcomm/xclock.h"
 %include "xspcomm/xdata.h"
+%include "xspcomm/xarray.h"
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 %include "xspcomm/xsignal_cfg.h"
@@ -96,7 +103,6 @@ namespace std {
    %template(XCoveragePointVector) vector<xspcomm::XCoveragePoint>;
    %template(XCoverageBinVector) vector<xspcomm::XCoverageBin>;
    %template(XUInt32Vector) vector<unsigned int>;
-   %template(XUInt64Vector) vector<unsigned long long>;
    %template(XSequenceStepVector) vector<xspcomm::XSequenceStep>;
    %template(XFsmTransitionVector) vector<xspcomm::XFsmTransition>;
 }

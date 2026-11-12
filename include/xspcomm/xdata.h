@@ -15,6 +15,8 @@
 
 namespace xspcomm {
 
+namespace detail { struct XDataArrayStorage; }
+class XDataArray;
 class ExprEngine;
 
 typedef unsigned char xsvLogic; /* scalar */
@@ -124,6 +126,7 @@ struct XDataCallBack {
 };
 class XData
 {
+    friend class XDataArray;
 public:
     static const IOType In      = IOType::Input;
     static const IOType Out     = IOType::Output;
@@ -162,6 +165,8 @@ private:
     XData *sub_parent             = nullptr; // non-owning; parent outlives view
     XDataBackendKind backend_kind = XDataBackendKind::Unknown;
     bool readonly_backend         = false;
+    std::shared_ptr<detail::XDataArrayStorage> array_storage;
+    uint64_t array_location = 0; // DPI flat index or precomputed native address.
 
     // For VPI
     func_vpi_get vpi_get             = nullptr;
@@ -234,6 +239,7 @@ public:
     bool IsVPIBinded(){return this->vpi_obj_handle != nullptr;}
     XDataBackendKind GetBackendKind() const { return this->backend_kind; }
     bool IsReadonly() const { return this->readonly_backend; }
+    bool IsArrayBound() const { return bool(this->array_storage); }
     uint32_t W();
     uint64_t U();
     uint64_t XMask();

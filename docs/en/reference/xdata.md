@@ -83,6 +83,62 @@ Set first changes XData storage. WriteMode determines when the DUT receives it. 
 
 Native vectors use uint8 for 1–8 bits, uint16 for 9–16 bits, and contiguous uint32 words from 17 bits upwards. Scalar storage is one logic-value byte. Native vectors carry aval, not SV four-state structs. Supply sufficient live storage.
 
+## Fixed unpacked arrays (unreleased, ABI 4)
+
+`xarray.h` provides `XDataArray(width, left_bounds, right_bounds)`. It owns one
+shared indexed backend and keeps each signal value in an ordinary leaf `XData`.
+`FlatIndex(indices)` and `Indices(index)` use declaration order, last dimension
+fastest, including descending and negative RTL bounds. `Left/Right/Shape/Size`
+expose the bounds, dimension lengths, and element count.
+
+Bind a backend once, before creating or attaching leaves:
+
+- `BindDPIPtr(getter, setter)` uses `void get(int index, void *value)` and either
+  scalar `void set(int index, unsigned char value)` or vector
+  `void set(int index, const void *value)`. A null setter is read-only. Total count
+  must fit a positive C++ `int`.
+- `BindNativeData(base, byte_strides)` uses the element at the minimum RTL index
+  of every dimension as its base. Strides are outermost first; omitted strides
+  mean contiguous storage with the native element representation described above.
+  Non-overlapping row-major padding is accepted. Rank, bounds, width, overlap,
+  and size/address arithmetic are checked.
+
+`At(indices)`/`AtFlat(index)` lazily create/cache shared leaf objects;
+`BindElement(existing_xdata, index)` attaches an existing same-width leaf.
+`Address(index)` returns a native element address; `Strides()` returns byte strides.
+`IsArrayBound()` identifies a leaf using this backend. No per-element read/write
+lambda or std::function is installed; the leaf holds shared state and a DPI index
+or an address resolved once at binding. Existing write modes, slices, masks, and
+change notifications continue to apply. Native vector reads preserve the existing
+bval policy; native memory is not a four-state SV buffer.
+
+Array leaves work directly with `ExprEngine` and `XTriggerEngine`, without a
+Python proxy or an extra `XPort` registration for sampling. Wide Value conditions
+refresh the backend before checking four-state validity, so a leaf recovering
+from X/Z can match at the next selected phase even without a change callback.
+
+Backend state outlives the array view when a leaf is retained, but model memory
+and DPI libraries are borrowed and must outlive all access. Bind a new array to
+change the backing store; rebinding an existing array is rejected. ReInit on an
+individual leaf detaches it; standalone backend bindings also detach it. Existing
+XData copies retain their snapshot-copy semantics, not the array binding.
+
+`XSignalCFG.NewXDataArrayView(name)` consumes `array_dimensions`/`array_strides`
+and caches a native array view. Array YAML must explicitly provide dimensions and
+strides matching `array_size`; incomplete layouts are rejected, not inferred.
+Internal bounds are zero-based storage coordinates. `NewXDataArray`/indexed
+`NewXData` use the same shared native backend.
+
+Picker and xcomm are upgraded together; old DUTs and layout YAML are not reused.
+Regenerate model artifacts with the current matched toolchain.
+
+`XDataArray` currently implements only DPI and native backends, not VPI array
+binding. Existing `XData::BindVPI`/`FromVPI` accept individual `vpiNet`/`vpiReg`
+handles; they do not discover array dimensions or index elements. The planned
+Verilator VPI array path requires **5.048 or newer** and excludes 5.026. This
+minimum does not change existing VPI interfaces for individual signals or
+DPI/native array support.
+
 ## Connections, comparison and callbacks
 
 | API | Purpose and contract |

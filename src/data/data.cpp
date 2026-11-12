@@ -2,6 +2,7 @@
 #include "xspcomm/xdata.h"
 #include "xspcomm/common/compare.h"
 #include "xspcomm/xutil.h"
+#include "data/array_storage.h"
 #include <utility>
 
 namespace xspcomm {
@@ -125,6 +126,11 @@ void XData::_dpi_read()
         return;
     }
     this->_dpi_check();
+    if (this->array_storage) {
+        this->array_storage->Read(this->array_location, this->mWidth == 0 ?
+            static_cast<void *>(&this->mLogicData) : static_cast<void *>(this->pVecData));
+        return;
+    }
     if (likely(this->bitRead)) this->bitRead(&this->mLogicData);
     if (likely(this->vecRead)) this->vecRead(this->pVecData);
 }
@@ -143,6 +149,11 @@ bool XData::SetWriteMode(WriteMode mode)
 };
 
 void XData::WriteDirect(){
+    if (this->array_storage) {
+        this->array_storage->Write(this->array_location, this->mWidth == 0 ?
+            static_cast<const void *>(&this->mLogicData) : static_cast<const void *>(this->pVecData));
+        return;
+    }
     if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
     if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
 }
@@ -152,8 +163,7 @@ void XData::WriteOnRise()
     if (unlikely(this->mIOType == IOType::Output)) return;
     if (unlikely(this->write_mode != WriteMode::Rise)) return;
     if (this->_need_write()) {
-        if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
-        if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
+        this->WriteDirect();
     }
 }
 
@@ -162,8 +172,7 @@ void XData::WriteOnFall()
     if (unlikely(this->mIOType == IOType::Output)) return;
     if (unlikely(this->write_mode != WriteMode::Fall)) return;
     if (this->_need_write()) {
-        if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
-        if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
+        this->WriteDirect();
     }
 }
 void XData::_dpi_write()
@@ -172,8 +181,7 @@ void XData::_dpi_write()
     if (unlikely(this->write_mode != WriteMode::Imme)) return;
     this->_dpi_check();
     if (this->_need_write()) {
-        if (likely(this->bitWrite)) this->bitWrite(this->mLogicData);
-        if (likely(this->vecWrite)) this->vecWrite(this->pVecData);
+        this->WriteDirect();
     }
 }
 
@@ -261,6 +269,7 @@ XData::XData(uint32_t width, IOType itype, std::string name) :
 }
 void XData::ReInit(uint32_t width, IOType itype, std::string name)
 {
+    this->array_storage.reset(); // Array element widths/layouts are immutable.
     if (this->pVecData) {
         for (int i = 0; i < this->mWidth; i++) { delete this->pinbind_vec[i]; }
         free(this->pinbind_vec);

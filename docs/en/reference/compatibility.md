@@ -14,6 +14,12 @@ Picker v2.1.0 sources require xspcomm>=1.0.0.dev0,<2 and pin native builds to c3
 
 Release wheels target a CPython minor version and platform. The 1.0.0 GitHub asset targets CPython 3.12 / Linux x86-64. Build from source for other environments. For source builds, use the Git tag or package metadata to identify the release; CMake supplies a fallback when package metadata is absent.
 
+The unreleased fixed-array backend changes `XData` and `XSignalCFG` layouts and
+uses **native ABI 4**, distinct from the released v1.0.0/ABI-3 baseline above.
+Picker and xcomm are upgraded together. Old DUTs and layout YAML are unsupported;
+regenerate model artifacts with the current matched toolchain. See
+[fixed arrays](xdata.md#fixed-unpacked-arrays-unreleased-abi-4).
+
 ## Header and name migration
 
 Removed paths have no forwarding headers. Update includes directly:

@@ -51,7 +51,10 @@ struct TriggerRegistration : PatternState {
             if (--remaining == 0) return {true, XHitKind::ClockCycles};
             break;
         case Kind::ValueEq: {
-            const uint64_t value = signal->W() > 64 ? 0 : signal->U();
+            // Validity is cached: refresh wide external/array leaves too,
+            // even when no XPort callback or another watcher reads them.
+            const uint64_t refreshed = signal->U();
+            const uint64_t value = signal->W() > 64 ? 0 : refreshed;
             const bool known = signal->DataValid();
             const bool current = known && (expected_wide ? signal->Equal(*expected_wide) : value == expected);
             if (MatchCondition(known, current, program.mode, last_condition))

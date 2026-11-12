@@ -2,6 +2,7 @@
 #define __xspcomm_xcfg__
 
 #include "xspcomm/xdata.h"
+#include "xspcomm/xarray.h"
 #include "xspcomm/xutil.h"
 #include <set>
 #include <map>
@@ -15,6 +16,8 @@ typedef struct
     uint64_t array_size = 0;
     bool is_empty = true;
     std::string type = "";
+    std::vector<int> array_dimensions;
+    std::vector<unsigned long long> array_strides;
 } s_xsignal_cfg, *p_xsignal_cfg;
 
 typedef struct
@@ -37,6 +40,7 @@ class XSignalCFG {
     std::map<std::string, s_xsignal_cfg> cfg_map;
     std::map<std::string, s_xsignal_meta> signal_meta_map;
     std::set<std::string> constructing_signals;
+    std::map<std::string, std::shared_ptr<XDataArray>> native_arrays;
     public:
     std::string cfg_data;
     uint64_t cfg_base_address = 0;
@@ -48,6 +52,8 @@ class XSignalCFG {
     XData* NewXData(std::string name, std::string xname="");
     XData* NewXData(std::string name, int array_index, std::string xname="");
     std::vector<std::shared_ptr<XData>> NewXDataArray(std::string name, std::string xname="");
+    // Internal arrays use zero-based storage bounds unless RTL bounds are known.
+    std::shared_ptr<XDataArray> NewXDataArrayView(std::string name);
     std::vector<std::string> GetSignalNames(std::string patten = "");
     s_xsignal_cfg At(std::string name);
     uint64_t Address(std::string name);

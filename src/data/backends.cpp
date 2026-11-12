@@ -7,6 +7,7 @@ namespace xspcomm {
 
 void XData::BindDPIPtr(uint64_t read_ptr, uint64_t write_ptr)
 {
+    this->array_storage.reset();
     if (this->mWidth > 0) {
         this->vecRead  = (void (*)(void *))read_ptr;
         this->vecWrite = (void (*)(const void *))write_ptr;
@@ -22,6 +23,7 @@ void XData::BindDPIPtr(uint64_t read_ptr, uint64_t write_ptr)
 void XData::BindDPIRW(xfunction<void, void *> read,
                       xfunction<void, void *> write)
 {
+    this->array_storage.reset();
     Assert(this->mWidth > 0, "XData(name=%s).mWidth(%d) need > 0",
            this->mName.c_str(), this->mWidth);
     this->vecRead  = read;
@@ -33,6 +35,7 @@ void XData::BindDPIRW(xfunction<void, void *> read,
 void XData::BindDPIRW(xfunction<void, void *> read,
                       xfunction<void, unsigned char> write)
 {
+    this->array_storage.reset();
     Assert(this->mWidth == 0, "XData(name=%s).mWidth(%d) need == 0",
            this->mName.c_str(), this->mWidth);
     this->bitRead  = read;
@@ -42,6 +45,7 @@ void XData::BindDPIRW(xfunction<void, void *> read,
     this->update_read();
 }
 void XData::BindDPIRW(void (*read)(void *), void (*write)(const void *)) {
+    this->array_storage.reset();
     Assert(this->mWidth > 0, "XData(name=%s).mWidth(%d) need > 0",
            this->mName.c_str(), this->mWidth);
     this->vecRead  = read;
@@ -51,6 +55,7 @@ void XData::BindDPIRW(void (*read)(void *), void (*write)(const void *)) {
     this->update_read();
 }
 void XData::BindDPIRW(void (*read)(void *), void (*write)(const unsigned char)) {
+    this->array_storage.reset();
     Assert(this->mWidth == 0, "XData(name=%s).mWidth(%d) need == 0",
            this->mName.c_str(), this->mWidth);
     this->bitRead  = read;
@@ -63,6 +68,7 @@ void XData::BindDPIRW(void (*read)(void *), void (*write)(const unsigned char)) 
 // X/Z writes map to native storage. Preserve bval until that policy is settled;
 // see docs/xdata_xclock_optimizations.md (BindNativeData X/Z semantics).
 void XData::BindNativeData(uint64_t pdata){
+    this->array_storage.reset();
     if (this->mWidth == 0){
         auto* native = reinterpret_cast<xsvLogic*>(pdata);
         this->bitRead = [native](xsvLogic* dst){
@@ -99,6 +105,7 @@ void XData::BindNativeData(uint64_t pdata){
 }
 void XData::BindMixFromUvs(uint64_t pdata)
 {
+    this->array_storage.reset();
     if (this->mWidth == 0) { // scalar and 1bit vector
         this->bitRead = [pdata](void *d) {
             *(xsvLogic *)d = *(uint8_t *)pdata;
@@ -137,6 +144,7 @@ void XData::BindMixFromUvs(uint64_t pdata)
     }
 }
 void XData::BindExpr(std::shared_ptr<ExprEngine> engine, int root_id){
+    this->array_storage.reset();
     Assert(engine != nullptr, "BindExpr engine is null");
     if (this->mWidth == 0) {
         this->bitRead = [engine, root_id](void *d){
@@ -168,6 +176,7 @@ void XData::BindExpr(std::shared_ptr<ExprEngine> engine, int root_id){
     this->update_read();
 }
 void XData::BindConst(uint64_t value){
+    this->array_storage.reset();
     if (this->mWidth == 0) {
         this->bitRead = [value](void *d){
             *(xsvLogic *)d = (xsvLogic)((value & 0x1) ? 1 : 0);

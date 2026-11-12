@@ -83,6 +83,49 @@ assert not value.DataValid()
 
 Native vector 存储约定是 1–8 bit 用 uint8、9–16 bit 用 uint16、17 bit 以上用连续 uint32 words；scalar 用一个逻辑值 byte。vector 原生内存只承载 aval。调用方必须提供足够大小并保持存储存活。
 
+## 定长 unpacked 数组（未发布，ABI 4）
+
+`xarray.h` 提供 `XDataArray(width, left_bounds, right_bounds)`，一个数组只持有一份共享
+索引后端，各元素值仍由普通叶子 `XData` 保存。`FlatIndex(indices)`、`Indices(index)`
+按声明顺序换算下标，最后一维变化最快，支持降序和负 RTL 下标。
+`Left/Right/Shape/Size` 分别提供边界、各维长度和元素总数。
+
+在创建或绑定叶子前，只配置一次后端：
+
+- `BindDPIPtr(getter, setter)` 使用 `void get(int index, void *value)`，以及标量的
+  `void set(int index, unsigned char value)` 或位向量的
+  `void set(int index, const void *value)`。setter 为零表示只读，总数须适合正 C++ `int`。
+- `BindNativeData(base, byte_strides)` 的基地址是各维最小 RTL 下标对应的元素。字节步长
+  按从外到内排列；省略时使用上述原生元素表示的连续布局，允许不重叠的行主序 padding。
+  会检查维数、下标、位宽、重叠以及尺寸和地址运算。
+
+`At(indices)`/`AtFlat(index)` 按需创建、缓存共享叶子，
+`BindElement(existing_xdata, index)` 绑定已有的同宽叶子。`Address(index)` 返回原生元素
+地址，`Strides()` 返回字节步长，`IsArrayBound()` 判断叶子是否走数组后端。不会安装逐元素
+读写 lambda 或 std::function；叶子只保存共享状态以及 DPI 下标或绑定时计算好的原生地址。
+原有写入时序、切片、mask 和变化通知继续有效；原生位向量读取沿用原有 bval 策略，原生
+内存并不是 SV 四态缓冲区。
+
+数组叶子可直接用于 `ExprEngine` 和 `XTriggerEngine`，无需经过 Python 代理或另行登记
+`XPort` 才能采样。宽位向量的 Value 判断会先刷新后端再检查四态有效性；即使叶子没有
+变化回调，从 X/Z 恢复后也能在下一次指定采样阶段匹配。
+
+保留叶子可以延长共享元数据的生命周期，但不会延长模型内存、DPI 动态库的生命周期。
+需要切换存储时创建新数组，不能重新绑定已有数组。叶子 `ReInit` 或绑定独立后端会解除
+数组绑定；复制 XData 仍保持原有快照语义，不复制数组绑定。
+
+`XSignalCFG.NewXDataArrayView(name)` 消费 `array_dimensions`/`array_strides`，缓存原生
+数组视图。数组 YAML 必须显式提供与 `array_size` 一致的维度及步长，不完整的布局直接拒绝，
+不做推断。内部视图使用从零开始的存储坐标；`NewXDataArray` 和带下标的 `NewXData`
+也使用同一共享后端。
+
+Picker 与 xcomm 配套升级，旧 DUT 和旧布局 YAML 不再复用，使用当前工具链重新生成模型产物。
+
+当前 `XDataArray` 仅实现 DPI 与 native 后端，尚无 VPI 数组绑定。已有
+`XData::BindVPI`/`FromVPI` 仅接受单个 `vpiNet`/`vpiReg` 句柄，不探测数组维度或索引
+元素。规划中的 Verilator VPI 数组路径以 **5.048（含）** 为最低版本，5.026 不纳入
+支持；该门槛不改变已有普通信号的 VPI 接口，也不影响 DPI/native 数组支持。
+
 ## 连接、比较、回调
 
 | API | 用途与约束 |
