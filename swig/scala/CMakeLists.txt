@@ -58,6 +58,11 @@ set_target_properties(scalaxspcomm
 # copy file
 add_custom_command(
     OUTPUT ${XCOMM_LIB_DIR}/scalaxspcomm.java
+    # Do not retain the removed public type in an incrementally rebuilt SDK.
+    COMMAND ${CMAKE_COMMAND} -E rm -f
+            ${CMAKE_CURRENT_BINARY_DIR}/XDataArray.java
+            ${XCOMM_LIB_DIR}/XDataArray.java
+            ${XCOMM_LIB_DIR}/com/xspcomm/XDataArray.class
     COMMAND ${CMAKE_COMMAND} -E make_directory ${XCOMM_LIB_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy
             $<TARGET_FILE:scalaxspcomm>

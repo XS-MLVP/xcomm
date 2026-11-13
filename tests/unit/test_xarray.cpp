@@ -1,11 +1,13 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "xspcomm/xcomm.h"
+#include "xspcomm/detail/array_binding.h"
 #include <climits>
 #include <cstring>
 #include <stdexcept>
 
 using namespace xspcomm;
+using detail::ArrayBinding;
 
 namespace {
 xsvLogicVecVal dpi_values[18][3]{};
@@ -24,7 +26,7 @@ void set_bit(int index, xsvLogic value) { dpi_bits[index] = value; }
 }
 
 TEST_CASE("array bounds and mixed-direction multidimensional indexing", "[xarray]") {
-    XDataArray array(8, {-1, 3, 4}, {1, 2, 6});
+    ArrayBinding array(8, {-1, 3, 4}, {1, 2, 6});
     REQUIRE(array.Size() == 18);
     REQUIRE(array.Shape() == std::vector<int>{3, 2, 3});
     REQUIRE(array.FlatIndex({0, 2, 5}) == 10);
@@ -32,16 +34,16 @@ TEST_CASE("array bounds and mixed-direction multidimensional indexing", "[xarray
     REQUIRE_THROWS_AS(array.FlatIndex({0, 2}), std::invalid_argument);
     REQUIRE_THROWS_AS(array.FlatIndex({0, 1, 5}), std::out_of_range);
     REQUIRE_THROWS_AS(array.Indices(18), std::out_of_range);
-    REQUIRE_THROWS_AS(XDataArray(8, {}, {}), std::invalid_argument);
-    REQUIRE_THROWS_AS(XDataArray(8, {0}, {1, 2}), std::invalid_argument);
-    REQUIRE_THROWS_AS(XDataArray(8, {INT_MIN}, {INT_MAX}), std::invalid_argument);
-    REQUIRE_THROWS_AS(XDataArray(8, {0, 0, 0}, {INT_MAX-1, INT_MAX-1, INT_MAX-1}), std::overflow_error);
+    REQUIRE_THROWS_AS(ArrayBinding(8, {}, {}), std::invalid_argument);
+    REQUIRE_THROWS_AS(ArrayBinding(8, {0}, {1, 2}), std::invalid_argument);
+    REQUIRE_THROWS_AS(ArrayBinding(8, {INT_MIN}, {INT_MAX}), std::invalid_argument);
+    REQUIRE_THROWS_AS(ArrayBinding(8, {0, 0, 0}, {INT_MAX-1, INT_MAX-1, INT_MAX-1}), std::overflow_error);
 }
 
 TEST_CASE("indexed DPI is shared, four-state, and respects write timing", "[xarray]") {
     std::memset(dpi_values, 0, sizeof(dpi_values));
     reads = writes = 0;
-    XDataArray array(65, {-1, 3, 4}, {1, 2, 6});
+    ArrayBinding array(65, {-1, 3, 4}, {1, 2, 6});
     array.BindDPIPtr(reinterpret_cast<uint64_t>(get_vector), reinterpret_cast<uint64_t>(set_vector));
     auto leaf = array.At({0, 2, 5});
     REQUIRE(leaf == array.AtFlat(10));
@@ -69,14 +71,14 @@ TEST_CASE("indexed DPI is shared, four-state, and respects write timing", "[xarr
     dpi_values[10][0].bval = 2;
     REQUIRE(leaf->XMask() == 2);
     REQUIRE_FALSE(leaf->DataValid());
-    XDataArray readonly(65, {0}, {17});
+    ArrayBinding readonly(65, {0}, {17});
     readonly.BindDPIPtr(reinterpret_cast<uint64_t>(get_vector), 0);
     REQUIRE(readonly.AtFlat(10)->IsReadonly());
     REQUIRE(readonly.AtFlat(10)->mIOType == IOType::Output);
 }
 
 TEST_CASE("indexed scalar DPI preserves scalar calling convention", "[xarray]") {
-    XDataArray array(0, {2, -1}, {3, 1});
+    ArrayBinding array(0, {2, -1}, {3, 1});
     array.BindDPIPtr(reinterpret_cast<uint64_t>(get_bit), reinterpret_cast<uint64_t>(set_bit));
     for (uint64_t i = 0; i < 6; ++i) {
         auto leaf = array.AtFlat(i);
@@ -91,7 +93,7 @@ TEST_CASE("wide array value watchers refresh validity without an XPort", "[xarra
     dpi_values[0][0].aval = 7;
     dpi_values[0][2].aval = 1;
     dpi_values[0][2].bval = 1;
-    XDataArray array(65, {3}, {2});
+    ArrayBinding array(65, {3}, {2});
     array.BindDPIPtr(reinterpret_cast<uint64_t>(get_vector), 0);
     auto leaf = array.At({3});
     REQUIRE_FALSE(leaf->DataValid());
@@ -124,7 +126,7 @@ TEST_CASE("wide array value watchers refresh validity without an XPort", "[xarra
 
 TEST_CASE("native arrays use actual strides and RTL direction", "[xarray]") {
     uint8_t bytes[3][2][3]{};
-    XDataArray array(8, {-1, 3, 4}, {1, 2, 6});
+    ArrayBinding array(8, {-1, 3, 4}, {1, 2, 6});
     array.BindNativeData(reinterpret_cast<uint64_t>(bytes), {sizeof(bytes[0]), sizeof(bytes[0][0]), 1});
     REQUIRE(array.Address(10) == reinterpret_cast<uint64_t>(&bytes[1][0][1]));
     auto leaf = array.At({0, 2, 5});
@@ -136,7 +138,7 @@ TEST_CASE("native arrays use actual strides and RTL direction", "[xarray]") {
     std::vector<unsigned char> wide(141, 0);
     std::shared_ptr<XData> survivor;
     {
-        XDataArray padded(65, {0, 0}, {1, 2});
+        ArrayBinding padded(65, {0, 0}, {1, 2});
         padded.BindNativeData(reinterpret_cast<uint64_t>(wide.data() + 1), {80, 24});
         survivor = padded.AtFlat(5);
         survivor->AsImmWrite(); survivor->Set(uint64_t(0x123456789ULL));
@@ -160,7 +162,7 @@ TEST_CASE("native array widths preserve existing bval and do not overrun", "[xar
     for (uint32_t width : {0U, 1U, 8U, 9U, 16U, 17U, 32U, 33U, 64U, 65U, 96U, 512U, 577U}) {
         const size_t bytes = width <= 8 ? 1 : width <= 16 ? 2 : ((width + 31) / 32) * 4;
         std::vector<unsigned char> memory(2 * bytes + 2, 0);
-        XDataArray array(width, {0}, {1});
+        ArrayBinding array(width, {0}, {1});
         array.BindNativeData(reinterpret_cast<uint64_t>(memory.data() + 1));
         auto leaf = array.AtFlat(1);
         leaf->AsImmWrite(); leaf->Set(width <= 1 ? 1 : 0x5a);
@@ -178,7 +180,7 @@ TEST_CASE("native array widths preserve existing bval and do not overrun", "[xar
 
 TEST_CASE("array leaves preserve notifications and standalone copies", "[xarray]") {
     uint32_t memory[2]{1, 2};
-    XDataArray array(32, {0}, {1});
+    ArrayBinding array(32, {0}, {1});
     array.BindNativeData(reinterpret_cast<uint64_t>(memory));
     auto leaf = array.AtFlat(0);
     int notifications = 0;
@@ -196,21 +198,21 @@ TEST_CASE("array leaves preserve notifications and standalone copies", "[xarray]
     REQUIRE(memory[0] == 7);
     leaf->ClearOnChangeCbs();
     uint32_t other[2]{11, 12};
-    XDataArray replacement(32, {0}, {1});
+    ArrayBinding replacement(32, {0}, {1});
     replacement.BindNativeData(reinterpret_cast<uint64_t>(other));
     replacement.BindElement(*leaf, 1);
     REQUIRE(leaf->U() == 12);
     leaf->Set(13);
     REQUIRE(other[1] == 13);
     REQUIRE(memory[0] == 7);
-    XDataArray singleton(32, {0, 0}, {0, 1});
+    ArrayBinding singleton(32, {0, 0}, {0, 1});
     singleton.BindNativeData(reinterpret_cast<uint64_t>(other), {0, 4});
     REQUIRE(singleton.At({0, 1})->U() == 13);
 }
 
 TEST_CASE("array bindings reject invalid or overflowing layouts", "[xarray]") {
     uint32_t data[6]{};
-    XDataArray array(32, {0, 0}, {1, 2});
+    ArrayBinding array(32, {0, 0}, {1, 2});
     REQUIRE_THROWS_AS(array.AtFlat(0), std::logic_error);
     REQUIRE_THROWS_AS(array.BindNativeData(0), std::invalid_argument);
     REQUIRE_THROWS_AS(array.BindNativeData(reinterpret_cast<uint64_t>(data), {4}), std::invalid_argument);
@@ -221,11 +223,11 @@ TEST_CASE("array bindings reject invalid or overflowing layouts", "[xarray]") {
     XData wrong(8, IOType::InOut);
     REQUIRE_THROWS_AS(array.BindElement(wrong, 0), std::invalid_argument);
     REQUIRE_THROWS_AS(array.AtFlat(6), std::out_of_range);
-    XDataArray huge(8, {0, 0}, {65535, 65535});
+    ArrayBinding huge(8, {0, 0}, {65535, 65535});
     REQUIRE_THROWS_AS(huge.BindDPIPtr(reinterpret_cast<uint64_t>(get_vector), 0), std::invalid_argument);
 }
 
-TEST_CASE("named internal array lists share storage with separate leaves", "[xarray]") {
+TEST_CASE("internal arrays expose cached recursive XArray nodes", "[xarray]") {
     uint32_t memory[2]{11, 12};
     XSignalCFG cfg(R"(
 variables:
@@ -237,14 +239,13 @@ variables:
     array_dimensions: [2]
     array_strides: [4]
 )", reinterpret_cast<uint64_t>(memory));
-    auto first = cfg.NewXDataArray("mem", "first");
-    auto second = cfg.NewXDataArray("mem", "second");
-    REQUIRE(first[0] != second[0]);
-    REQUIRE(first[0]->mName == "first_0");
-    REQUIRE(second[0]->mName == "second_0");
-    REQUIRE(cfg.NewXDataArrayView("mem")->Shape() == std::vector<int>{2});
-    first[1]->AsImmWrite(); first[1]->Set(99);
-    REQUIRE(second[1]->U() == 99);
+    auto first = cfg.NewXArray("mem");
+    auto second = cfg.NewXArray("mem");
+    REQUIRE(first == second);
+    REQUIRE(first->Data(0) == second->Data(0));
+    REQUIRE(first->Shape() == std::vector<int>{2});
+    first->Data(1)->AsImmWrite(); first->Data(1)->Set(99);
+    REQUIRE(second->Data(1)->U() == 99);
 }
 
 TEST_CASE("XSignalCFG requires explicit array dimensions and strides", "[xarray]") {
@@ -269,8 +270,7 @@ variables:
         INFO(layout);
         XSignalCFG cfg(yaml + layout, reinterpret_cast<uint64_t>(memory));
         REQUIRE(cfg.At("mem").is_empty);
-        REQUIRE_FALSE(cfg.NewXDataArrayView("mem"));
-        REQUIRE(cfg.NewXDataArray("mem").empty());
+        REQUIRE_FALSE(cfg.NewXArray("mem"));
         REQUIRE(cfg.NewXData("mem", 0) == nullptr);
     }
 }
@@ -288,20 +288,60 @@ variables:
     array_strides: [80, 24]
 )";
     XSignalCFG cfg(yaml, reinterpret_cast<uint64_t>(bytes));
-    auto array = cfg.NewXDataArrayView("Top.mem");
+    auto array = cfg.NewXArray("Top.mem");
     REQUIRE(array);
-    REQUIRE(array == cfg.NewXDataArrayView("Top.mem"));
+    REQUIRE(array == cfg.NewXArray("Top.mem"));
     REQUIRE(array->Shape() == std::vector<int>{2, 3});
-    auto leaves = cfg.NewXDataArray("Top.mem");
-    REQUIRE(leaves.size() == 6);
-    REQUIRE(leaves[5] != array->At({1, 2})); // Named lists create separate leaves.
-    REQUIRE(leaves[5]->IsArrayBound());
-    leaves[5]->AsImmWrite(); leaves[5]->Set(77);
+    auto leaf = array->Array(1)->Data(2);
+    REQUIRE(array->Size() == 2);
+    REQUIRE(leaf->IsArrayBound());
+    REQUIRE(leaf->mName == "Top.mem[1][2]");
+    leaf->AsImmWrite(); leaf->Set(77);
     REQUIRE(bytes[128] == 77);
-    REQUIRE(array->At({1, 2})->U() == 77);
+    REQUIRE(array->Array(1)->Data(2)->U() == 77);
     auto selected_leaf = std::unique_ptr<XData>(cfg.NewXData("Top.mem", 5));
     REQUIRE(selected_leaf->IsArrayBound());
     REQUIRE(selected_leaf->U() == 77);
     REQUIRE_THROWS_AS(cfg.NewXData("Top.mem", -1), std::out_of_range);
     REQUIRE_THROWS_AS(cfg.NewXData("Top.mem", 6), std::out_of_range);
+}
+
+TEST_CASE("public XArray factories preserve recursive indexing and shared leaf identity", "[xarray]") {
+    uint8_t bytes[3][2][3]{};
+    auto array = XArray::FromNative(8, {-1, 3, 4}, {1, 2, 6},
+        reinterpret_cast<uint64_t>(bytes), {6, 3, 1});
+    REQUIRE(array->Left() == -1);
+    REQUIRE(array->Right() == 1);
+    REQUIRE(array->Size() == 3);
+    REQUIRE(array->Shape() == std::vector<int>{3, 2, 3});
+    std::shared_ptr<XArray> row = array->At(0);
+    auto leaf = row->Array(2)->Data(5);
+    REQUIRE(leaf == array->Array(0)->Array(2)->Data(5));
+    leaf->AsImmWrite(); leaf->Set(0xa5);
+    REQUIRE(bytes[1][0][1] == 0xa5);
+    REQUIRE_THROWS_AS(array->Data(0), std::invalid_argument);
+    REQUIRE_THROWS_AS(array->At(-2), std::out_of_range);
+    array.reset(); row.reset();
+    leaf->Set(0x5a);
+    REQUIRE(bytes[1][0][1] == 0x5a);
+    auto dpi = XArray::FromDPI(65, {3}, {2}, reinterpret_cast<uint64_t>(get_vector), 0);
+    REQUIRE(dpi->Data(3)->IsReadonly());
+    REQUIRE(dpi->Data(3)->GetBackendKind() == XDataBackendKind::DPI);
+}
+
+TEST_CASE("public XArray factories validate bounds and backend contracts", "[xarray]") {
+    uint8_t bytes[16]{};
+    const auto base = reinterpret_cast<uint64_t>(bytes);
+    REQUIRE_THROWS_AS(XArray::FromNative(8, {}, {}, base), std::invalid_argument);
+    REQUIRE_THROWS_AS(XArray::FromNative(8, {0}, {1, 2}, base), std::invalid_argument);
+    REQUIRE_THROWS_AS(XArray::FromNative(8, {0}, {1}, 0), std::invalid_argument);
+    REQUIRE_THROWS_AS(XArray::FromNative(8, {0, 0}, {1, 2}, base, {2, 1}), std::invalid_argument);
+    REQUIRE_THROWS_AS(XArray::FromDPI(8, {0}, {1}, 0, 0), std::invalid_argument);
+    auto array = XArray::FromNative(8, {INT_MIN, INT_MAX}, {INT_MIN + 1, INT_MAX - 1}, base);
+    REQUIRE(array->Shape() == std::vector<int>{2, 2});
+    auto row = array->Array(INT_MIN);
+    array.reset();
+    auto leaf = row->Data(INT_MAX);
+    leaf->AsImmWrite(); leaf->Set(42);
+    REQUIRE(bytes[1] == 42);
 }

@@ -7,9 +7,14 @@
 - C++ 使用 XEngine，绑定当前使用 XTriggerEngine；C++ 的 XTriggerEngine 是别名。
 - Python 枚举通常展平，例如 XPhase_RisingStable、ExprOp_EQ、XCoveragePointKind_Pattern；XData.In/Out/InOut 是方向便捷常量。
 - 描述数组使用 XCoveragePointVector、XCoverageBinVector、XSequenceStepVector、XFsmTransitionVector；索引容器为 XIntVector/XUInt32Vector/XUInt64Vector，命中列表为 XBackendHitVector。
-- Python 和 Java 暴露 XDataArray；Python 的边界、索引和步长参数使用 list，Java 使用 XIntVector/XUInt64Vector。
+- 数组视图统一使用 XArray；Python 工厂的边界和步长使用 list，Java 使用 XIntVector/XUInt64Vector。每层通过 At/Array/Data 选择一个 RTL 下标，Python 也支持索引语法。
 - Python 的 vector<unsigned char> 参数使用 bytes，不把任意 list 当作通用替代；输出字节也为 bytes。
 - 跨语言对象里保存的原生指针不自动延长其他 proxy 的生命周期；应用显式保留 clock、signals、ports 和 callbacks。
+
+`XArray.FromDPI`/`FromNative` 与 `XSignalCFG.NewXArray` 返回 `XArray` 句柄，
+`XArray.At(index)` 返回经过检查的 `XView`。Go、Lua 和 JavaScript 的容器句柄拥有所有权，
+叶子 `XData` 句柄为借用：访问叶子期间须保留来源容器或 DUT。C++/Python/Java 工厂创建的
+叶子保留共享后端状态，但各语言绑定均不拥有模型内存或 DPI 动态库。
 
 ## Python XData
 

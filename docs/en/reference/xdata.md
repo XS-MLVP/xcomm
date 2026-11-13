@@ -86,29 +86,27 @@ Native vectors use uint8 for 1–8 bits, uint16 for 9–16 bits, and contiguous 
 ## Fixed unpacked arrays
 
 [xarray.h](https://github.com/XS-MLVP/xcomm/blob/master/include/xspcomm/xarray.h)
-provides `XDataArray(width, left_bounds, right_bounds)` for fixed
-multidimensional unpacked arrays. It owns one shared indexed backend and keeps
-each signal value in an ordinary leaf `XData`. `FlatIndex(indices)` and
-`Indices(index)` use declaration order, last dimension fastest, including
-descending and negative RTL bounds. `Left/Right/Shape/Size` expose the bounds,
-dimension lengths, and element count.
+provides the same recursive `XArray` interface used by aggregate arrays. Each
+dimension accepts its actual RTL index, including descending and negative bounds.
+`Left/Right/Size` describe the current dimension; `LeftBounds/RightBounds/Shape`
+describe consecutive dimensions. `Array(index)` selects a child array and
+`Data(index)` selects an existing packed leaf. Python supports `array[i][j]`.
 
-Bind a backend once, before creating or attaching leaves:
+Create a homogeneous unpacked array and its shared indexed backend with a factory:
 
-- `BindDPIPtr(getter, setter)` uses `void get(int index, void *value)` and either
+- `XArray.FromDPI(width, left, right, getter, setter)` uses `void get(int index, void *value)` and either
   scalar `void set(int index, unsigned char value)` or vector
   `void set(int index, const void *value)`. A null setter is read-only. Total count
   must fit a positive C++ `int`.
-- `BindNativeData(base, byte_strides)` uses the element at the minimum RTL index
+- `XArray.FromNative(width, left, right, base, byte_strides)` uses the element at the minimum RTL index
   of every dimension as its base. Strides are outermost first; omitted strides
   mean contiguous storage with the native element representation described above.
   Non-overlapping row-major padding is accepted. Rank, bounds, width, overlap,
   and size/address arithmetic are checked.
 
-`At(indices)`/`AtFlat(index)` lazily create and cache shared leaf objects;
-`BindElement(existing_xdata, index)` attaches an existing same-width leaf.
-`Address(index)` returns a native element address; `Strides()` returns byte strides.
-`IsArrayBound()` identifies a leaf using this backend. The leaf stores shared
+Selections lazily create/cache recursive nodes and leaf objects. Shared binding,
+flat-index conversion and element addresses are internal implementation details,
+not a second public array type. `IsArrayBound()` identifies a leaf using this backend. The leaf stores shared
 backend state plus its DPI flat index or a native address resolved at binding;
 no per-element read/write `std::function` is installed. Existing write modes,
 slices, masks, and change notifications continue to apply. Native vector reads
@@ -122,18 +120,37 @@ from X/Z can match at the next selected phase even without a change callback.
 Backend state outlives the array view when a leaf is retained, but model memory
 and DPI libraries are borrowed and must outlive all access. Bind a new array to
 change the backing store; rebinding an existing array is rejected. ReInit on an
-individual leaf detaches it; standalone backend bindings also detach it. Existing
+individual leaf detaches it; standalone backend bindings also detach it. Do not
+reinitialize or rebind a cached array leaf while using its original view. Existing
 XData copies retain their snapshot-copy semantics, not the array binding.
 
-`XSignalCFG.NewXDataArrayView(name)` consumes `array_dimensions` and
+`XSignalCFG.NewXArray(name)` consumes `array_dimensions` and
 `array_strides`, and caches a native array view. Array YAML must provide both
 fields: the product of the dimensions must equal `array_size`, and the stride
 rank must match the dimension rank. Incomplete layouts are rejected rather than
-inferred. The view uses zero-based storage coordinates. `NewXDataArray` and
-indexed `NewXData` use the same shared backend.
+inferred. The view uses zero-based storage coordinates. Indexed `NewXData` uses
+the same shared backend, but its legacy index is a flat storage position.
 
 Array layouts use native ABI 4. The DPI/native paths target Verilator 5.026 and
 newer, with regression coverage on 5.026, 5.048, and 5.052.
+
+The former public `XDataArray` type and `NewXDataArray`/`NewXDataArrayView`
+factories are removed, without aliases. Use `XArray.FromDPI`/`FromNative` and
+`XSignalCFG.NewXArray` instead. `Size()` now describes one dimension, not the
+total element count; select each dimension recursively rather than passing a
+coordinate vector or flat index. Python, for example:
+
+<!-- runnable:python -->
+```python
+import ctypes
+import xspcomm as xs
+
+memory = (ctypes.c_ubyte * 6)()
+array = xs.XArray.FromNative(8, [-1, 3], [1, 2], ctypes.addressof(memory), [2, 1])
+array[0][2].AsImmWrite()
+array[0][2].value = 42
+assert memory[2] == 42
+```
 
 ## Recursive struct and packed-array views
 
@@ -149,7 +166,7 @@ the xcomm containers themselves do not depend on a simulator version.
 | Packed struct | One parent `XData`; field leaves are bit slices |
 | Packed array | One parent `XData`; index selections are bit slices |
 | Unpacked struct | Independent field `XData` values and recursive containers |
-| Unpacked array | Independent element values and recursive containers; `XDataArray` still owns homogeneous backends |
+| Unpacked array | XArray with independent element values and recursive containers; homogeneous leaves share an internal indexed backend |
 
 Picker emits the recursive layout and bound leaf paths. `XView.FromPort(port,
 name, layout_json)` groups existing leaves without changing their binding,
@@ -166,7 +183,7 @@ require that exact kind. A mismatch reports the node path, actual kind and reque
 kind. Empty handles and expired sources are rejected when converting; `HasValue()`
 only tests whether a node exists, not whether its source remains alive.
 
-C++ factories, `Field`, `At` and `XVPI.Get` return `XView` by value. A typed
+C++ `XView` factories, `Field`, `At` and `XVPI.Get` return `XView` by value. A typed
 destination implicitly performs the same checks without copying signal data:
 
 ```cpp

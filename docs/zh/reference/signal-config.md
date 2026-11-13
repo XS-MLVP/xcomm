@@ -47,8 +47,7 @@ variables:
 | `XSignalCFG(path_or_yaml, base_address=0)` | 接受存在的文件路径或 YAML 字符串，第一次查询/构造时解析。 |
 | `NewXData(name, xname="")` | 创建信号；数组名称创建扁平下标 0 的元素。失败可返回 nullptr；C++ 调用方管理返回对象。 |
 | `NewXData(name, index, xname="")` | 按扁平、从零开始的存储下标创建数组元素；下标必须小于数组大小并会检查，越界抛出异常。非数组名称返回 nullptr。 |
-| `NewXDataArray(name, xname="")` | 从同一共享视图按扁平顺序创建全部元素；C++ 返回 shared_ptr vector。非数组名称返回空 vector。 |
-| `NewXDataArrayView(name)` | 返回缓存的 XDataArray 视图，边界从零开始；名称不存在或不是数组时返回 nullptr。 |
+| `NewXArray(name)` | 返回缓存的递归 XArray，边界为从零开始的存储坐标；名称不存在或不是数组时返回 nullptr。Size 为当前维度长度，Array/Data 每层选择一个下标。 |
 | `GetSignalNames(pattern="")` | 列出名称；pattern 按名称子串筛选。 |
 | `At(name)`；`operator[]` | 原生布局查询；不存在时 is_empty=true，Python 包装成 None。 |
 | `Address(name)` | 返回 base+offset；先核对 At 的存在性，不能用这个结果判断信号是否存在。 |

@@ -51,7 +51,6 @@
 #if !defined(SWIGGO) && !defined(SWIGLUA) && !defined(SWIGJAVASCRIPT)
 %include std_shared_ptr.i
 %shared_ptr(xspcomm::XData)
-%shared_ptr(xspcomm::XDataArray)
 %shared_ptr(xspcomm::XStruct)
 %shared_ptr(xspcomm::XArray)
 %shared_ptr(xspcomm::XVPI)
@@ -103,18 +102,21 @@ namespace std {
 %ignore xspcomm::XArray::Struct;
 %ignore xspcomm::XArray::Array;
 %ignore xspcomm::XArray::PackedData;
+%ignore xspcomm::XArray::FromDPI;
+%ignore xspcomm::XArray::FromNative;
+%ignore xspcomm::XSignalCFG::NewXArray;
 %ignore xspcomm::XVPI::Get;
 #endif
 %include "xspcomm/xdata.h"
 %include "xspcomm/xarray.h"
 %include "xspcomm/xview.h"
 %include "xspcomm/xvpi_view.h"
-#if defined(SWIGGO) || defined(SWIGLUA) || defined(SWIGJAVASCRIPT)
-%include "view_raw.i"
-#endif
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 %include "xspcomm/xsignal_cfg.h"
+#if defined(SWIGGO) || defined(SWIGLUA) || defined(SWIGJAVASCRIPT)
+%include "view_raw.i"
+#endif
 %include "xspcomm/monitor/callback.h"
 %include "xspcomm/common/compare_op.h"
 %include "xspcomm/monitor/condition.h"

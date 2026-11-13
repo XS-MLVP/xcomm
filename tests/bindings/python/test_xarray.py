@@ -9,23 +9,23 @@ import xspcomm as xs
 class XArrayTests(unittest.TestCase):
     def test_native_multidimensional_view(self):
         memory = (ctypes.c_ubyte * 18)()
-        array = xs.XDataArray(8, [-1, 3, 4], [1, 2, 6])
-        array.BindNativeData(ctypes.addressof(memory), [6, 3, 1])
+        self.assertFalse(hasattr(xs, "XDataArray"))
+        array = xs.XArray.FromNative(8, [-1, 3, 4], [1, 2, 6], ctypes.addressof(memory), [6, 3, 1])
         self.assertEqual(tuple(array.Shape()), (3, 2, 3))
-        self.assertEqual(tuple(array.Strides()), (6, 3, 1))
-        self.assertEqual(array.FlatIndex([0, 2, 5]), 10)
-        leaf = array.At([0, 2, 5])
-        self.assertEqual(leaf.CSelf(), array.AtFlat(10).CSelf())
+        self.assertEqual(array.Size(), 3)
+        self.assertEqual(array.Left(), -1)
+        leaf = array[0][2][5]
+        self.assertEqual(leaf.CSelf(), array.Array(0).Array(2).Data(5).CSelf())
         self.assertTrue(leaf.IsArrayBound())
         leaf.AsImmWrite()
         leaf.value = 0xa5
         self.assertEqual(memory[7], 0xa5)
         with self.assertRaises(IndexError):
-            array.At([0, 1, 5])
+            array[0][1][5]
         with self.assertRaises(ValueError):
-            array.At([0, 2])
+            array.Data(0)
         with self.assertRaises(IndexError):
-            array.AtFlat(18)
+            array.At(2)
         del array
         gc.collect()
         leaf.value = 0x5a
@@ -42,10 +42,9 @@ class XArrayTests(unittest.TestCase):
         def setter(index, value):
             values[index] = value
 
-        array = xs.XDataArray(0, [2, -1], [3, 0])
-        array.BindDPIPtr(ctypes.cast(getter, ctypes.c_void_p).value,
-                         ctypes.cast(setter, ctypes.c_void_p).value)
-        first, last = array.At([2, -1]), array.At([3, 0])
+        array = xs.XArray.FromDPI(0, [2, -1], [3, 0],
+            ctypes.cast(getter, ctypes.c_void_p).value, ctypes.cast(setter, ctypes.c_void_p).value)
+        first, last = array[2][-1], array[3][0]
         first.AsImmWrite()
         last.AsImmWrite()
         first.value, last.value = 1, 0
@@ -63,13 +62,13 @@ class XArrayTests(unittest.TestCase):
 """
         cfg = xs.XSignalCFG(config + "    array_dimensions: [2, 3]\n"
                                "    array_strides: [80, 24]\n", ctypes.addressof(memory))
-        view = cfg.NewXDataArrayView("mem")
+        view = cfg.NewXArray("mem")
         leaf = cfg.NewXData("mem", 5)
         leaf.AsImmWrite()
         leaf.value = 77
         self.assertEqual(memory[128], 77)
-        self.assertEqual(view.At([1, 2]).value, 77)
-        self.assertEqual(cfg.NewXDataArray("mem")[5].value, 77)
+        self.assertEqual(view[1][2].value, 77)
+        self.assertEqual(cfg.NewXArray("mem")[1][2].value, 77)
         for index in (-2, 6):
             with self.assertRaises(IndexError):
                 cfg.NewXData("mem", index)
@@ -77,7 +76,7 @@ class XArrayTests(unittest.TestCase):
         for layout in ("", "    array_dimensions: [6]\n", "    array_strides: [12]\n"):
             with self.subTest(layout=layout):
                 incomplete = xs.XSignalCFG(config + layout, ctypes.addressof(memory))
-                self.assertIsNone(incomplete.NewXDataArrayView("mem"))
+                self.assertIsNone(incomplete.NewXArray("mem"))
 
 
 if __name__ == "__main__":

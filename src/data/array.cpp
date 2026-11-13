@@ -18,8 +18,8 @@ uint64_t native_bytes(uint32_t width) {
 }
 }
 
-detail::XDataArrayStorage::XDataArrayStorage(uint32_t width, const std::vector<int> &left,
-                                           const std::vector<int> &right)
+detail::ArrayStorage::ArrayStorage(uint32_t width, const std::vector<int> &left,
+                                   const std::vector<int> &right)
     : width(width), left(left), right(right) {
     if (left.empty() || left.size() != right.size())
         throw std::invalid_argument("Array bounds must have the same nonzero rank");
@@ -32,11 +32,11 @@ detail::XDataArrayStorage::XDataArrayStorage(uint32_t width, const std::vector<i
     }
 }
 
-void detail::XDataArrayStorage::CheckIndex(uint64_t index) const {
+void detail::ArrayStorage::CheckIndex(uint64_t index) const {
     if (index >= size) throw std::out_of_range("Array element index out of range");
 }
 
-uint64_t detail::XDataArrayStorage::Address(uint64_t index) const {
+uint64_t detail::ArrayStorage::Address(uint64_t index) const {
     CheckIndex(index);
     if (kind != XDataBackendKind::MemDirect)
         throw std::logic_error("Array has no native storage");
@@ -50,7 +50,7 @@ uint64_t detail::XDataArrayStorage::Address(uint64_t index) const {
     return base + offset;
 }
 
-void detail::XDataArrayStorage::Read(uint64_t location, void *value) const {
+void detail::ArrayStorage::Read(uint64_t location, void *value) const {
     if (kind == XDataBackendKind::DPI) {
         reinterpret_cast<void (*)(int, void *)>(getter)(int(location), value);
         return;
@@ -62,7 +62,7 @@ void detail::XDataArrayStorage::Read(uint64_t location, void *value) const {
     else VecMemoryIO<uint32_t>::Read(static_cast<xsvLogicVecVal *>(value), address, (uint64_t(width) + 31) / 32);
 }
 
-void detail::XDataArrayStorage::Write(uint64_t location, const void *value) const {
+void detail::ArrayStorage::Write(uint64_t location, const void *value) const {
     if (kind == XDataBackendKind::DPI) {
         if (!setter) return;
         if (width == 0) reinterpret_cast<void (*)(int, xsvLogic)>(setter)(int(location), *static_cast<const xsvLogic *>(value));
@@ -76,16 +76,20 @@ void detail::XDataArrayStorage::Write(uint64_t location, const void *value) cons
     else VecMemoryIO<uint32_t>::Write(address, static_cast<const xsvLogicVecVal *>(value), (uint64_t(width) + 31) / 32);
 }
 
-XDataArray::XDataArray(uint32_t width, const std::vector<int> &left, const std::vector<int> &right)
-    : storage(std::make_shared<detail::XDataArrayStorage>(width, left, right)) {}
+namespace detail {
+ArrayBinding::ArrayBinding(uint32_t width, const std::vector<int> &left, const std::vector<int> &right)
+    : storage(std::make_shared<ArrayStorage>(width, left, right)) {}
 
-uint64_t XDataArray::Size() const { return storage->size; }
-std::vector<int> XDataArray::Left() const { return storage->left; }
-std::vector<int> XDataArray::Right() const { return storage->right; }
-std::vector<int> XDataArray::Shape() const { return storage->shape; }
-std::vector<unsigned long long> XDataArray::Strides() const { return storage->strides; }
+uint64_t ArrayBinding::Size() const { return storage->size; }
+std::vector<int> ArrayBinding::Left() const { return storage->left; }
+std::vector<int> ArrayBinding::Right() const { return storage->right; }
+std::vector<int> ArrayBinding::Shape() const { return storage->shape; }
+std::vector<unsigned long long> ArrayBinding::Strides() const { return storage->strides; }
+void ArrayBinding::CheckBound() const {
+    if (storage->kind == XDataBackendKind::Unknown) throw std::logic_error("Array backend is not bound");
+}
 
-uint64_t XDataArray::FlatIndex(const std::vector<int> &indices) const {
+uint64_t ArrayBinding::FlatIndex(const std::vector<int> &indices) const {
     if (indices.size() != storage->shape.size()) throw std::invalid_argument("Array index rank mismatch");
     uint64_t flat = 0;
     for (size_t d = 0; d < indices.size(); ++d) {
@@ -96,7 +100,7 @@ uint64_t XDataArray::FlatIndex(const std::vector<int> &indices) const {
     return flat;
 }
 
-std::vector<int> XDataArray::Indices(uint64_t index) const {
+std::vector<int> ArrayBinding::Indices(uint64_t index) const {
     storage->CheckIndex(index);
     std::vector<int> indices(storage->shape.size());
     for (size_t d = indices.size(); d-- > 0;) {
@@ -107,7 +111,7 @@ std::vector<int> XDataArray::Indices(uint64_t index) const {
     return indices;
 }
 
-void XDataArray::BindDPIPtr(uint64_t read, uint64_t write) {
+void ArrayBinding::BindDPIPtr(uint64_t read, uint64_t write) {
     if (storage->kind != XDataBackendKind::Unknown) throw std::logic_error("Array backend is already bound");
     if (!read || Size() > uint64_t(std::numeric_limits<int>::max()))
         throw std::invalid_argument("DPI array requires a getter and int-sized element indices");
@@ -116,7 +120,7 @@ void XDataArray::BindDPIPtr(uint64_t read, uint64_t write) {
     storage->kind = XDataBackendKind::DPI;
 }
 
-void XDataArray::BindNativeData(uint64_t base, const std::vector<unsigned long long> &strides) {
+void ArrayBinding::BindNativeData(uint64_t base, const std::vector<unsigned long long> &strides) {
     if (storage->kind != XDataBackendKind::Unknown) throw std::logic_error("Array backend is already bound");
     if (!base) throw std::invalid_argument("Native array base is null");
     auto layout = strides;
@@ -142,9 +146,9 @@ void XDataArray::BindNativeData(uint64_t base, const std::vector<unsigned long l
     storage->kind = XDataBackendKind::MemDirect;
 }
 
-uint64_t XDataArray::Address(uint64_t index) const { return storage->Address(index); }
+uint64_t ArrayBinding::Address(uint64_t index) const { return storage->Address(index); }
 
-void XDataArray::BindElement(XData &element, uint64_t index) const {
+void ArrayBinding::BindElement(XData &element, uint64_t index) const {
     storage->CheckIndex(index);
     if (storage->kind == XDataBackendKind::Unknown) throw std::logic_error("Array backend is not bound");
     if (element.mWidth != storage->width) throw std::invalid_argument("Array element width mismatch");
@@ -160,7 +164,7 @@ void XDataArray::BindElement(XData &element, uint64_t index) const {
     element.update_read();
 }
 
-std::shared_ptr<XData> XDataArray::AtFlat(uint64_t index) {
+std::shared_ptr<XData> ArrayBinding::AtFlat(uint64_t index) {
     storage->CheckIndex(index);
     auto found = elements.find(index);
     if (found != elements.end()) return found->second;
@@ -171,6 +175,7 @@ std::shared_ptr<XData> XDataArray::AtFlat(uint64_t index) {
     return element;
 }
 
-std::shared_ptr<XData> XDataArray::At(const std::vector<int> &indices) { return AtFlat(FlatIndex(indices)); }
+std::shared_ptr<XData> ArrayBinding::At(const std::vector<int> &indices) { return AtFlat(FlatIndex(indices)); }
 
+} // namespace detail
 } // namespace xspcomm
