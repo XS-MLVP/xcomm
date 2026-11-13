@@ -11,8 +11,10 @@ set(XSPCOMM_SOURCES
     data/data.cpp
     data/backends.cpp
     data/array.cpp
+    data/view.cpp
     data/value.cpp
     data/vpi.cpp
+    data/vpi_view.cpp
     data/pin.cpp
     core/port.cpp
     core/signal_cfg.cpp

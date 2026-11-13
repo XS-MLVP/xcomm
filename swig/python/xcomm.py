@@ -140,6 +140,65 @@ XData.Set = XData_Set
 XData.BindDPIName = XDataBindDPIName
 XData.__eq__ = XData__eq__
 
+# Recursive xcomm containers. Unwrap typed nodes at the language boundary so
+# public leaves remain the original XData objects, never Python value copies.
+def _view_value(view, *, packed_arrays=False):
+    kind = view.Kind()
+    if kind == "bits":
+        return view.Data()
+    if kind == "struct":
+        return view.Struct()
+    if view.IsPacked() and not packed_arrays:
+        return view.PackedData()
+    return view.Array()
+
+def _struct_item(self, name):
+    if not isinstance(name, str):
+        raise TypeError("Struct field name must be str")
+    cache = self.__dict__.setdefault("_view_fields", {})
+    if name not in cache:
+        cache[name] = _view_value(self.Field(name))
+    return cache[name]
+
+def _struct_attr(self, name):
+    if name.startswith("_") or not self.Has(name):
+        raise AttributeError(name)
+    return self[name]
+
+XStruct.__getitem__ = _struct_item
+XStruct.__getattr__ = _struct_attr
+XStruct.__len__ = lambda self: len(self.Names())
+XStruct.__iter__ = lambda self: iter(self.Names())
+XStruct.fields = property(lambda self: tuple(self.Names()))
+
+_struct_setattr = XStruct.__setattr__
+def _struct_setattr_checked(self, name, value):
+    if name != "this" and not name.startswith("_") and "this" in self.__dict__ and self.Has(name):
+        raise AttributeError("Struct fields are read-only references; set the field's value")
+    return _struct_setattr(self, name, value)
+
+XStruct.__setattr__ = _struct_setattr_checked
+
+def _array_item(self, index):
+    from operator import index as integer_index
+    index = integer_index(index)
+    cache = self.__dict__.setdefault("_view_elements", {})
+    if index not in cache:
+        cache[index] = _view_value(self.At(index), packed_arrays=self.IsPacked())
+    return cache[index]
+
+def _array_indices(self):
+    left, right = self.Left(), self.Right()
+    step = 1 if left <= right else -1
+    return range(left, right + step, step)
+
+XArray.__getitem__ = _array_item
+XArray.__len__ = lambda self: self.Size()
+XArray.__iter__ = lambda self: (self[index] for index in self.indices)
+XArray.indices = property(_array_indices)
+XArray.shape = property(lambda self: tuple(self.Shape()))
+XArray.bounds = property(lambda self: tuple(zip(self.LeftBounds(), self.RightBounds())))
+
 # XSignalCFG
 XSignalCFG_old__At = XSignalCFG.At
 def XSignalCFG__At(self: XData, key):

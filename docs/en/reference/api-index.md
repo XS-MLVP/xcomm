@@ -4,7 +4,7 @@ This index groups entry points by responsibility. Module pages explain arguments
 
 | Module | Public types/entry points | Details |
 | --- | --- | --- |
-| Signals | XData, XDataArray, PinBind, IOType, WriteMode, XDataBackendKind, xsvLogic, xsvLogicVecVal | [XData](xdata.md) |
+| Signals | XData, XDataArray, XView, XStruct, XArray, PinBind, IOType, WriteMode, XDataBackendKind, xsvLogic, xsvLogicVecVal | [XData](xdata.md) |
 | Ports | XPort | [XPort](xport.md) |
 | Clocks | XClock, FastMode, XStep | [XClock](xclock.md) |
 | Expressions | ExprEngine, ExprOp, ExprNode, NewBits, EvalBits, Collect | [ExprEngine](expressions.md) |
@@ -36,7 +36,7 @@ This index groups entry points by responsibility. Module pages explain arguments
 
 ## Choosing headers
 
-Use xcomm.h for core APIs and xmonitor.h for monitors. Include individual headers to narrow dependencies: xdata.h, xarray.h, xport.h, xclock.h, xexpr.h, xengine.h, xpattern.h, xcoverage.h, xsignal_cfg.h, monitor/*, tlm/* and common/*.
+Use xcomm.h for core APIs and xmonitor.h for monitors. Include individual headers to narrow dependencies: xdata.h, xarray.h, xview.h, xport.h, xclock.h, xexpr.h, xengine.h, xpattern.h, xcoverage.h, xsignal_cfg.h, monitor/*, tlm/* and common/*.
 
 runtime/types.h defines runtime protocol types without pulling in clocks or the runtime implementation. xtrigger.h provides the historical engine alias.
 

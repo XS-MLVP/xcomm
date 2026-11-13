@@ -13,6 +13,7 @@ public:
     Lifetime(const Lifetime &);
     Lifetime &operator=(const Lifetime &) { return *this; }
     std::weak_ptr<const int> Observe() const { return token; }
+    void Renew(); // Invalidate observers when a containing object's storage changes.
 };
 
 } // namespace xspcomm::detail

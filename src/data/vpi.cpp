@@ -1,127 +1,76 @@
 #include "xspcomm/xdata.h"
+#include "data/vpi_storage.h"
 
 namespace xspcomm {
 
-bool XData::BindVPI(vpiHandle obj, func_vpi_get get,
-               func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name){
-    if(this->vpi_obj_handle != nullptr){
-        Warn("BindVPI: already bind, ignore bind");
-        return false;
-    }
-    if(obj == nullptr){
-        Warn("BindVPI: obj is nullptr, ignore bind");
-        return false;
-    }
-    if(get == nullptr || get_value == nullptr || put_value == nullptr){
-        Warn("BindVPI: get/get_value/put_value is nullptr, ignore bind");
-        return false;
-    }
-    PLI_INT32 type = get(vpiType, obj);
-    if(type != vpiNet && type != vpiReg){
-        Warn("BindVPI: obj type is not vpiNet or vpiReg, ignore bind");
-        return false;
-    }
-    this->vpi_obj_handle = obj;
-    this->vpi_get = get;
-    this->vpi_get_value = get_value;
-    this->vpi_put_value = put_value;
-    // Get data width
-    PLI_INT32 bit_size = get(vpiSize, obj);
-    if(bit_size == 1){
-        bit_size = 0;
-    }
-    PLI_INT32 direction = vpi_get(vpiDirection, obj);
-    bool writeable = (direction != vpiOutput);
-    auto mode = IOType::Input;
-    if (!writeable) {
-        mode = IOType::Output;
-    }
-    // Reinit self
-    this->ReInit(bit_size, mode, name);
-    // Define and bind fake DPIRW
-    if(bit_size == 0){ // As logic
-        auto fake_dpir = [this](void *data){
-            t_vpi_value value;
-            value.format = vpiIntVal;
-            if(this->vpi_data_type == VPI_XDATA_SCALAR){
-                value.format = vpiScalarVal;
-                this->vpi_get_value(this->vpi_obj_handle, &value);
-                *(xsvLogic *)data = (xsvLogic)value.value.scalar;
-            }else{
-                this->vpi_get_value(this->vpi_obj_handle, &value);
-                *(xsvLogic *)data = (xsvLogic)value.value.integer;
-            }
-        };
-        auto fake_dpiw = [this](unsigned char data){
-            t_vpi_value value;
-            value.format = vpiIntVal;
-            value.value.integer = data;
-            if(this->vpi_data_type == VPI_XDATA_SCALAR){
-                value.format = vpiScalarVal;
-                value.value.scalar = data;
-            }
-            this->vpi_put_value(this->vpi_obj_handle, &value, nullptr, this->vpi_obj_wflage);
-        };
-        if(writeable){
-            this->BindDPIRW(fake_dpir, fake_dpiw);
-        }else{
-            this->BindDPIRW(fake_dpir, (void(*)(unsigned char))nullptr);
-        }
-    }else{ // As vec
-        auto fake_dpir = [this](void *data){
-            t_vpi_value value;
-            if((this->W() <= 32 && this->vpi_data_type == VPI_XDATA_AUTOCHECK) || this->vpi_data_type == VPI_XDATA_INTEGER){
-                value.format = vpiIntVal;
-                this->vpi_get_value(this->vpi_obj_handle, &value);
-                this->pVecData[0].aval = value.value.integer;
-                this->pVecData[0].bval = 0;
-            }else{
-                value.format = vpiVectorVal;
-                value.value.vector = nullptr;
-                this->vpi_get_value(this->vpi_obj_handle, &value);
-                if(value.value.vector == nullptr){
-                    Error("VPI vector read returned nullptr for XData(%s)", this->mName.c_str());
-                    this->_zero_sv();
-                    return;
-                }
-                auto dst = (xsvLogicVecVal *)data;
-                for(uint32_t i = 0; i < this->vecSize; i++){
-                    dst[i].aval = value.value.vector[i].aval;
-                    dst[i].bval = value.value.vector[i].bval;
-                }
-            }
-        };
-        auto fake_dpiw = [this](void *data){
-            t_vpi_value value;
-            value.format = vpiVectorVal;
-            value.value.vector = (s_vpi_vecval *)data;
-            if((this->W() <= 32 && this->vpi_data_type == VPI_XDATA_AUTOCHECK) || this->vpi_data_type == VPI_XDATA_INTEGER){
-                value.format = vpiIntVal;
-                value.value.integer = this->pVecData[0].aval;
-            }
-            this->vpi_put_value(this->vpi_obj_handle, &value, nullptr, this->vpi_obj_wflage);
-        };
-        if(writeable){
-            this->BindDPIRW(fake_dpir, fake_dpiw);
-        }else{
-            this->BindDPIRW(fake_dpir, (void(*)(void *))nullptr);
-        }
-    }
-    if(writeable){
-        this->AsImmWrite();
-    }
-    this->backend_kind = XDataBackendKind::VPI;
-    this->readonly_backend = !writeable;
+bool XData::BindVPI(vpiHandle obj, func_vpi_get get, func_vpi_get_value get_value,
+                    func_vpi_put_value put_value, std::string name) {
+    if (vpi_obj_handle || !obj || !get || !get_value || !put_value) return false;
+    const auto type = get(vpiType, obj);
+    const bool packed_struct = (type == vpiStructVar || type == vpiStructNet) && get(vpiPacked, obj) == 1;
+    if (!detail::VpiLeafType(type) && !packed_struct) return false;
+    const auto bits = get(vpiSize, obj);
+    if (bits <= 0) return false;
+    const auto direction = get(vpiDirection, obj);
+    const auto mode = direction == vpiOutput ? IOType::Output : IOType::Input;
+    // Preserve a caller's explicit one-bit vector layout; the traditional
+    // FromVPI entry point still normalizes a one-bit object to scalar XData.
+    const uint32_t width = bits == 1 && mWidth != 1 ? 0 : uint32_t(bits);
+    ReInit(width, mode, name);
+    vpi_obj_handle = obj;
+    vpi_get = get;
+    vpi_get_value = get_value;
+    vpi_put_value = put_value;
+    backend_kind = XDataBackendKind::VPI;
+    readonly_backend = mode == IOType::Output;
+    if (!readonly_backend) AsImmWrite();
+    update_read();
     return true;
 }
 
-XData * XData::FromVPI(vpiHandle obj, func_vpi_get get, func_vpi_get_value get_value, func_vpi_put_value put_value, std::string name){
-    auto xdata = new XData(0, IOType::InOut, name);
-    if(xdata->BindVPI(obj, get, get_value, put_value, name)){
-        return xdata;
+void XData::_vpi_read() {
+    if (vpi_owner) vpi_owner->context->Check();
+    s_vpi_value value{};
+    if (!mWidth) {
+        value.format = vpi_data_type == VPI_XDATA_INTEGER ? vpiIntVal : vpiScalarVal;
+        vpi_get_value(vpi_obj_handle, &value);
+        mLogicData = xsvLogic(value.format == vpiIntVal ? value.value.integer : value.value.scalar);
+    } else if (vpi_data_type == VPI_XDATA_INTEGER) {
+        value.format = vpiIntVal;
+        vpi_get_value(vpi_obj_handle, &value);
+        _zero_sv();
+        pVecData[0].aval = PLI_UINT32(value.value.integer);
+    } else {
+        value.format = vpiVectorVal;
+        vpi_get_value(vpi_obj_handle, &value);
+        if (!value.value.vector) throw std::runtime_error("VPI vector read returned null: " + mName);
+        for (uint32_t i = 0; i < vecSize; ++i) {
+            pVecData[i].aval = value.value.vector[i].aval;
+            pVecData[i].bval = value.value.vector[i].bval;
+        }
     }
-    delete xdata;
-    return nullptr;
 }
 
+void XData::_vpi_write() {
+    if (vpi_owner) vpi_owner->context->Check();
+    s_vpi_value value{};
+    if (!mWidth) {
+        value.format = vpi_data_type == VPI_XDATA_INTEGER ? vpiIntVal : vpiScalarVal;
+        value.value.integer = mLogicData;
+    } else if (vpi_data_type == VPI_XDATA_INTEGER) {
+        value.format = vpiIntVal;
+        value.value.integer = PLI_INT32(pVecData[0].aval);
+    } else {
+        value.format = vpiVectorVal;
+        value.value.vector = reinterpret_cast<s_vpi_vecval *>(pVecData);
+    }
+    vpi_put_value(vpi_obj_handle, &value, nullptr, vpi_obj_wflage);
+}
+
+XData *XData::FromVPI(vpiHandle obj, func_vpi_get get, func_vpi_get_value get_value,
+                       func_vpi_put_value put_value, std::string name) {
+    auto data = std::make_unique<XData>(0, IOType::InOut, name);
+    if (!data->BindVPI(obj, get, get_value, put_value, name)) return nullptr;
+    return data.release();
+}
 } // namespace xspcomm

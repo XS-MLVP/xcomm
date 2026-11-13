@@ -3,7 +3,9 @@
 #include "xspcomm/common/compare.h"
 #include "xspcomm/xutil.h"
 #include "data/array_storage.h"
+#include "data/vpi_storage.h"
 #include <utility>
+#include <stdexcept>
 
 namespace xspcomm {
 
@@ -121,11 +123,17 @@ void XData::_local_to_sv()
 }
 void XData::_dpi_read()
 {
+    if (this->vpi_owner) this->vpi_owner->context->Check();
+    if (this->sub_parent) {
+        this->_slice_rw(true);
+        return;
+    }
     if (unlikely(this->mIOType == IOType::Input
                  && this->write_mode != WriteMode::Imme)) {
         return;
     }
     this->_dpi_check();
+    if (this->backend_kind == XDataBackendKind::VPI) { this->_vpi_read(); return; }
     if (this->array_storage) {
         this->array_storage->Read(this->array_location, this->mWidth == 0 ?
             static_cast<void *>(&this->mLogicData) : static_cast<void *>(this->pVecData));
@@ -149,6 +157,11 @@ bool XData::SetWriteMode(WriteMode mode)
 };
 
 void XData::WriteDirect(){
+    if (this->sub_parent) {
+        this->_slice_rw(false);
+        return;
+    }
+    if (this->backend_kind == XDataBackendKind::VPI) { this->_vpi_write(); return; }
     if (this->array_storage) {
         this->array_storage->Write(this->array_location, this->mWidth == 0 ?
             static_cast<const void *>(&this->mLogicData) : static_cast<const void *>(this->pVecData));
@@ -180,6 +193,12 @@ void XData::_dpi_write()
     if (unlikely(this->mIOType == IOType::Output)) return;
     if (unlikely(this->write_mode != WriteMode::Imme)) return;
     this->_dpi_check();
+    // The parent's refreshed full value, not the slice's last written value,
+    // determines whether an immediate backend write can be suppressed.
+    if (this->sub_parent) {
+        this->WriteDirect();
+        return;
+    }
     if (this->_need_write()) {
         this->WriteDirect();
     }
@@ -258,6 +277,11 @@ void XData::_dpi_check(){
 
 bool XData::_check_writeable() const
 {
+    if (this->vpi_owner) this->vpi_owner->context->Check();
+    if (this->sub_parent) {
+        if (this->sub_lifetime.expired()) throw std::runtime_error("Parent XData has been destroyed");
+        return this->sub_parent->_check_writeable();
+    }
     return !this->readonly_backend && this->mIOType != IOType::Output;
 }
 
@@ -269,6 +293,11 @@ XData::XData(uint32_t width, IOType itype, std::string name) :
 }
 void XData::ReInit(uint32_t width, IOType itype, std::string name)
 {
+    if (this->mWidth != width) this->view_lifetime.Renew();
+    this->sub_parent = nullptr;
+    this->sub_lifetime.reset();
+    this->vpi_owner.reset();
+    this->vpi_obj_handle = nullptr;
     this->array_storage.reset(); // Array element widths/layouts are immutable.
     if (this->pVecData) {
         for (int i = 0; i < this->mWidth; i++) { delete this->pinbind_vec[i]; }
@@ -340,8 +369,8 @@ XData::XData(XData &t) :
     this->zero_mask = t.zero_mask;
     this->write_mode = t.write_mode;
     this->sub_offset = t.sub_offset;
-    this->sub_pVecRef = t.sub_pVecRef;
     this->sub_parent = t.sub_parent;
+    this->sub_lifetime = t.sub_lifetime;
     // pointers
     if (this->vecSize > 0) {
         this->pVecData =
@@ -359,10 +388,7 @@ XData::XData(XData &t) :
     }
     this->pinbind_bit.write_fc = write_fc;
     this->_sv_to_local();
-    if(this->sub_pVecRef != nullptr){
-        Warn("You are copying a ref xdata. bind _sub_data_fake_dpirw ...");
-        this->vecRead = [this](void*data){return this->_sub_data_fake_dpir(data);};
-        if(this->mIOType != IOType::Output)this->vecWrite = [this](void*data){return this->_sub_data_fake_dpiw(data);};
+    if(this->sub_parent != nullptr){
         this->update_read();
     }
 };
@@ -382,17 +408,24 @@ XData::~XData()
 }
 
 XData* XData::SubDataRefRaw(uint32_t start, uint32_t width, std::string name){
-    Assert(this->mWidth > 0, "Only svVec support SubDataRef, need mWidth > 0");
-    Assert(start + width <= this->mWidth, "SubDataRef out of range (start + witdth=%d > mWidth=%d)", start + width, this->mWidth);
-    auto sub = new XData(width, this->mIOType, name);
+    const uint64_t bits = width ? width : 1;
+    if (uint64_t(start) + bits > (this->mWidth ? this->mWidth : 1))
+        throw std::out_of_range("SubDataRef bit range exceeds parent XData");
+    auto *parent = this;
+    if (this->sub_parent) {
+        if (this->sub_lifetime.expired()) throw std::runtime_error("Parent XData has been destroyed");
+        start += this->sub_offset;
+        parent = this->sub_parent;
+    }
+    auto sub = std::make_unique<XData>(width, this->mIOType, name);
     if(sub->mIOType != IOType::Output)sub->SetWriteMode(WriteMode::Imme);
     sub->sub_offset = start;
-    sub->sub_pVecRef = this->pVecData;
-    sub->sub_parent = this;
-    sub->vecRead = [sub](void*data){return sub->_sub_data_fake_dpir(data);};
-    if(sub->mIOType != IOType::Output)sub->vecWrite = [sub](void*data){return sub->_sub_data_fake_dpiw(data);};
+    sub->sub_parent = parent;
+    sub->sub_lifetime = parent->ObserveLifetime();
+    sub->backend_kind = parent->backend_kind;
+    sub->readonly_backend = parent->readonly_backend;
     sub->update_read();
-    return sub;
+    return sub.release();
 }
 
 std::shared_ptr<XData> XData::SubDataRef(uint32_t start, uint32_t width, std::string name){
@@ -400,119 +433,55 @@ std::shared_ptr<XData> XData::SubDataRef(uint32_t start, uint32_t width, std::st
     return sub;
 }
 
-void XData::_sub_data_fake_dpirw(void *data, bool is_read){
-    DebugC(false, "_sub_data_fake_dpirw: %s", is_read ? "Read": "Write");
-    if (is_read && this->sub_parent != nullptr) {
-        this->sub_parent->update_read();
+void XData::_slice_rw(bool is_read){
+    if (this->sub_lifetime.expired()) throw std::runtime_error("Parent XData has been destroyed");
+    auto &parent = *this->sub_parent;
+    const uint64_t bits = this->mWidth ? this->mWidth : 1;
+    if (uint64_t(this->sub_offset) + bits > (parent.mWidth ? parent.mWidth : 1))
+        throw std::out_of_range("Parent XData width changed beneath SubDataRef");
+    // Refresh before read-modify-write so an immediate write cannot overwrite
+    // sibling fields changed by the simulator. Scheduled input values remain
+    // local because the parent's existing read policy skips backend reads.
+    if (is_read) parent.update_read();
+    else {
+        // Notify after the merged write, as a direct parent assignment does.
+        // A pre-write callback that reads this slice would replace its pending
+        // value with the old parent value before the merge.
+        parent._dpi_read();
+        parent._sv_to_local();
     }
-    // read data from ref
-    uint32_t start_p = this->sub_offset / 32;
-    uint32_t start_f = this->sub_offset % 32;
-    uint32_t end_p = (this->sub_offset + this->mWidth - 1) / 32;
-    uint32_t end_f = (this->sub_offset + this->mWidth - 1) % 32 + 1;
-    if (this->vecSize == 0 && this->mWidth == 0) {
-        if (is_read) {
-            auto aval = (this->sub_pVecRef[start_p].aval >> start_f) & 1;
-            auto bval = (this->sub_pVecRef[start_p].bval >> start_f) & 1;
-            this->mLogicData = bval * 2 + aval;
-        } else {
-            uint32_t mask = 1 << start_f;
-            uint32_t maskb = ~mask;
-            this->sub_pVecRef[start_p].aval = (maskb & this->sub_pVecRef[start_p].aval) | ((this->mLogicData & 1) << start_f);
-            this->sub_pVecRef[start_p].bval = (maskb & this->sub_pVecRef[start_p].bval) | (((this->mLogicData >> 1) & 1) << start_f);
-            if (this->sub_parent != nullptr) {
-                this->sub_parent->_sv_to_local();
-                this->sub_parent->_dpi_write();
-                this->sub_parent->_update_shadow();
-            }
-        }
-        return;
+    if (this->sub_lifetime.expired()) throw std::runtime_error("Parent XData storage is no longer valid");
+    bool changed = false;
+    for (uint64_t bit = 0; bit < bits;) {
+        const auto source_bit = uint64_t(this->sub_offset) + bit;
+        const uint32_t parent_shift = source_bit % 32, child_shift = bit % 32;
+        const uint32_t count = uint32_t(std::min<uint64_t>(bits - bit, std::min(32 - parent_shift, 32 - child_shift)));
+        const uint32_t mask = count == 32 ? UINT32_MAX : (uint32_t(1) << count) - 1;
+        xsvLogicVecVal parent_scalar{uint32_t(parent.mLogicData & 1), uint32_t((parent.mLogicData >> 1) & 1)};
+        xsvLogicVecVal child_scalar{uint32_t(this->mLogicData & 1), uint32_t((this->mLogicData >> 1) & 1)};
+        auto &parent_word = parent.mWidth ? parent.pVecData[source_bit / 32] : parent_scalar;
+        auto &child_word = this->mWidth ? this->pVecData[bit / 32] : child_scalar;
+        auto &source = is_read ? parent_word : child_word;
+        auto &target = is_read ? child_word : parent_word;
+        const auto from = is_read ? parent_shift : child_shift;
+        const auto to = is_read ? child_shift : parent_shift;
+        const auto aval = ((source.aval >> from) & mask) << to;
+        const auto bval = ((source.bval >> from) & mask) << to;
+        changed |= ((target.aval ^ aval) & (mask << to)) || ((target.bval ^ bval) & (mask << to));
+        target.aval = (target.aval & ~(mask << to)) | aval;
+        target.bval = (target.bval & ~(mask << to)) | bval;
+        if (!this->mWidth && is_read) this->mLogicData = xsvLogic(target.aval | (target.bval << 1));
+        if (!parent.mWidth && !is_read) parent.mLogicData = xsvLogic(target.aval | (target.bval << 1));
+        bit += count;
     }
-    xsvLogicVecVal * p = this->sub_pVecRef;
-    // copy/write data
-    // from/dist:      |_|_|_|_|_|_|
-    //                 /     /
-    // to/from:        |_|_|_|
-    // [shadow data][mask][aval][bval]
-    int secs = end_p - start_p + 1;
-    int * temp_mask = (int *)this->__pVecData + this->vecSize * 2;
-    int * temp_aval = temp_mask + secs;
-    int * temp_bval = temp_aval + secs;
-    Assert(secs > 0, "Error! SubDataRef: secs <= 0");
-    Assert(secs <= (this->vecSize + 1), "Error! SubDataRef: secs(%d) > vecSize(%d) + 1", secs, this->vecSize);
-    if(is_read) {
-        // Logic for reading data
-        for (int i = 0; i < secs; i++) {
-            temp_aval[i] = p[start_p + i].aval;
-            temp_bval[i] = p[start_p + i].bval;
-        }
-        if (start_f > 0) {
-            big_shift(temp_aval, secs, start_f);
-            big_shift(temp_bval, secs, start_f);
-        }
-        for (int i = 0; i < this->vecSize; i++){
-            this->pVecData[i].aval = temp_aval[i];
-            this->pVecData[i].bval = temp_bval[i];
-        }
-    } else {
-        // Logic for writing data
-        for (int i = 0; i < this->vecSize; i++) {
-            temp_aval[i] = this->pVecData[i].aval;
-            temp_bval[i] = this->pVecData[i].bval;
-        }
-        if (start_f > 0) {
-            big_shift(temp_aval, secs, -start_f);
-            big_shift(temp_bval, secs, -start_f);
-        }
-        // Calculate bit mask
-        // Use a more precise method to calculate the mask
-        memset(temp_mask, 0, secs * sizeof(int));
-        // Create mask for the first 32-bit block
-        uint32_t first_mask_bits = 32 - start_f;
-        if (this->mWidth < first_mask_bits) {
-            first_mask_bits = this->mWidth;
-        }
-        uint32_t first_mask = first_mask_bits == 32
-                                  ? 0xFFFFFFFFu
-                                  : (uint32_t(1) << first_mask_bits) - 1;
-        temp_mask[0] = first_mask << start_f;
-        // Create mask for the middle blocks (if any)
-        for (int i = 1; i < secs - 1; i++) {
-            temp_mask[i] = 0xFFFFFFFF;  // Set all bits to 1
-        }
-        // Create mask for the last block (if different from the first block)
-        if (secs > 1) {
-            uint32_t last_bits = (this->sub_offset + this->mWidth) % 32;
-            if (last_bits == 0) {
-                // If exactly on the boundary, set all bits
-                temp_mask[secs - 1] = 0xFFFFFFFF;
-            } else {
-                // Otherwise, set only the required bits
-                temp_mask[secs - 1] = bit32_msk(last_bits);
-            }
-        }
-        // Apply the mask and update the data
-        for (int i = 0; i < secs; i++) {
-            p[start_p + i].aval = (p[start_p + i].aval & ~temp_mask[i]) | (temp_aval[i] & temp_mask[i]);
-            p[start_p + i].bval = (p[start_p + i].bval & ~temp_mask[i]) | (temp_bval[i] & temp_mask[i]);
-        }
-        if (this->sub_parent != nullptr) {
-            this->sub_parent->_sv_to_local();
-            this->sub_parent->_dpi_write();
-            this->sub_parent->_update_shadow();
-        }
+    if (!is_read) {
+        parent._sv_to_local();
+        // The simulator may have changed the field since the last immediate
+        // write, even when the requested new value equals that earlier write.
+        if (changed && parent.write_mode == WriteMode::Imme) parent.last_is_write = false;
+        parent._dpi_write();
+        parent._update_shadow();
     }
-    // Update local data
-    this->_sv_to_local();
-    this->_update_shadow();
-}
-
-void XData::_sub_data_fake_dpir(void *data){
-    return this->_sub_data_fake_dpirw(data, true);
-}
-
-void XData::_sub_data_fake_dpiw(void *data){
-    return this->_sub_data_fake_dpirw(data, false);
 }
 
 

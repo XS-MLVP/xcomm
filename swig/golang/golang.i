@@ -31,10 +31,10 @@ void FreeSCVector(FreePtr p){
 
 %typemap(gotype) std::vector<unsigned char>  "[]byte"
 %typemap(gotype) std::vector<unsigned char>& "[]byte"
-%typemap(in) (std::vector<unsigned char>&) %{
+%typemap(in) (std::vector<unsigned char>&) (std::vector<unsigned char> vec) %{
     // convert slice to std::vector<unsigned char>
-    std::vector<unsigned char> vec((unsigned char*)$input.array,
-                                   (unsigned char*)$input.array + (size_t)$input.len);
+    vec.assign((unsigned char*)$input.array,
+               (unsigned char*)$input.array + (size_t)$input.len);
     $1 = &vec;
 %}
 %typemap(out) std::vector<unsigned char> %{

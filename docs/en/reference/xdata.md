@@ -62,7 +62,7 @@ Set first changes XData storage. WriteMode determines when the DUT receives it. 
 | --- | --- |
 | `At(index)`; C++ `operator[]` | Return PinBind. Python indexing reads 0/1/2/3 and assignment updates that bit. |
 | `PinBind.Set/Get/AsInt32/AsString` | Read or write one four-state bit. |
-| `SubDataRef(start, width, name)` | Borrow `[start, start+width)`; writes affect the parent, which must remain alive. |
+| `SubDataRef(start, width, name)` | Borrow `[start, start+width)`; width zero selects one scalar bit. Writes affect the parent, which must remain alive; resizing it invalidates old slices. |
 | `SubDataRefRaw(...)` | Raw-pointer form for bindings; manage ownership explicitly. |
 | `SetBits(buffer, count, mask, start)` | Byte overloads count bytes; word overloads count 32-bit words. Mask selects aval bits to update; other aval bits survive. Written regions clear bval. |
 | `GetBits(buffer, count)` | Read the selected granularity; returns false for unknown data. |
@@ -134,6 +134,80 @@ indexed `NewXData` use the same shared backend.
 
 Array layouts use native ABI 4. The DPI/native paths target Verilator 5.026 and
 newer, with regression coverage on 5.026, 5.048, and 5.052.
+
+## Recursive struct and packed-array views
+
+`XStruct` is an independent, recursively named container, not a subclass of
+`XData`. `XArray` preserves one declared array dimension; its elements can
+be ordinary `XData`, another array, or a struct. Their shared implementation is
+in `xview.h`.
+Picker's RTL aggregate port integration requires Verilator 5.048 or newer;
+the xcomm containers themselves do not depend on a simulator version.
+
+| Storage | Representation |
+| --- | --- |
+| Packed struct | One parent `XData`; field leaves are bit slices |
+| Packed array | One parent `XData`; index selections are bit slices |
+| Unpacked struct | Independent field `XData` values and recursive containers |
+| Unpacked array | Independent element values and recursive containers; `XDataArray` still owns homogeneous backends |
+
+Picker emits the recursive layout and bound leaf paths. `XView.FromPort(port,
+name, layout_json)` groups existing leaves without changing their binding,
+write mode or `XPort` registration. `XData.StructView(layout_json)` and
+`XData.ArrayView(layout_json)` create packed views directly from a single value.
+Layouts include `kind`, `packed`, `width` (zero for scalar leaves), optional
+`signed`/`four_state`, array `left`/`right`/`element`, or struct `fields` with
+`name`, `type`, and packed `offset`. Widths, bounds, duplicate names, overlapping
+fields, gaps and recursive depth are checked before accessing data.
+
+`XView` is a lightweight dynamic node handle, not another value or backend.
+`Kind()` identifies `bits`, `struct`, or `array`; `Data()`, `Struct()` and `Array()`
+require that exact kind. A mismatch reports the node path, actual kind and requested
+kind. Empty handles and expired sources are rejected when converting; `HasValue()`
+only tests whether a node exists, not whether its source remains alive.
+
+C++ factories, `Field`, `At` and `XVPI.Get` return `XView` by value. A typed
+destination implicitly performs the same checks without copying signal data:
+
+```cpp
+XView node = record->Field("payload");
+std::shared_ptr<XArray> array = node;   // payload must be an array
+std::shared_ptr<XStruct> wrong = node; // throws; an existing target stays unchanged
+```
+
+Packed containers never implicitly convert to `XData`; explicitly use `PackedData()`
+for their complete packed value. `XStruct.Data(name)` and `XArray.Data(index)` also
+explicitly select a whole packed field/element. Python normally unwraps nodes to
+their concrete type; Python annotations do not enforce variable-assignment checks.
+
+`XStruct.Names()` retains
+RTL field declaration order. `Field(name)` returns a typed node; `Data(name)`,
+`Struct(name)` and `Array(name)` provide direct access. `PackedData()` returns a
+complete packed value and rejects unpacked containers. `XArray.At(index)`
+uses an actual RTL index, not a position; its `Data/Struct/Array(index)` helpers
+return the selected object. `Shape`, `LeftBounds` and `RightBounds` describe the
+consecutive dimensions of the same packed/unpacked kind.
+
+Python containers support `view[name]`, struct field attributes, array `[index]`,
+`bounds`, `shape`, and declaration-order iteration. Packed struct fields and
+packed values selected from unpacked arrays remain complete `XData` values;
+request `Array(name)` or `Array(index)` explicitly to index their packed bits.
+Method-name collisions are accessible with `view[name]`. Container structure is
+read-only; drive the referenced signal's `.value` instead of replacing a field.
+
+Packed selections are created lazily and cached. Slices dispatch through their
+parent without per-slice backend callbacks, preserve both aval/bval, and merge
+writes without changing sibling bits. The parent controls backend write timing
+and edge commits; do not register slices as additional ordinary data pins.
+Layout and child containers can outlive their outer view, but the source
+`XData`, DUT memory and DPI library must remain alive. Access through a slice
+whose parent was destroyed fails rather than dereferencing the parent.
+Go/Lua expose cached `XData` leaves as borrowed references; keep their source
+view alive while retaining a leaf. Generated DUTs retain those views themselves.
+Go container handles are owned resources: release them with `DeleteXView`,
+`DeleteXStruct` or `DeleteXArray` when no longer needed, including handles
+returned by `Field`, `At`, `Struct` and `Array`. Do not delete borrowed `XData`
+leaves. Lua garbage collection releases owned container handles.
 
 ## Connections, comparison and callbacks
 

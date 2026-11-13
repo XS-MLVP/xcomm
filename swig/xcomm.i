@@ -3,6 +3,8 @@
 #include "xspcomm/xclock.h"
 #include "xspcomm/xdata.h"  
 #include "xspcomm/xarray.h"
+#include "xspcomm/xview.h"
+#include "xspcomm/xvpi_view.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/xcallback.h"
 #include "xspcomm/xsignal_cfg.h"
@@ -50,6 +52,9 @@
 %include std_shared_ptr.i
 %shared_ptr(xspcomm::XData)
 %shared_ptr(xspcomm::XDataArray)
+%shared_ptr(xspcomm::XStruct)
+%shared_ptr(xspcomm::XArray)
+%shared_ptr(xspcomm::XVPI)
 #endif
 
 %ignore xspcomm::XPort::SelectPins(std::initializer_list<std::string>);
@@ -77,8 +82,36 @@ namespace std {
 }
 %include "xspcomm/runtime/types.h"
 %include "xspcomm/xclock.h"
+#if defined(SWIGGO) || defined(SWIGLUA) || defined(SWIGJAVASCRIPT)
+// These SWIG targets do not provide std_shared_ptr.i. Keep shared node/storage
+// ownership in C++; expose owned container handles and borrowed cached XData.
+%ignore xspcomm::XData::StructView;
+%ignore xspcomm::XData::ArrayView;
+%ignore xspcomm::XView::FromData;
+%ignore xspcomm::XView::FromPort;
+%ignore xspcomm::XView::Data;
+%ignore xspcomm::XView::Struct;
+%ignore xspcomm::XView::Array;
+%ignore xspcomm::XView::PackedData;
+%ignore xspcomm::XStruct::Field;
+%ignore xspcomm::XStruct::Data;
+%ignore xspcomm::XStruct::Struct;
+%ignore xspcomm::XStruct::Array;
+%ignore xspcomm::XStruct::PackedData;
+%ignore xspcomm::XArray::At;
+%ignore xspcomm::XArray::Data;
+%ignore xspcomm::XArray::Struct;
+%ignore xspcomm::XArray::Array;
+%ignore xspcomm::XArray::PackedData;
+%ignore xspcomm::XVPI::Get;
+#endif
 %include "xspcomm/xdata.h"
 %include "xspcomm/xarray.h"
+%include "xspcomm/xview.h"
+%include "xspcomm/xvpi_view.h"
+#if defined(SWIGGO) || defined(SWIGLUA) || defined(SWIGJAVASCRIPT)
+%include "view_raw.i"
+#endif
 %include "xspcomm/xport.h"
 %include "xspcomm/xutil.h"
 %include "xspcomm/xsignal_cfg.h"

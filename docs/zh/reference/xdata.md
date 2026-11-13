@@ -62,7 +62,7 @@ assert not value.DataValid()
 | --- | --- |
 | `At(index)`；C++ `operator[]` | 返回 PinBind；Python 下标读取返回 0/1/2/3，赋值修改该位。 |
 | `PinBind.Set/Get/AsInt32/AsString` | 读写一个四态 bit。 |
-| `SubDataRef(start, width, name)` | 引用原对象的 `[start, start+width)`，写入切片会影响父信号；父对象须存活。 |
+| `SubDataRef(start, width, name)` | 引用原对象的 `[start, start+width)`，width 为零时选一个标量 bit；写入影响父信号，父对象须存活，改宽后旧切片失效。 |
 | `SubDataRefRaw(...)` | 裸指针形式，供部分绑定使用；需处理对象所有权。 |
 | `SetBits(buffer, count, mask, start)` | byte 重载的 start/count 以 byte 计，word 重载以 32-bit word 计；mask 选择哪些数据位更新，未选中的 aval 位保留；已写区域的 bval 清零。 |
 | `GetBits(buffer, count)` | 读取对应粒度的数据，含未知位时返回 false。 |
@@ -124,6 +124,67 @@ rank 须与维度 rank 一致。不完整的布局直接拒绝，不做推断。
 
 数组布局使用原生 ABI 4。DPI/native 路径面向 Verilator 5.026 及更新版本，回归验证
 版本为 5.026、5.048、5.052。
+
+## 递归 struct 与 packed 数组视图
+
+`XStruct` 是按字段名组织的独立递归容器，不继承 `XData`。`XArray` 保留一个声明的
+数组维度，元素可以是普通 `XData`、另一层数组或 struct。共享实现位于 `xview.h`。
+Picker 的 RTL 聚合端口集成要求 Verilator 5.048 及更新版本；xcomm 容器本身不依赖
+特定仿真器版本。
+
+| 存储类型 | 表示 |
+| --- | --- |
+| packed struct | 一个父 `XData`，字段叶子映射位切片 |
+| packed array | 一个父 `XData`，数组下标映射位切片 |
+| unpacked struct | 独立字段 `XData` 与递归容器 |
+| unpacked array | 独立元素值与递归容器；同类元素后端仍由 `XDataArray` 管理 |
+
+Picker 自动生成递归布局和绑定叶子的路径。`XView.FromPort(port, name, layout_json)`
+组织已有叶子，不改变其绑定、写模式或 `XPort` 注册。
+`XData.StructView(layout_json)`、`XData.ArrayView(layout_json)` 直接在一个值上建立
+packed 视图。布局包含 `kind`、`packed`、`width`（标量叶子为零），可选的
+`signed`/`four_state`，数组的 `left`/`right`/`element`，或 struct 的 `fields`；字段含
+`name`、`type`，packed 字段还含 `offset`。会检查位宽、边界、重名、字段重叠、空隙和
+递归深度，再访问数据。
+
+`XView` 是动态节点的轻量句柄，不是另一种值或后端。`Kind()` 返回 `bits`、`struct` 或
+`array`，`Data()`、`Struct()`、`Array()` 要求实际类型完全匹配；不匹配时报告节点路径、
+实际类型和目标类型。空句柄、来源已失效的句柄在转换时会报错；`HasValue()` 只检查是否有
+节点，不代表来源仍然存活。
+
+C++ 工厂、`Field`、`At` 和 `XVPI.Get` 按值返回 `XView`。赋给明确类型的目标时会隐式执行
+同样的检查，不复制信号数据：
+
+```cpp
+XView node = record->Field("payload");
+std::shared_ptr<XArray> array = node;   // payload 必须是 array
+std::shared_ptr<XStruct> wrong = node; // 抛异常；赋给已有目标时，原目标保持不变
+```
+
+packed 容器不隐式转换为 `XData`，需要完整 packed 值时显式调用 `PackedData()`。
+`XStruct.Data(name)`、`XArray.Data(index)` 同样是显式选择完整 packed 字段或元素。
+Python 通常直接解包为具体类型；Python 类型注解不检查普通变量赋值。
+
+`XStruct.Names()` 保留 RTL 字段声明顺序，`Field(name)` 返回类型节点，
+`Data(name)`、`Struct(name)`、`Array(name)` 直接访问字段。`PackedData()` 返回完整
+packed 值，对 unpacked 容器报错。`XArray.At(index)` 使用真实 RTL 下标而非位置；
+`Data/Struct/Array(index)` 返回选中的对象。`Shape`、`LeftBounds`、`RightBounds`
+描述连续且 packed/unpacked 类型相同的各层维度。
+
+Python 支持 `view[name]`、struct 字段属性、数组 `[index]`、`bounds`、`shape` 与按
+声明顺序遍历。packed struct 的位向量字段、从 unpacked 数组取出的 packed 值仍是
+完整 `XData`；需要按 packed 下标访问时，显式调用 `Array(name)` 或 `Array(index)`。
+与方法重名的字段使用 `view[name]`。容器结构只读，应给信号的 `.value` 赋值，不替换字段。
+
+packed 选择按需创建并缓存；切片直接经过父信号分发，不安装逐切片后端回调，同时保留
+aval/bval，字段写入不会覆盖其他位。后端写时机与边沿提交由父信号控制，不要额外把切片
+注册成普通数据引脚。布局与子容器可以比外层视图活得更久，但来源 `XData`、DUT 内存与
+DPI 动态库必须仍然存活；父信号销毁后的切片访问会报错，不解引用已销毁父对象。
+Go/Lua 返回的缓存 `XData` 叶子是借用引用，保留叶子时也须保持来源视图存活；生成的
+DUT 自身会保存这些视图。
+Go 容器句柄由调用者拥有，不再使用时调用 `DeleteXView`、`DeleteXStruct` 或
+`DeleteXArray` 释放，包括 `Field`、`At`、`Struct`、`Array` 返回的句柄；不要删除
+借用的 `XData` 叶子。Lua 垃圾回收会释放拥有所有权的容器句柄。
 
 ## 连接、比较、回调
 

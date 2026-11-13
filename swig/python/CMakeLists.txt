@@ -10,12 +10,12 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_pyswig)
 file(GLOB_RECURSE XSPCOMM_SWIG_HEADERS CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/../../include/xspcomm/*.h")
 set_property(SOURCE python.i PROPERTY DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${XSPCOMM_SWIG_HEADERS}")
+        "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${CMAKE_CURRENT_SOURCE_DIR}/../view_raw.i;${XSPCOMM_SWIG_HEADERS}")
 # UseSWIG consumes this variable when it creates the SWIG custom command.
 # The source DEPENDS property alone is not propagated by every CMake generator
 # (notably Unix Makefiles when xcomm is a Picker subdirectory).
 set(SWIG_MODULE_pyxspcomm_EXTRA_DEPS
-        "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${XSPCOMM_SWIG_HEADERS}")
+        "${CMAKE_CURRENT_SOURCE_DIR}/../xcomm.i;${CMAKE_CURRENT_SOURCE_DIR}/../view_raw.i;${XSPCOMM_SWIG_HEADERS}")
 
 # Add swig module
 string(TOLOWER "$ENV{BUILD_XSPCOMM_VCS_UVMPS}" swig_vcs_pubsub)
@@ -57,6 +57,11 @@ if(BUILD_TESTING)
     add_test(NAME test_xarray_python
         COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${XCOMM_LIB_DIR}/.."
             ${Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_xarray.py -v)
+    configure_file(${PROJECT_SOURCE_DIR}/tests/bindings/python/test_xstruct.py
+        ${CMAKE_CURRENT_BINARY_DIR}/test_xstruct.py COPYONLY)
+    add_test(NAME test_xstruct_python
+        COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=${XCOMM_LIB_DIR}/.."
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_xstruct.py -v)
 endif()
 set(STAGE_NATIVE_LIBRARY_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/../StageSharedLibrary.cmake)
 # set rpath prefix
