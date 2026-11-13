@@ -12,7 +12,8 @@ namespace xspcomm {
 class XPort;
 class XStruct;
 class XArray;
-namespace detail { struct ViewNode; }
+namespace detail { struct ViewNode; class ArrayBinding; }
+class XSignalCFG;
 
 // A lightweight value handle for a dynamically selected signal or container.
 // Copies share the original node, never copy data or register callbacks.
@@ -74,7 +75,18 @@ class XArray {
     std::shared_ptr<detail::ViewNode> node;
     explicit XArray(std::shared_ptr<detail::ViewNode> node);
     friend class XView;
+    friend class XSignalCFG;
+    static std::shared_ptr<XArray> FromBinding(std::shared_ptr<detail::ArrayBinding> binding,
+                                             uint32_t width, const std::string &name);
+    void BindElement(XData &element, uint64_t index) const;
 public:
+    // Homogeneous unpacked arrays use the same recursive interface as aggregate
+    // arrays. The model memory / DPI library must outlive all resulting leaves.
+    static std::shared_ptr<XArray> FromDPI(uint32_t width, const std::vector<int> &left,
+        const std::vector<int> &right, uint64_t read, uint64_t write);
+    static std::shared_ptr<XArray> FromNative(uint32_t width, const std::vector<int> &left,
+        const std::vector<int> &right, uint64_t base,
+        const std::vector<unsigned long long> &strides = {});
     bool IsPacked() const;
     int Left() const;
     int Right() const;

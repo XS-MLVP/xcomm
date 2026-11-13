@@ -4,7 +4,7 @@ This index groups entry points by responsibility. Module pages explain arguments
 
 | Module | Public types/entry points | Details |
 | --- | --- | --- |
-| Signals | XData, XDataArray, XView, XStruct, XArray, PinBind, IOType, WriteMode, XDataBackendKind, xsvLogic, xsvLogicVecVal | [XData](xdata.md) |
+| Signals | XData, XView, XStruct, XArray, PinBind, IOType, WriteMode, XDataBackendKind, xsvLogic, xsvLogicVecVal | [XData](xdata.md) |
 | Ports | XPort | [XPort](xport.md) |
 | Clocks | XClock, FastMode, XStep | [XClock](xclock.md) |
 | Expressions | ExprEngine, ExprOp, ExprNode, NewBits, EvalBits, Collect | [ExprEngine](expressions.md) |

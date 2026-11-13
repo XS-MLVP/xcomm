@@ -7,9 +7,15 @@ The shared interface is [xcomm.i](https://github.com/XS-MLVP/xcomm/blob/master/s
 - C++ uses XEngine; bindings currently expose XTriggerEngine. The C++ XTriggerEngine name is an alias.
 - Python enums are generally flattened, such as XPhase_RisingStable, ExprOp_EQ and XCoveragePointKind_Pattern. XData.In/Out/InOut are direction conveniences.
 - Descriptor arrays use XCoveragePointVector, XCoverageBinVector, XSequenceStepVector and XFsmTransitionVector. Index containers include XIntVector/XUInt32Vector/XUInt64Vector; hit lists use XBackendHitVector.
-- Python and Java expose XDataArray. Python accepts lists for bounds, indices and strides; Java uses XIntVector/XUInt64Vector.
+- All array views use XArray. Python accepts lists for factory bounds/strides; Java uses XIntVector/XUInt64Vector. Select one RTL index per dimension with At/Array/Data, or Python indexing.
 - Python vector<unsigned char> arguments use bytes, not arbitrary lists. Byte results also use bytes.
 - Native pointers stored in another object do not automatically keep other language proxies alive. Retain clocks, signals, ports and callbacks explicitly.
+
+`XArray.FromDPI`/`FromNative` and `XSignalCFG.NewXArray` return `XArray` handles;
+`XArray.At(index)` returns a checked `XView`. Go, Lua and JavaScript use owned
+container handles but borrowed leaf `XData` handles: retain the source container
+or DUT while using those leaves. C++/Python/Java factory leaves retain their
+shared backend state, but no binding owns the model allocation or DPI library.
 
 ## Python XData
 

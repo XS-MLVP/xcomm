@@ -4,7 +4,7 @@
 
 | 模块 | 公开类型/入口 | 详细说明 |
 | --- | --- | --- |
-| 信号 | XData、XDataArray、XView、XStruct、XArray、PinBind、IOType、WriteMode、XDataBackendKind、xsvLogic、xsvLogicVecVal | [XData](xdata.md) |
+| 信号 | XData、XView、XStruct、XArray、PinBind、IOType、WriteMode、XDataBackendKind、xsvLogic、xsvLogicVecVal | [XData](xdata.md) |
 | 端口 | XPort | [XPort](xport.md) |
 | 时钟 | XClock、FastMode、XStep | [XClock](xclock.md) |
 | 表达式 | ExprEngine、ExprOp、ExprNode、NewBits、EvalBits、Collect | [ExprEngine](expressions.md) |

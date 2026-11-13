@@ -88,23 +88,22 @@ Native vector 存储约定是 1–8 bit 用 uint8、9–16 bit 用 uint16、17 b
 ## 定长 unpacked 数组
 
 [xarray.h](https://github.com/XS-MLVP/xcomm/blob/master/include/xspcomm/xarray.h)
-提供 `XDataArray(width, left_bounds, right_bounds)`，用于固定多维
-unpacked 数组。一个数组只持有一份共享索引后端，各元素值仍由普通叶子 `XData` 保存。
-`FlatIndex(indices)`、`Indices(index)` 按声明顺序换算下标，最后一维变化最快，支持降序和
-负 RTL 下标。`Left/Right/Shape/Size` 分别提供边界、各维长度和元素总数。
+提供与聚合数组相同的递归 `XArray` 接口，每层接受真实 RTL 下标，支持降序和负下标。
+`Left/Right/Size` 表示当前维度的边界和长度；`LeftBounds/RightBounds/Shape` 描述连续
+数组维度。`Array(index)` 选择子数组，`Data(index)` 选择已有的 packed 叶子，Python
+也支持 `array[i][j]`。
 
-在创建或绑定叶子前，配置一次后端：
+通过工厂创建同质 unpacked 数组及其共享索引后端：
 
-- `BindDPIPtr(getter, setter)` 使用 `void get(int index, void *value)`，以及标量的
+- `XArray.FromDPI(width, left, right, getter, setter)` 使用 `void get(int index, void *value)`，以及标量的
   `void set(int index, unsigned char value)` 或位向量的
   `void set(int index, const void *value)`。setter 为零表示只读，总数须适合正 C++ `int`。
-- `BindNativeData(base, byte_strides)` 的基地址是各维最小 RTL 下标对应的元素。字节步长
+- `XArray.FromNative(width, left, right, base, byte_strides)` 的基地址是各维最小 RTL 下标对应的元素。字节步长
   按从外到内排列；省略时使用上述原生元素表示的连续布局，允许不重叠的行主序 padding。
   会检查维数、下标、位宽、重叠以及尺寸和地址运算。
 
-`At(indices)`/`AtFlat(index)` 按需创建、缓存共享叶子，
-`BindElement(existing_xdata, index)` 绑定已有的同宽叶子。`Address(index)` 返回原生元素
-地址，`Strides()` 返回字节步长，`IsArrayBound()` 判断叶子是否走数组后端。叶子保存共享
+数组选择按需创建、缓存递归节点和共享叶子。共享绑定、扁平下标换算与元素地址属于内部
+实现，不再构成另一套公开数组类型。`IsArrayBound()` 判断叶子是否走数组后端。叶子保存共享
 后端状态，以及 DPI 扁平下标或绑定时计算好的原生地址；不会安装逐元素读写
 `std::function`。原有写入时序、切片、mask 和变化通知继续有效；原生位向量读取沿用原有
 bval 策略，原生内存并不是 SV 四态缓冲区。
@@ -115,15 +114,33 @@ bval 策略，原生内存并不是 SV 四态缓冲区。
 
 保留叶子可以延长共享元数据的生命周期，但不会延长模型内存、DPI 动态库的生命周期。
 需要切换存储时创建新数组，不能重新绑定已有数组。叶子 `ReInit` 或绑定独立后端会解除
-数组绑定；复制 XData 仍保持原有快照语义，不复制数组绑定。
+数组绑定；使用原数组视图期间不要重新初始化或重新绑定其缓存叶子。复制 XData 仍保持
+原有快照语义，不复制数组绑定。
 
-`XSignalCFG.NewXDataArrayView(name)` 消费 `array_dimensions` 和 `array_strides`，缓存
+`XSignalCFG.NewXArray(name)` 消费 `array_dimensions` 和 `array_strides`，缓存
 原生数组视图。数组 YAML 必须同时提供这两个字段：维度乘积须等于 `array_size`，步长
 rank 须与维度 rank 一致。不完整的布局直接拒绝，不做推断。内部视图使用从零开始的存储
-坐标；`NewXDataArray` 和带下标的 `NewXData` 也使用同一共享后端。
+坐标；带下标的 `NewXData` 也使用同一共享后端，但其旧有下标仍表示扁平存储位置。
 
 数组布局使用原生 ABI 4。DPI/native 路径面向 Verilator 5.026 及更新版本，回归验证
 版本为 5.026、5.048、5.052。
+
+原公开类型 `XDataArray` 及 `NewXDataArray`/`NewXDataArrayView` 工厂已移除，不保留
+别名。请改用 `XArray.FromDPI`/`FromNative` 和 `XSignalCFG.NewXArray`。
+`Size()` 现在表示当前维度长度而非元素总数；使用逐层选择，不再传完整坐标或扁平下标。
+例如 Python：
+
+<!-- runnable:python -->
+```python
+import ctypes
+import xspcomm as xs
+
+memory = (ctypes.c_ubyte * 6)()
+array = xs.XArray.FromNative(8, [-1, 3], [1, 2], ctypes.addressof(memory), [2, 1])
+array[0][2].AsImmWrite()
+array[0][2].value = 42
+assert memory[2] == 42
+```
 
 ## 递归 struct 与 packed 数组视图
 
@@ -137,7 +154,7 @@ Picker 的 RTL 聚合端口集成要求 Verilator 5.048 及更新版本；xcomm 
 | packed struct | 一个父 `XData`，字段叶子映射位切片 |
 | packed array | 一个父 `XData`，数组下标映射位切片 |
 | unpacked struct | 独立字段 `XData` 与递归容器 |
-| unpacked array | 独立元素值与递归容器；同类元素后端仍由 `XDataArray` 管理 |
+| unpacked array | XArray 组织独立元素值与递归容器；同类叶子共享内部索引后端 |
 
 Picker 自动生成递归布局和绑定叶子的路径。`XView.FromPort(port, name, layout_json)`
 组织已有叶子，不改变其绑定、写模式或 `XPort` 注册。
@@ -152,7 +169,7 @@ packed 视图。布局包含 `kind`、`packed`、`width`（标量叶子为零）
 实际类型和目标类型。空句柄、来源已失效的句柄在转换时会报错；`HasValue()` 只检查是否有
 节点，不代表来源仍然存活。
 
-C++ 工厂、`Field`、`At` 和 `XVPI.Get` 按值返回 `XView`。赋给明确类型的目标时会隐式执行
+C++ 的 `XView` 工厂、`Field`、`At` 和 `XVPI.Get` 按值返回 `XView`。赋给明确类型的目标时会隐式执行
 同样的检查，不复制信号数据：
 
 ```cpp

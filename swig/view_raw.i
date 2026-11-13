@@ -39,6 +39,14 @@
 %owned_node(XArray, At, int index, index)
 %owned_view(XArray, Struct, XStruct, int index, index)
 %owned_view(XArray, Array, XArray, int index, index)
+%rename(NewXArray) xspcomm::XSignalCFG::NewXArrayHandle;
+%newobject xspcomm::XSignalCFG::NewXArrayHandle;
+%extend xspcomm::XSignalCFG {
+    xspcomm::XArray *NewXArrayHandle(const std::string &name) {
+        auto result = $self->NewXArray(name);
+        return result ? new xspcomm::XArray(*result) : nullptr;
+    }
+}
 %owned_node(XVPI, Get, const std::string &name, name)
 %borrowed_data(XView, Data, , )
 %borrowed_data(XView, PackedData, , )
@@ -58,5 +66,21 @@
     static xspcomm::XView *FromPortHandle(xspcomm::XPort &port, const std::string &name,
                                        const std::string &layout) {
         return new xspcomm::XView(xspcomm::XView::FromPort(port, name, layout));
+    }
+}
+
+%rename(FromDPI) xspcomm::XArray::FromDPIHandle;
+%rename(FromNative) xspcomm::XArray::FromNativeHandle;
+%newobject xspcomm::XArray::FromDPIHandle;
+%newobject xspcomm::XArray::FromNativeHandle;
+%extend xspcomm::XArray {
+    static xspcomm::XArray *FromDPIHandle(uint32_t width, const std::vector<int> &left,
+        const std::vector<int> &right, uint64_t read, uint64_t write) {
+        return new xspcomm::XArray(*xspcomm::XArray::FromDPI(width, left, right, read, write));
+    }
+    static xspcomm::XArray *FromNativeHandle(uint32_t width, const std::vector<int> &left,
+        const std::vector<int> &right, uint64_t base,
+        const std::vector<unsigned long long> &strides = {}) {
+        return new xspcomm::XArray(*xspcomm::XArray::FromNative(width, left, right, base, strides));
     }
 }

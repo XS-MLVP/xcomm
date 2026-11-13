@@ -1,5 +1,6 @@
 #include "xspcomm/xview.h"
 #include "xspcomm/xport.h"
+#include "xspcomm/detail/array_binding.h"
 #include "fkyaml/node.hpp"
 #include <algorithm>
 #include <limits>
@@ -139,16 +140,21 @@ struct ViewNode {
     uint32_t offset = 0;
     std::shared_ptr<XData> data;
     std::map<uint64_t, std::shared_ptr<ViewNode>> children;
+    std::shared_ptr<ArrayBinding> indexed;
+    uint64_t indexed_first = 0, indexed_count = 0;
 
     ViewNode(std::shared_ptr<const Layout> layout, std::shared_ptr<const Bindings> bindings,
-             std::string path, std::shared_ptr<DataRef> backing = nullptr, uint32_t offset = 0)
+             std::string path, std::shared_ptr<DataRef> backing = nullptr, uint32_t offset = 0,
+             std::shared_ptr<ArrayBinding> indexed = nullptr, uint64_t first = 0, uint64_t count = 0)
         : layout(std::move(layout)), bindings(std::move(bindings)), path(std::move(path)),
-          backing(std::move(backing)), offset(offset) {
-        if (this->layout->packed && !this->backing)
+          backing(std::move(backing)), offset(offset), indexed(std::move(indexed)),
+          indexed_first(first), indexed_count(count) {
+        if (this->layout->packed && !this->backing && !this->indexed)
             this->backing = std::make_shared<DataRef>(this->bindings->at(this->path));
     }
 
     void CheckAlive() const {
+        if (indexed) { indexed->CheckBound(); return; }
         auto check = [&](const DataRef &ref, const std::string &source) {
             try {
                 // This checks parent/VPI lifetimes without sampling the signal
@@ -173,6 +179,13 @@ struct ViewNode {
     }
 
     std::shared_ptr<XData> Data() {
+        if (indexed) {
+            auto leaf = indexed->AtFlat(indexed_first);
+            if (leaf->mWidth != layout->width)
+                throw std::runtime_error("Array leaf width has changed: " + path);
+            if (leaf->mName.empty()) leaf->mName = path;
+            return leaf;
+        }
         if (!backing) throw std::invalid_argument("Unpacked container has no whole XData value");
         auto &parent = backing->Get();
         if (!data) {
@@ -200,7 +213,9 @@ struct ViewNode {
             if (layout->packed) child_offset += (layout->Size() - position - 1) * child->Bits();
         }
         auto result = std::make_shared<ViewNode>(child, bindings, child_path,
-            layout->packed ? backing : nullptr, uint32_t(child_offset));
+            layout->packed ? backing : nullptr, uint32_t(child_offset), indexed,
+            indexed ? indexed_first + position * (indexed_count / layout->Size()) : 0,
+            indexed ? indexed_count / layout->Size() : 0);
         children.emplace(position, result);
         return result;
     }
@@ -301,6 +316,43 @@ std::shared_ptr<XArray> XStruct::Array(const std::string &name) { return Field(n
 std::shared_ptr<XData> XStruct::PackedData() { return XView(node).PackedData(); }
 
 XArray::XArray(std::shared_ptr<detail::ViewNode> node) : node(std::move(node)) {}
+std::shared_ptr<XArray> XArray::FromBinding(std::shared_ptr<detail::ArrayBinding> binding,
+                                          uint32_t width, const std::string &name) {
+    auto left = binding->Left(), right = binding->Right();
+    if (left.size() >= 128 || width > uint32_t(INT32_MAX))
+        throw std::invalid_argument("Array rank or element width exceeds supported layout limits");
+    auto layout = std::make_shared<detail::Layout>();
+    layout->kind = "bits";
+    layout->packed = true;
+    layout->width = width;
+    for (size_t d = left.size(); d-- > 0;) {
+        auto parent = std::make_shared<detail::Layout>();
+        parent->kind = "array";
+        parent->left = left[d]; parent->right = right[d];
+        parent->children.push_back(layout);
+        layout = std::move(parent);
+    }
+    auto root = std::make_shared<detail::ViewNode>(layout, nullptr, name, nullptr, 0,
+                                                  binding, 0, binding->Size());
+    return XView(std::move(root)).Array();
+}
+std::shared_ptr<XArray> XArray::FromDPI(uint32_t width, const std::vector<int> &left,
+    const std::vector<int> &right, uint64_t read, uint64_t write) {
+    auto binding = std::make_shared<detail::ArrayBinding>(width, left, right);
+    binding->BindDPIPtr(read, write);
+    return FromBinding(std::move(binding), width, "");
+}
+std::shared_ptr<XArray> XArray::FromNative(uint32_t width, const std::vector<int> &left,
+    const std::vector<int> &right, uint64_t base, const std::vector<unsigned long long> &strides) {
+    auto binding = std::make_shared<detail::ArrayBinding>(width, left, right);
+    binding->BindNativeData(base, strides);
+    return FromBinding(std::move(binding), width, "");
+}
+void XArray::BindElement(XData &element, uint64_t index) const {
+    if (!node->indexed) throw std::logic_error("Array has no indexed binding");
+    if (index >= node->indexed_count) throw std::out_of_range("Native array index out of range");
+    node->indexed->BindElement(element, node->indexed_first + index);
+}
 bool XArray::IsPacked() const { return node->layout->packed; }
 int XArray::Left() const { return node->layout->left; }
 int XArray::Right() const { return node->layout->right; }

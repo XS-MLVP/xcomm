@@ -16,11 +16,10 @@
 
 namespace xspcomm {
 
-namespace detail { struct XDataArrayStorage; }
+namespace detail { struct ArrayStorage; class ArrayBinding; }
 namespace detail { struct VpiOwnedHandle; }
 namespace detail { struct ViewNode; }
 class XVPI;
-class XDataArray;
 class XView;
 class XStruct;
 class XArray;
@@ -133,7 +132,7 @@ struct XDataCallBack {
 };
 class XData
 {
-    friend class XDataArray;
+    friend class detail::ArrayBinding;
     friend class XVPI;
     friend struct detail::ViewNode;
 public:
@@ -175,7 +174,7 @@ private:
     std::weak_ptr<const int> sub_lifetime;
     XDataBackendKind backend_kind = XDataBackendKind::Unknown;
     bool readonly_backend         = false;
-    std::shared_ptr<detail::XDataArrayStorage> array_storage;
+    std::shared_ptr<detail::ArrayStorage> array_storage;
     uint64_t array_location = 0; // DPI flat index or precomputed native address.
 
     // For VPI

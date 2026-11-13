@@ -1,18 +1,18 @@
 #ifndef XSPCOMM_DATA_ARRAY_STORAGE_H
 #define XSPCOMM_DATA_ARRAY_STORAGE_H
 
-#include "xspcomm/xarray.h"
+#include "xspcomm/detail/array_binding.h"
 
 namespace xspcomm::detail {
 
-struct XDataArrayStorage {
+struct ArrayStorage {
     uint32_t width;
     std::vector<int> left, right, shape;
     std::vector<unsigned long long> strides;
     uint64_t size = 1, base = 0, getter = 0, setter = 0;
     XDataBackendKind kind = XDataBackendKind::Unknown;
 
-    XDataArrayStorage(uint32_t width, const std::vector<int> &left, const std::vector<int> &right);
+    ArrayStorage(uint32_t width, const std::vector<int> &left, const std::vector<int> &right);
     void CheckIndex(uint64_t index) const;
     uint64_t Address(uint64_t index) const;
     // Locations are resolved once at bind time: DPI index or native address.

@@ -48,8 +48,7 @@ variables:
 | `XSignalCFG(path_or_yaml, base_address=0)` | Accept an existing file path or YAML text; parse on the first query/construction operation. |
 | `NewXData(name, xname="")` | Create a signal; for an array, create the element at flat index 0. May return nullptr on failure. C++ callers own the result. |
 | `NewXData(name, index, xname="")` | Create an array element by flat, zero-based storage index. The index must be less than the array size and is checked; out-of-range values throw. Returns nullptr for a non-array name. |
-| `NewXDataArray(name, xname="")` | Create all elements in flat order from one shared view; C++ returns a shared_ptr vector. Returns an empty vector for a non-array name. |
-| `NewXDataArrayView(name)` | Return the cached XDataArray view with zero-based bounds, or nullptr for a missing or non-array name. |
+| `NewXArray(name)` | Return the cached recursive XArray with zero-based storage bounds, or nullptr for a missing or non-array name. Size is the current dimension length; Array/Data select one index per dimension. |
 | `GetSignalNames(pattern="")` | List names using pattern as a substring filter. |
 | `At(name)`; `operator[]` | Query native layout; missing entries have is_empty=true and become None in Python. |
 | `Address(name)` | Return base+offset. Check existence with At first; an address alone does not prove existence. |
