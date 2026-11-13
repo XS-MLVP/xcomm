@@ -65,7 +65,7 @@ object chiselUT {
                   workDir: String = ".pickerChiselUT",
                   forceRebuild: Boolean = false,
                   autoRebuild: Boolean = true,
-                  pickerExArgs: String = "",
+                  pickerExArgs: String = ""
                   ): BaseDUTTrait = {
     // Files need to check or generate
     val dutClassName = typeOf[A].typeSymbol.fullName.split('.').last.stripSuffix("$")
@@ -111,7 +111,7 @@ object chiselUT {
     }
     // Load the Scala JAR and instantiate the DUT
     val classLoader = loadJars(Seq(
-      Paths.get(scalaJarFile.toString).toFile,
+      Paths.get(scalaJarFile.toString).toFile
     ))
     val dutClass = classLoader.loadClass(s"com.ut.$dutClassName.UT_$dutClassName")
     val dutInstance = dutClass.getDeclaredConstructor().newInstance().asInstanceOf[BaseDUTTrait]

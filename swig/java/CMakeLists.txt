@@ -12,7 +12,9 @@ set_property(SOURCE java.i PROPERTY CPLUSPLUS ON)
 swig_add_library(javaxspcomm LANGUAGE java SOURCES java.i)
 set_property(TARGET javaxspcomm PROPERTY SWIG_DEPENDS
     "${PROJECT_SOURCE_DIR}/swig/xcomm.i"
+    "${PROJECT_SOURCE_DIR}/swig/view_raw.i"
     "${PROJECT_SOURCE_DIR}/include/xspcomm/xarray.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h"
     "${PROJECT_SOURCE_DIR}/include/xspcomm/xdata.h"
     "${PROJECT_SOURCE_DIR}/include/xspcomm/xsignal_cfg.h")
 target_link_libraries(javaxspcomm PRIVATE xspcomm)

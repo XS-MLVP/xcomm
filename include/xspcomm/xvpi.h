@@ -5,6 +5,11 @@
 *  VPI defines from verilator/include/vltstd/vpi_user.h
 */
 
+// Picker can include the simulator's official vpi_user.h before xcomm when
+// building a VPI-enabled adapter. Prefer that ABI-complete declaration set;
+// standalone xcomm builds use the compatible subset below.
+#ifndef VPI_USER_H
+
 typedef int              PLI_INT32;
 typedef unsigned int     PLI_UINT32;
 typedef short            PLI_INT16;
@@ -20,6 +25,28 @@ typedef PLI_UINT32 *vpiHandle;
 #define vpiSize                4   /* size of gate, net, port, etc. */
 #define vpiNet                36   /* scalar or vector net */
 #define vpiReg                48   /* scalar or vector reg */
+#define vpiMemory             29
+#define vpiMemoryWord         30
+#define vpiNetArray          114
+#define vpiRange             115
+#define vpiRegArray          116
+#define vpiLeftRange          79
+#define vpiRightRange         83
+#define vpiSigned             65
+#define vpiBitVar            620
+#define vpiIntVar            612
+#define vpiShortIntVar       611
+#define vpiLongIntVar        610
+#define vpiByteVar           614
+#define vpiIntegerVar         25
+#define vpiTimeVar            63
+#define vpiEnumVar           617
+#define vpiStructVar         618
+#define vpiStructNet         683
+#define vpiPackedArrayVar    623
+#define vpiPackedArrayNet    693
+#define vpiMember            742
+#define vpiPacked            630
 #define vpiForce              16   /* force statement */
 #define vpiRelease            50   /* release statement */
 
@@ -121,7 +148,16 @@ typedef vpiHandle    (*func_vpi_put_value)     (vpiHandle   object,
                                                 p_vpi_time  time_p,
                                                 PLI_INT32   flags);
 
-typedef PLI_BYTE8    (*func_vpi_get_str)       (PLI_INT32   property,
-                                                vpiHandle   object);
+typedef PLI_BYTE8 *  (*func_vpi_get_str)       (PLI_INT32   property,
+                                                 vpiHandle   object);
+#else
+// vpi_user.h declares these as global functions but does not publish reusable
+// function-pointer typedefs; xcomm stores them in a simulator-owned table.
+typedef PLI_INT32 (*func_vpi_get)(PLI_INT32 property, vpiHandle object);
+typedef void (*func_vpi_get_value)(vpiHandle object, p_vpi_value value);
+typedef vpiHandle (*func_vpi_put_value)(vpiHandle object, p_vpi_value value,
+                                        p_vpi_time time, PLI_INT32 flags);
+typedef PLI_BYTE8 *(*func_vpi_get_str)(PLI_INT32 property, vpiHandle object);
+#endif // VPI_USER_H
 
 #endif

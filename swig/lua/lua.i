@@ -81,4 +81,11 @@ namespace std {
     %template(UCharVector) vector<unsigned char>;
 }
 
+// Lua considers numeric strings to be numbers. Do not send a wide hexadecimal
+// XData value through an integer overload before its string overload sees it.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_INTEGER)
+    int data, unsigned int data, int64_t data, uint64_t data {
+    $1 = lua_type(L, $input) == LUA_TNUMBER;
+}
+
 %include ../xcomm.i

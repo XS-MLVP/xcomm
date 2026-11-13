@@ -4,5 +4,6 @@ namespace xspcomm::detail {
 
 Lifetime::Lifetime() : token(std::make_shared<const int>(0)) {}
 Lifetime::Lifetime(const Lifetime &) : Lifetime() {}
+void Lifetime::Renew() { token = std::make_shared<const int>(0); }
 
 } // namespace xspcomm::detail

@@ -5,6 +5,10 @@ set(SWIG_OUTFILE_DIR ${CMAKE_CURRENT_BINARY_DIR}/_golangswig)
 set_property(SOURCE golang.i PROPERTY CPLUSPLUS ON)
 
 swig_add_library(golangxspcomm TYPE SHARED LANGUAGE go SOURCES golang.i)
+set_property(TARGET golangxspcomm PROPERTY SWIG_DEPENDS
+    "${PROJECT_SOURCE_DIR}/swig/xcomm.i"
+    "${PROJECT_SOURCE_DIR}/swig/view_raw.i"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h")
 target_link_libraries(golangxspcomm PRIVATE xspcomm)
 
 # set buld output directory

@@ -4,6 +4,7 @@
 #include "xspcomm/xutil.h"
 #include "xspcomm/xvpi.h"
 #include "xspcomm/xcallback.h"
+#include "xspcomm/common/lifetime.h"
 
 #include <cstdio>
 #include <memory>
@@ -16,7 +17,13 @@
 namespace xspcomm {
 
 namespace detail { struct XDataArrayStorage; }
+namespace detail { struct VpiOwnedHandle; }
+namespace detail { struct ViewNode; }
+class XVPI;
 class XDataArray;
+class XView;
+class XStruct;
+class XArray;
 class ExprEngine;
 
 typedef unsigned char xsvLogic; /* scalar */
@@ -127,6 +134,8 @@ struct XDataCallBack {
 class XData
 {
     friend class XDataArray;
+    friend class XVPI;
+    friend struct detail::ViewNode;
 public:
     static const IOType In      = IOType::Input;
     static const IOType Out     = IOType::Output;
@@ -161,8 +170,9 @@ private:
     bool last_is_write            = false;
     bool ignore_same_write        = true;
     u_int32_t sub_offset          = 0;       // for sub data
-    xsvLogicVecVal * sub_pVecRef  = nullptr; // for sub data
-    XData *sub_parent             = nullptr; // non-owning; parent outlives view
+    XData *sub_parent             = nullptr; // observed; must be alive for access
+    detail::Lifetime view_lifetime;
+    std::weak_ptr<const int> sub_lifetime;
     XDataBackendKind backend_kind = XDataBackendKind::Unknown;
     bool readonly_backend         = false;
     std::shared_ptr<detail::XDataArrayStorage> array_storage;
@@ -175,6 +185,7 @@ private:
     vpiHandle vpi_obj_handle         = nullptr;
     PLI_INT32 vpi_obj_wflage         = vpiNoDelay;
     int vpi_data_type                = 0;  // 0: auto check, 1: scalar, 2: integer, 3: vector
+    std::shared_ptr<detail::VpiOwnedHandle> vpi_owner;
 
 private:
     void update_read();
@@ -189,10 +200,10 @@ private:
     void _dpi_check();
     bool _need_write();
     void _update_last_write();
-    void _sub_data_fake_dpirw(void *data, bool is_read);
-    void _sub_data_fake_dpir(void * data);
-    void _sub_data_fake_dpiw(void * data);
+    void _slice_rw(bool is_read);
     bool _check_writeable() const;
+    void _vpi_read();
+    void _vpi_write();
 
 public:
     // basic
@@ -212,6 +223,11 @@ public:
     ~XData();
     void ReInit(uint32_t width, IOType itype, std::string name = "");
     std::shared_ptr<XData> SubDataRef(uint32_t start, uint32_t width, std::string name = "");
+    std::shared_ptr<XStruct> StructView(const std::string &layout);
+    std::shared_ptr<XArray> ArrayView(const std::string &layout);
+#ifndef SWIG
+    std::weak_ptr<const int> ObserveLifetime() const { return view_lifetime.Observe(); }
+#endif
     WriteMode GetWriteMode();
     bool SetWriteMode(WriteMode mode);
     bool DataValid();
