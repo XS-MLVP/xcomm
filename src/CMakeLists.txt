@@ -7,6 +7,12 @@ if(XSPCOMM_WASM_LIB)
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${XSPCOMM_SOURCES})
+if(XSPCOMM_WASM_LIB)
+    target_compile_options(${PROJECT_NAME} PRIVATE "-sUSE_ZLIB=1")
+    target_link_options(${PROJECT_NAME} PRIVATE "-sUSE_ZLIB=1")
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
+endif()
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/third_party)

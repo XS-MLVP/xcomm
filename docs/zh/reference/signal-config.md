@@ -4,6 +4,10 @@
 
 ## 原生布局
 
+Picker 默认只导出一份 `.xscfg` 配置库，统一保存端口元数据、原生记录、共享类型、字段
+绑定及派生信号，不附带 YAML/JSON/索引副本。`XSignalCFG` 按文件魔数识别该格式，
+从 JAR 提取的文件也适用。下面的 YAML 入口仍用于手写配置，不是生成模型的运行时格式。
+
 variables 支持列表或嵌套映射，例子见 [列表配置](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/tests/fixtures/signal_cfg.yaml) 和 [映射配置](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/tests/fixtures/signal_cfg_map.yaml)。
 
 ```yaml
@@ -46,7 +50,8 @@ variables:
 
 | API | 用途与约束 |
 | --- | --- |
-| `XSignalCFG(path_or_yaml, base_address=0)` | 接受存在的文件路径或 YAML 字符串，第一次查询/构造时解析。 |
+| `XSignalCFG(path_or_yaml, base_address=0, model_id="")` | 接受 XSCFG 文件、手写 YAML 文件或文本，首次实际查询时加载。可选 model_id 拒绝其他构建的配置库；生成 DUT 始终传入该标识。 |
+| `Metadata(name)` | 显式解码一个元数据记录并返回 JSON，例如 `Metadata("ports")`；缺失返回 `"null"`。 |
 | `NewXData(name, xname="")` | 创建信号；数组名称创建扁平下标 0 的元素。失败可返回 nullptr；C++ 调用方管理返回对象。 |
 | `NewXData(name, index, xname="")` | 按扁平、从零开始的存储下标创建数组元素；下标必须小于数组大小并会检查，越界抛出异常。非数组名称返回 nullptr。 |
 | `NewXArray(name)` | 返回缓存的递归 XArray，边界为从零开始的存储坐标；名称不存在或不是数组时返回 nullptr。Size 为当前维度长度，Array/Data 每层选择一个下标。 |
@@ -79,6 +84,24 @@ assert memory.value == 0x55
 ```
 
 memory 必须比所有绑定它的信号活得更久。相对地址、mem_bytes、位宽、维度和步长应与实际模拟器布局匹配，尤其不能将窄 C 对象当成任意宽 word 数组。
+
+## 单文件二进制配置库
+
+格式显式使用小端整数，不保存进程指针或原生 C++ struct 布局。128 字节文件头记录模型
+标识及索引/块目录位置。每条索引占 8 字节，含 32 位名称指纹和压缩块/槽位定位符。
+指纹仅用于加速搜索，命中后始终核对完整类别和名称，哈希冲突不会绑定到另一信号。
+名称按公共前缀共享，类型化数值记录按块 deflate 压缩，普通块最多 256 条；压缩无收益的
+块直接保存原数据，每块单独校验。
+
+POSIX 上映射文件，不在打开时解析全部记录或为每个信号建立 map。首次查询仅校验和
+解码涉及的块。解压块缓存上限为 2 MiB；异常大的单条记录需要缓存之外的临时空间。
+信号对象、类型和绑定按需创建。名称枚举遍历块但不解码所有值；`String()` 会显式加载
+全部信号，不是启动路径。文件头/区间检查、块校验和、值复杂度及深度限制拒绝非法输入。
+文件头立即验证、数据块按需验证，不进行启动时的全文件完整性扫描。写入使用相邻临时
+文件及原子重命名，旧文件已映射的读者继续有效；不产生日志或长期缓存文件。
+
+文件格式版本 1 与原生 ABI 4 相互独立。构建需要 zlib 开发包（Debian/Ubuntu 为
+`zlib1g-dev`）。只读配置库拥有元数据，不拥有 DUT 存储，使用信号时模型必须存活。
 
 ## 递归原生类型
 
