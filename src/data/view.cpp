@@ -3,6 +3,7 @@
 #include "xspcomm/detail/array_binding.h"
 #include "fkyaml/node.hpp"
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <map>
 #include <set>
@@ -110,6 +111,7 @@ struct DataRef {
 };
 
 using Bindings = std::map<std::string, DataRef>;
+using NativeBindings = std::map<std::string, std::shared_ptr<ArrayBinding>>;
 
 void collect(XPort &port, const Layout &layout, const std::string &path, Bindings &bindings) {
     if (layout.packed) {
@@ -142,19 +144,35 @@ struct ViewNode {
     std::map<uint64_t, std::shared_ptr<ViewNode>> children;
     std::shared_ptr<ArrayBinding> indexed;
     uint64_t indexed_first = 0, indexed_count = 0;
+    std::shared_ptr<const NativeBindings> native;
+    std::string native_path;
+    std::vector<int> native_indices;
 
     ViewNode(std::shared_ptr<const Layout> layout, std::shared_ptr<const Bindings> bindings,
              std::string path, std::shared_ptr<DataRef> backing = nullptr, uint32_t offset = 0,
-             std::shared_ptr<ArrayBinding> indexed = nullptr, uint64_t first = 0, uint64_t count = 0)
+              std::shared_ptr<ArrayBinding> indexed = nullptr, uint64_t first = 0, uint64_t count = 0,
+              std::shared_ptr<const NativeBindings> native = nullptr, std::string native_path = "",
+              std::vector<int> native_indices = {})
         : layout(std::move(layout)), bindings(std::move(bindings)), path(std::move(path)),
           backing(std::move(backing)), offset(offset), indexed(std::move(indexed)),
-          indexed_first(first), indexed_count(count) {
+           indexed_first(first), indexed_count(count), native(std::move(native)),
+           native_path(std::move(native_path)), native_indices(std::move(native_indices)) {
+        if (this->layout->packed && this->native && !this->indexed) {
+            this->indexed = this->native->at(this->native_path);
+            // Scalar groups use a singleton dimension internally.
+            this->indexed_first = this->native_indices.empty() ? 0 : this->indexed->FlatIndex(this->native_indices);
+            this->indexed_count = 1;
+        }
         if (this->layout->packed && !this->backing && !this->indexed)
             this->backing = std::make_shared<DataRef>(this->bindings->at(this->path));
     }
 
     void CheckAlive() const {
         if (indexed) { indexed->CheckBound(); return; }
+        if (native) {
+            for (const auto &[path, group] : *native) group->CheckBound();
+            return;
+        }
         auto check = [&](const DataRef &ref, const std::string &source) {
             try {
                 // This checks parent/VPI lifetimes without sampling the signal
@@ -181,10 +199,15 @@ struct ViewNode {
     std::shared_ptr<XData> Data() {
         if (indexed) {
             auto leaf = indexed->AtFlat(indexed_first);
-            if (leaf->mWidth != layout->width)
-                throw std::runtime_error("Array leaf width has changed: " + path);
-            if (leaf->mName.empty()) leaf->mName = path;
-            return leaf;
+            if (!layout->packed) throw std::invalid_argument("Unpacked container has no whole XData value");
+            if (uint64_t(offset) + layout->Bits() > (leaf->mWidth ? leaf->mWidth : 1))
+                throw std::runtime_error("Array field exceeds its packed element: " + path);
+            if (!data) {
+                if (offset == 0 && leaf->mWidth == layout->width) data = leaf;
+                else data = leaf->SubDataRef(offset, layout->width, path);
+                if (data->mName.empty()) data->mName = path;
+            }
+            return data;
         }
         if (!backing) throw std::invalid_argument("Unpacked container has no whole XData value");
         auto &parent = backing->Get();
@@ -201,21 +224,26 @@ struct ViewNode {
         if (found != children.end()) return found->second;
         std::shared_ptr<const Layout> child;
         std::string child_path;
+        auto key = native_path;
+        auto indices = native_indices;
         uint64_t child_offset = offset;
         if (layout->kind == "struct") {
             child = layout->children.at(position);
             child_path = path + "." + layout->names.at(position);
             if (layout->packed) child_offset += layout->offsets.at(position);
+            else key += "." + layout->names.at(position);
         } else {
             child = layout->children.front();
             const auto index = int64_t(layout->left) + int64_t(position) * (layout->left <= layout->right ? 1 : -1);
             child_path = path + "[" + std::to_string(index) + "]";
             if (layout->packed) child_offset += (layout->Size() - position - 1) * child->Bits();
+            else { key += "[]"; indices.push_back(int(index)); }
         }
         auto result = std::make_shared<ViewNode>(child, bindings, child_path,
             layout->packed ? backing : nullptr, uint32_t(child_offset), indexed,
-            indexed ? indexed_first + position * (indexed_count / layout->Size()) : 0,
-            indexed ? indexed_count / layout->Size() : 0);
+            indexed ? indexed_first + (layout->packed ? 0 : position * (indexed_count / layout->Size())) : 0,
+            indexed ? (layout->packed ? indexed_count : indexed_count / layout->Size()) : 0,
+            native, std::move(key), std::move(indices));
         children.emplace(position, result);
         return result;
     }
@@ -232,6 +260,89 @@ XView XView::FromData(XData &data, const std::string &description) {
     auto root = std::make_shared<detail::ViewNode>(layout, nullptr, data.mName,
                                                   std::make_shared<detail::DataRef>(data));
     return XView(std::move(root));
+}
+
+XView XView::FromNative(uint64_t base, const std::string &description,
+                       const std::vector<unsigned long long> &strides) {
+    if (!base) throw std::invalid_argument("Native view base is null");
+    auto layout = detail::parse(fkyaml::node::deserialize(description));
+    auto value = layout;
+    std::vector<int> left, right;
+    while (!value->packed) {
+        if (value->kind != "array")
+            throw std::invalid_argument("Native unpacked structs require independent member bindings");
+        left.push_back(value->left);
+        right.push_back(value->right);
+        value = value->children.front();
+    }
+    if (left.empty()) {
+        if (!strides.empty()) throw std::invalid_argument("Packed native value cannot have array strides");
+        const uint64_t bytes = value->Bits() <= 8 ? 1 : value->Bits() <= 16 ? 2 : ((value->Bits() + 31) / 32) * 4;
+        if (base > UINT64_MAX - (bytes - 1)) throw std::overflow_error("Native view address overflow");
+        auto data = std::make_shared<XData>(layout->width, IOType::InOut);
+        data->BindNativeData(base);
+        data->AsImmWrite();
+        auto root = std::make_shared<detail::ViewNode>(layout, nullptr, "",
+                                                      std::make_shared<detail::DataRef>(data));
+        return XView(std::move(root));
+    }
+    auto binding = std::make_shared<detail::ArrayBinding>(value->width, left, right, true);
+    binding->BindNativeData(base, strides);
+    return XView(std::make_shared<detail::ViewNode>(layout, nullptr, "", nullptr, 0,
+                                                   binding, 0, binding->Size()));
+}
+
+XView XView::FromNativeBindings(uint64_t base, const std::string &description,
+                               const std::string &bindings) {
+    if (!base) throw std::invalid_argument("Native view base is null");
+    using N = fkyaml::node;
+    auto layout = detail::parse(N::deserialize(description));
+    auto declarations = N::deserialize(bindings);
+    if (!declarations.is_sequence()) throw std::invalid_argument("Native bindings must be a list");
+    std::map<std::string, N> groups;
+    for (const auto &group : declarations) {
+        if (!groups.emplace(group["path"].get_value<std::string>(), group).second)
+            throw std::invalid_argument("Duplicate native field binding");
+    }
+    auto native = std::make_shared<detail::NativeBindings>();
+    std::function<void(const detail::Layout &, std::string, std::vector<int>, std::vector<int>)> collect;
+    collect = [&](const detail::Layout &type, std::string path, std::vector<int> left, std::vector<int> right) {
+        if (!type.packed) {
+            if (type.kind == "array") {
+                left.push_back(type.left); right.push_back(type.right);
+                collect(*type.children.front(), path + "[]", left, right);
+            } else for (size_t i = 0; i < type.names.size(); ++i)
+                collect(*type.children[i], path + "." + type.names[i], left, right);
+            return;
+        }
+        const auto found = groups.find(path);
+        if (found == groups.end()) throw std::invalid_argument("Missing native field binding: " + path);
+        const auto &group = found->second;
+        const auto width = group["rtl_width"].get_value<uint64_t>();
+        const auto bytes = width <= 8 ? 1 : width <= 16 ? 2 : ((width + 31) / 32) * 4;
+        if (width != type.Bits() || group["mem_bytes"].get_value<uint64_t>() != bytes)
+            throw std::invalid_argument("Native field width/storage size mismatch: " + path);
+        const auto &dimensions = group["array_dimensions"];
+        const auto &steps = group["array_strides"];
+        if (!dimensions.is_sequence() || dimensions.size() != left.size() || !steps.is_sequence() || steps.size() != left.size())
+            throw std::invalid_argument("Native field rank mismatch: " + path);
+        std::vector<unsigned long long> strides;
+        for (size_t d = 0; d < left.size(); ++d) {
+            if (dimensions[d].get_value<int64_t>() != std::abs(int64_t(left[d]) - right[d]) + 1)
+                throw std::invalid_argument("Native field shape mismatch: " + path);
+            strides.push_back(steps[d].get_value<uint64_t>());
+        }
+        const auto offset = group["offset"].get_value<uint64_t>();
+        if (base > UINT64_MAX - offset) throw std::overflow_error("Native field address overflow");
+        if (left.empty()) { left.push_back(0); right.push_back(0); strides.push_back(bytes); }
+        auto binding = std::make_shared<detail::ArrayBinding>(type.width, left, right, true);
+        binding->BindNativeData(base + offset, strides);
+        native->emplace(path, std::move(binding));
+        groups.erase(found);
+    };
+    collect(*layout, "", {}, {});
+    if (!groups.empty()) throw std::invalid_argument("Unexpected native field binding");
+    return XView(std::make_shared<detail::ViewNode>(layout, nullptr, "", nullptr, 0, nullptr, 0, 0, native));
 }
 
 XView XView::FromPort(XPort &port, const std::string &name, const std::string &description) {

@@ -25,6 +25,8 @@ variables:
 | array_dimensions | 各维的元素数量；乘积须等于 array_size |
 | array_strides | 从外到内的字节步长；rank 须与 array_dimensions 一致 |
 | type | 布局类型说明；不能靠它覆盖 BindNativeData 的内存约定 |
+| layout_id | 可选的 RTL 类型引用，指向顶层 `types` 表；不是 C++ 类型名 |
+| bindings | unpacked struct 的同构字段组：字段路径、真实 offset/mem_bytes 及包围它的数组维度/步长 |
 
 array_size 非零时，array_dimensions 和 array_strides 均为必填；布局不完整会在解析阶段失败。
 
@@ -48,6 +50,7 @@ variables:
 | `NewXData(name, xname="")` | 创建信号；数组名称创建扁平下标 0 的元素。失败可返回 nullptr；C++ 调用方管理返回对象。 |
 | `NewXData(name, index, xname="")` | 按扁平、从零开始的存储下标创建数组元素；下标必须小于数组大小并会检查，越界抛出异常。非数组名称返回 nullptr。 |
 | `NewXArray(name)` | 返回缓存的递归 XArray，边界为从零开始的存储坐标；名称不存在或不是数组时返回 nullptr。Size 为当前维度长度，Array/Data 每层选择一个下标。 |
+| `NewXView(name)` | 返回缓存的 RTL 坐标视图，支持字段/数组路径；名称不存在时为空视图，缺少或不匹配的类型/绑定抛出异常。动态叶子默认立即写入。 |
 | `GetSignalNames(pattern="")` | 列出名称；pattern 按名称子串筛选。 |
 | `At(name)`；`operator[]` | 原生布局查询；不存在时 is_empty=true，Python 包装成 None。 |
 | `Address(name)` | 返回 base+offset；先核对 At 的存在性，不能用这个结果判断信号是否存在。 |
@@ -77,12 +80,27 @@ assert memory.value == 0x55
 
 memory 必须比所有绑定它的信号活得更久。相对地址、mem_bytes、位宽、维度和步长应与实际模拟器布局匹配，尤其不能将窄 C 对象当成任意宽 word 数组。
 
+## 递归原生类型
+
+可选顶层 `types` 是去重的类型节点表，节点的 `element` 和字段的 `type` 引用其他类型 ID。
+类型只有在查询 `NewXView()` 时才展开，并检查深度、循环引用、位宽、维度和存储大小。
+packed struct/array 共享完整 `XData`，unpacked struct 按独立字段组绑定；数组元素按需创建，
+不按元素重复存类型或注册回调。普通单维 bit-vector 为位值叶子。
+
+`NewXArray()` 仍使用旧的零基存储坐标；`NewXView()` 使用 RTL 左右边界，两者不混用。
+没有 RTL 元数据的旧数组配置仍可调用 `NewXArray()`，但不能凭元素数量猜出 RTL 边界。
+unpacked struct 没有整体位值，应使用视图，不能用 `NewXData()` 绑定其首字节。
+`XView.FromNativeBindings(base, layout, bindings)` 消费同一组经过核验的描述；调用方负责
+存储生命周期。绑定组偏移、大小和 stride 必须由生成该模型的原生编译器确定，不能用
+字段位宽推算 padding。`XView.FromNative()` 则适用于一个 packed 值或它的固定 unpacked 数组。
+
 ## 只读派生信号
 
 可选 signals 列表的条目使用 name/kind，并按类型提供 rtl_width、offset/mem_bytes、expr 或 value 等字段：
 
 - kind=direct：可直接绑定的原生布局，仍需要 offset/mem_bytes/rtl_width。
 - kind=const：解析 value 字符串并通过 BindConst 创建只读信号，数值求值范围为 64 bit。
+- kind=unavailable：生成器没有证明可访问存储或可求值表达式，`NewXData()` 返回 nullptr。
 - 其他派生条目：使用 expr 创建 ExprEngine，并通过 BindExpr 读出结果。source/deps 是元数据，不能仅填 source 就假定它自动产生一个 alias 表达式。
 
 派生信号继承 ExprEngine 的数值范围和语法限制，不提供任意 C++ 表达式解释。出现依赖环或表达式解析失败时，NewXData 报错并返回 nullptr。s_xsignal_cfg/s_xsignal_meta 分别描述原生布局和派生元数据；At 主要面向前者。

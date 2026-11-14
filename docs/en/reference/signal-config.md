@@ -25,6 +25,8 @@ variables:
 | array_dimensions | Element counts per dimension; their product must equal array_size |
 | array_strides | Byte strides, outermost first; rank must match array_dimensions |
 | type | Layout type description; does not override BindNativeData's storage convention |
+| layout_id | Optional RTL type reference into the top-level `types` table, not a C++ type name |
+| bindings | Homogeneous unpacked-struct field groups with native offset/mem_bytes and enclosing array dimensions/strides |
 
 When `array_size` is nonzero, both `array_dimensions` and `array_strides` are
 mandatory. Malformed layouts fail during parsing.
@@ -49,6 +51,7 @@ variables:
 | `NewXData(name, xname="")` | Create a signal; for an array, create the element at flat index 0. May return nullptr on failure. C++ callers own the result. |
 | `NewXData(name, index, xname="")` | Create an array element by flat, zero-based storage index. The index must be less than the array size and is checked; out-of-range values throw. Returns nullptr for a non-array name. |
 | `NewXArray(name)` | Return the cached recursive XArray with zero-based storage bounds, or nullptr for a missing or non-array name. Size is the current dimension length; Array/Data select one index per dimension. |
+| `NewXView(name)` | Return a cached RTL-indexed view, including field/array paths. Missing names return an empty view; missing or inconsistent types/bindings throw. Dynamic leaves default to immediate writes. |
 | `GetSignalNames(pattern="")` | List names using pattern as a substring filter. |
 | `At(name)`; `operator[]` | Query native layout; missing entries have is_empty=true and become None in Python. |
 | `Address(name)` | Return base+offset. Check existence with At first; an address alone does not prove existence. |
@@ -78,12 +81,31 @@ assert memory.value == 0x55
 
 Keep memory alive longer than every signal bound to it. Offsets, mem_bytes, widths, dimensions and strides must match the simulator's storage, including the exact size of narrow C objects.
 
+## Recursive native types
+
+The optional top-level `types` table interns type nodes; `element` and each field's
+`type` reference another type ID. `NewXView()` expands types only on demand,
+checking depth, cycles, widths, shapes and storage sizes. Packed structs/arrays
+share one complete `XData`; unpacked structs bind independent homogeneous field
+groups. Array elements are created lazily, without repeated element type trees or
+per-element callbacks. Ordinary single-dimension bit vectors are value leaves.
+
+`NewXArray()` retains zero-based storage coordinates, while `NewXView()` uses RTL
+bounds. Existing array configurations without RTL metadata still support
+`NewXArray()`, but element counts cannot recover RTL indices. Unpacked structs
+have no whole bit value: use their view, not `NewXData()` on their first byte.
+`XView.FromNativeBindings(base, layout, bindings)` consumes the same verified
+description; the caller owns the storage lifetime. Offsets, sizes and strides must
+come from the native compiler that built the model, not guessed padding from bit
+widths. `XView.FromNative()` handles one packed value or fixed unpacked arrays of it.
+
 ## Read-only derived signals
 
 The optional signals list uses name/kind and fields such as rtl_width, offset/mem_bytes, expr or value:
 
 - kind=direct binds native storage and still needs offset/mem_bytes/rtl_width.
 - kind=const parses a value string and creates a read-only signal using BindConst, with a 64-bit numeric evaluation range.
+- kind=unavailable has neither proven storage nor an evaluable expression; `NewXData()` returns nullptr.
 - Other derived entries create an ExprEngine from expr and read through BindExpr. source/deps are metadata; source alone does not automatically create an alias expression.
 
 Derived signals inherit ExprEngine's numeric and syntax limits; they do not interpret arbitrary C++. Cycles or expression parse failures make NewXData report an error and return nullptr. s_xsignal_cfg and s_xsignal_meta describe native layout and derived metadata respectively; At primarily queries the former.
