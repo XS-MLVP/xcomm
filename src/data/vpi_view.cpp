@@ -76,17 +76,25 @@ N discover(Context &c, vpiHandle object, unsigned depth = 0) {
         ranges.push_back(bounds(c, raw));
     }
     if (ranges.empty()) return result;
-    result["width"] = 0;
     uint64_t bits = 1;
-    for (auto it = ranges.rbegin(); it != ranges.rend(); ++it) {
-        auto [left, right] = *it;
+    for (const auto &[left, right] : ranges) {
         const auto count = uint64_t(std::abs(int64_t(left) - right)) + 1;
         if (bits > uint64_t(INT_MAX) / count) throw std::invalid_argument("VPI packed dimensions overflow");
         bits *= count;
+    }
+    if (bits != uint64_t(size)) throw std::runtime_error("VPI dimensions do not match whole packed width");
+    // One packed bit-vector range describes an ordinary XData leaf, not an
+    // aggregate dimension. Explicit Picker layouts bypass discovery entirely;
+    // keep their recursive arrays/structs, and all multidimensional ranges.
+    if (ranges.size() == 1) return result;
+    result["width"] = 0;
+    bits = 1;
+    for (auto it = ranges.rbegin(); it != ranges.rend(); ++it) {
+        auto [left, right] = *it;
+        bits *= uint64_t(std::abs(int64_t(left) - right)) + 1;
         result = N{{"kind", "array"}, {"packed", true}, {"width", bits}, {"left", left}, {"right", right},
                    {"signed", c.get(vpiSigned, object) == 1}, {"four_state", type != vpiBitVar}, {"element", result}};
     }
-    if (bits != uint64_t(size)) throw std::runtime_error("VPI dimensions do not match whole packed width");
     return result;
 }
 
