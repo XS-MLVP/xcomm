@@ -77,8 +77,8 @@ void detail::ArrayStorage::Write(uint64_t location, const void *value) const {
 }
 
 namespace detail {
-ArrayBinding::ArrayBinding(uint32_t width, const std::vector<int> &left, const std::vector<int> &right)
-    : storage(std::make_shared<ArrayStorage>(width, left, right)) {}
+ArrayBinding::ArrayBinding(uint32_t width, const std::vector<int> &left, const std::vector<int> &right, bool immediate)
+    : storage(std::make_shared<ArrayStorage>(width, left, right)), immediate(immediate) {}
 
 uint64_t ArrayBinding::Size() const { return storage->size; }
 std::vector<int> ArrayBinding::Left() const { return storage->left; }
@@ -171,6 +171,7 @@ std::shared_ptr<XData> ArrayBinding::AtFlat(uint64_t index) {
     auto element = std::make_shared<XData>(storage->width,
         storage->kind == XDataBackendKind::DPI && !storage->setter ? IOType::Output : IOType::InOut);
     BindElement(*element, index);
+    if (immediate) element->AsImmWrite();
     elements.emplace(index, element);
     return element;
 }

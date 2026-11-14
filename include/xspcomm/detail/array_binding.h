@@ -12,8 +12,10 @@ struct ArrayStorage;
 class ArrayBinding {
     std::shared_ptr<ArrayStorage> storage;
     std::map<uint64_t, std::shared_ptr<XData>> elements;
+    bool immediate = false;
 public:
-    ArrayBinding(uint32_t width, const std::vector<int> &left, const std::vector<int> &right);
+    ArrayBinding(uint32_t width, const std::vector<int> &left, const std::vector<int> &right,
+                 bool immediate = false);
     uint64_t Size() const;
     std::vector<int> Left() const;
     std::vector<int> Right() const;

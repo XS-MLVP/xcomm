@@ -28,6 +28,14 @@ public:
     // Layout is the recursive JSON type description emitted by Picker.
     static XView FromData(XData &data, const std::string &layout);
     static XView FromPort(XPort &port, const std::string &name, const std::string &layout);
+    // Fixed unpacked dimensions of a packed value; byte strides come from the
+    // native compiler, never from RTL bit widths. Does not own model memory.
+    static XView FromNative(uint64_t base, const std::string &layout,
+        const std::vector<unsigned long long> &strides = {});
+    // Bind one homogeneous field group per packed storage value, not per
+    // element. The binding description contains compiler-derived byte offsets.
+    static XView FromNativeBindings(uint64_t base, const std::string &layout,
+                                   const std::string &bindings);
 #ifndef SWIG
     // Backend factories retain independent leaves for the lifetime of the tree.
     static XView FromSignals(

@@ -3,6 +3,9 @@
 #include "xspcomm/detail/array_binding.h"
 #include "fkyaml/node.hpp"
 #include <stdexcept>
+#include <functional>
+#include <sstream>
+#include <iomanip>
 
 namespace xspcomm
 {
@@ -26,6 +29,42 @@ namespace xspcomm
             text.replace(pos, from.size(), to);
             pos += to.size();
         }
+    }
+
+    // Preserve strings exactly across the lazy metadata boundary. In
+    // particular empty paths and "[][]" must not become YAML null/flow nodes.
+    std::string native_json(const fkyaml::node &node) {
+        if (node.is_mapping()) {
+            std::string out = "{";
+            for (const auto &entry : node.map_items()) {
+                if (out.size() > 1) out += ",";
+                out += native_json(entry.key()) + ":" + native_json(entry.value());
+            }
+            return out + "}";
+        }
+        if (node.is_sequence()) {
+            std::string out = "[";
+            for (const auto &value : node) {
+                if (out.size() > 1) out += ",";
+                out += native_json(value);
+            }
+            return out + "]";
+        }
+        if (node.is_string()) {
+            std::ostringstream out;
+            out << '"';
+            for (unsigned char c : node.get_value<std::string>()) {
+                if (c == '"' || c == '\\') out << '\\' << c;
+                else if (c < 32) out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << int(c);
+                else out << c;
+            }
+            out << '"';
+            return out.str();
+        }
+        if (node.is_integer()) return std::to_string(node.get_value<int64_t>());
+        if (node.is_boolean()) return node.get_value<bool>() ? "true" : "false";
+        if (node.is_null()) return "null";
+        throw std::invalid_argument("Native metadata contains an unsupported scalar");
     }
 
     } // namespace
@@ -113,6 +152,15 @@ namespace xspcomm
             this->_register_native_meta(e.first, e.second);
         }
 
+        if (root.contains("types")) {
+            if (!root["types"].is_mapping()) {
+                init_error_msg = "native types is not a map";
+                return;
+            }
+            for (const auto &entry : root["types"].map_items())
+                native_types.emplace(entry.key().get_value<std::string>(), native_json(entry.value()));
+        }
+
         if(root.contains("signals")){
             auto signals = root["signals"];
             if(!signals.is_sequence()){
@@ -178,7 +226,21 @@ namespace xspcomm
             return false;
         }
         if(var.contains("type"))cfg.type = var["type"].get_value<std::string>();
+        if(var.contains("layout_id")) cfg.layout_id = var["layout_id"].get_value<std::string>();
+        if(var.contains("bindings")) cfg.bindings = native_json(var["bindings"]);
+        if(var.contains("view_error")) cfg.view_error = var["view_error"].get_value<std::string>();
         Assert(cfg_key.empty() == false, "cfg_key is empty, check prefix and name");
+        // A trace alias may repeat an existing native root. Do not discard its
+        // verified type/member bindings when the storage description agrees.
+        const auto previous = owner.cfg_map.find(cfg_key);
+        if (previous != owner.cfg_map.end() && cfg.layout_id.empty() &&
+            previous->second.offset == cfg.offset && previous->second.rtl_width == cfg.rtl_width &&
+            previous->second.mem_bytes == cfg.mem_bytes && previous->second.array_dimensions == cfg.array_dimensions &&
+            previous->second.array_strides == cfg.array_strides) {
+            cfg.layout_id = previous->second.layout_id;
+            cfg.bindings = previous->second.bindings;
+            cfg.view_error = previous->second.view_error;
+        }
         owner.cfg_map[cfg_key] = cfg;
         return true;
     }
@@ -271,6 +333,7 @@ namespace xspcomm
             return (XData *)0x1;
         }
         if(xname.empty())xname = name;
+        if (!cfg.rtl_width) return nullptr; // An unpacked struct is not a bit value.
         return new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname);
     }
 
@@ -302,6 +365,7 @@ namespace xspcomm
         }
         if(xname.empty())xname = name;
         auto &meta = metaIt->second;
+        if (meta.kind == "unavailable") return nullptr;
         if(meta.bindable){
             if (this->cfg_map[name].array_size) return this->NewXData(name, 0, xname);
             s_xsignal_cfg cfg;
@@ -352,7 +416,7 @@ namespace xspcomm
         auto found = native_arrays.find(name);
         if (found != native_arrays.end()) return found->second;
         const auto cfg = At(name);
-        if (cfg.is_empty || !cfg.array_size) return nullptr;
+        if (cfg.is_empty || !cfg.array_size || !cfg.rtl_width) return nullptr;
         std::vector<int> left(cfg.array_dimensions.size(), 0), right;
         for (int dimension : cfg.array_dimensions) right.push_back(dimension - 1);
         if (cfg.offset > UINT64_MAX - cfg_base_address) throw std::overflow_error("Native array base overflow");
@@ -362,6 +426,97 @@ namespace xspcomm
         auto array = XArray::FromBinding(std::move(binding), width, name);
         native_arrays.emplace(name, array);
         return array;
+    }
+
+    XView XSignalCFG::NewXView(std::string name) {
+        load_cfg();
+        if (!init_error_msg.empty()) throw std::invalid_argument(init_error_msg);
+        auto cached = native_views.find(name);
+        if (cached != native_views.end()) return cached->second;
+        auto found = cfg_map.find(name);
+        if (found == cfg_map.end() || found->second.layout_id.empty()) {
+            // The closest retained root wins; names are matched at a field or
+            // index boundary, never by an ambiguous raw prefix.
+            for (size_t end = name.size(); end > 0; --end) {
+                if (name[end - 1] != '.' && name[end - 1] != '[') continue;
+                const auto root = name.substr(0, end - 1);
+                auto parent = cfg_map.find(root);
+                if (parent == cfg_map.end() || parent->second.layout_id.empty()) continue;
+                auto view = NewXView(root);
+                for (size_t pos = end - 1; pos < name.size();) {
+                    if (name[pos] == '.') {
+                        const auto begin = ++pos;
+                        pos = name.find_first_of(".[", pos);
+                        if (pos == std::string::npos) pos = name.size();
+                        if (pos == begin) throw std::invalid_argument("Empty native field name");
+                        view = view.Struct()->Field(name.substr(begin, pos - begin));
+                    } else if (name[pos] == '[') {
+                        const auto close = name.find(']', ++pos);
+                        if (close == std::string::npos) throw std::invalid_argument("Incomplete native array index");
+                        const auto text = name.substr(pos, close - pos);
+                        size_t consumed = 0;
+                        const int index = std::stoi(text, &consumed);
+                        if (consumed != text.size()) throw std::invalid_argument("Invalid native array index");
+                        view = view.Array()->At(index);
+                        pos = close + 1;
+                    } else throw std::invalid_argument("Invalid native view path");
+                }
+                native_views.emplace(name, view);
+                return view;
+            }
+            if (found == cfg_map.end()) return {};
+        }
+        const auto &cfg = found->second;
+        using N = fkyaml::node;
+        if (!cfg.view_error.empty()) throw std::invalid_argument(cfg.view_error + ": " + name);
+        N layout;
+        if (cfg.layout_id.empty()) {
+            if (cfg.array_size)
+                throw std::invalid_argument("RTL layout unavailable for native array: " + name + "; use NewXArray for storage coordinates");
+            if (!cfg.rtl_width) throw std::invalid_argument("Native aggregate has no verified RTL layout: " + name);
+            layout = N{{"kind", "bits"}, {"packed", true}, {"width", cfg.rtl_width == 1 ? 0 : cfg.rtl_width}};
+        } else {
+            size_t nodes = 0;
+            std::set<std::string> active;
+            std::function<N(const std::string &)> expand = [&](const std::string &id) -> N {
+                if (++nodes > 100000 || active.size() >= 128 || !active.insert(id).second)
+                    throw std::invalid_argument("Native type references exceed bounded acyclic layout limits");
+                auto type = native_types.find(id);
+                if (type == native_types.end()) throw std::invalid_argument("Unknown native type reference: " + id);
+                auto node = N::deserialize(type->second);
+                if (node.contains("element")) node["element"] = expand(node["element"].get_value<std::string>());
+                if (node.contains("fields")) for (auto &field : node["fields"])
+                    field["type"] = expand(field["type"].get_value<std::string>());
+                active.erase(id);
+                return node;
+            };
+            layout = expand(cfg.layout_id);
+        }
+        XView view;
+        if (cfg.bindings.empty()) {
+            auto element = layout;
+            size_t rank = 0;
+            while (!element["packed"].get_value<bool>()) {
+                if (element["kind"].get_value<std::string>() != "array")
+                    throw std::invalid_argument("Native struct requires verified member bindings: " + name);
+                const auto count = std::abs(int64_t(element["left"].get_value<int>()) - element["right"].get_value<int>()) + 1;
+                if (rank >= cfg.array_dimensions.size() || count != cfg.array_dimensions[rank++])
+                    throw std::invalid_argument("Native RTL/storage shape mismatch: " + name);
+                auto child = element["element"];
+                element = std::move(child);
+            }
+            const auto width = element["width"].get_value<uint32_t>();
+            if (rank != cfg.array_dimensions.size() || (width ? width : 1) != cfg.rtl_width)
+                throw std::invalid_argument("Native RTL/storage width or rank mismatch: " + name);
+            const uint64_t bytes = cfg.rtl_width <= 8 ? 1 : cfg.rtl_width <= 16 ? 2 : ((uint64_t(cfg.rtl_width) + 31) / 32) * 4;
+            if (cfg.mem_bytes != bytes || !cfg.rtl_width) throw std::invalid_argument("Unsupported native value storage size: " + name);
+            if (cfg.offset > UINT64_MAX - cfg_base_address) throw std::overflow_error("Native view base overflow");
+            view = XView::FromNative(cfg_base_address + cfg.offset, native_json(layout), cfg.array_strides);
+        } else {
+            view = XView::FromNativeBindings(cfg_base_address, native_json(layout), cfg.bindings);
+        }
+        native_views.emplace(name, view);
+        return view;
     }
 
     s_xsignal_cfg XSignalCFG::At(std::string name){

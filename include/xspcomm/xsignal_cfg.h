@@ -18,6 +18,9 @@ typedef struct
     std::string type = "";
     std::vector<int> array_dimensions;
     std::vector<unsigned long long> array_strides;
+    std::string layout_id;
+    std::string bindings;
+    std::string view_error;
 } s_xsignal_cfg, *p_xsignal_cfg;
 
 typedef struct
@@ -41,6 +44,8 @@ class XSignalCFG {
     std::map<std::string, s_xsignal_meta> signal_meta_map;
     std::set<std::string> constructing_signals;
     std::map<std::string, std::shared_ptr<XArray>> native_arrays;
+    std::map<std::string, XView> native_views;
+    std::map<std::string, std::string> native_types;
     public:
     std::string cfg_data;
     uint64_t cfg_base_address = 0;
@@ -53,6 +58,8 @@ class XSignalCFG {
     XData* NewXData(std::string name, int array_index, std::string xname="");
     // Internal arrays use zero-based storage bounds unless RTL bounds are known.
     std::shared_ptr<XArray> NewXArray(std::string name);
+    // RTL-indexed recursive view; NewXArray retains zero-based storage indices.
+    XView NewXView(std::string name);
     std::vector<std::string> GetSignalNames(std::string patten = "");
     s_xsignal_cfg At(std::string name);
     uint64_t Address(std::string name);
