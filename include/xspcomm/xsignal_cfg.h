@@ -8,6 +8,7 @@
 #include <map>
 
 namespace xspcomm {
+namespace detail::cfgdb { class Database; }
 typedef struct
 {
     uint64_t offset = 0;
@@ -46,6 +47,8 @@ class XSignalCFG {
     std::map<std::string, std::shared_ptr<XArray>> native_arrays;
     std::map<std::string, XView> native_views;
     std::map<std::string, std::string> native_types;
+    std::shared_ptr<detail::cfgdb::Database> database;
+    std::string expected_model;
     public:
     std::string cfg_data;
     uint64_t cfg_base_address = 0;
@@ -53,7 +56,10 @@ class XSignalCFG {
     /*************************************************************** */
     //                  Start of Stable public user APIs
     /*************************************************************** */
-    XSignalCFG(std::string path_or_str_data, uint64_t base_address = 0): cfg_data(path_or_str_data), cfg_base_address(base_address){};
+    XSignalCFG(std::string path_or_str_data, uint64_t base_address = 0, std::string model_id = ""):
+        expected_model(std::move(model_id)), cfg_data(std::move(path_or_str_data)), cfg_base_address(base_address){};
+    // Explicit inspection only: runtime lookups never decode all metadata.
+    std::string Metadata(std::string name);
     XData* NewXData(std::string name, std::string xname="");
     XData* NewXData(std::string name, int array_index, std::string xname="");
     // Internal arrays use zero-based storage bounds unless RTL bounds are known.
@@ -71,6 +77,7 @@ class XSignalCFG {
     private:
     XData* new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return=false);
     void load_cfg();
+    void load_signal(const std::string &name);
     class Parser;
     void _register_native_meta(const std::string &name, const s_xsignal_cfg &cfg);
     std::string _normalize_expr(std::string expr) const;

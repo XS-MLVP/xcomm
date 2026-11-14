@@ -1,6 +1,7 @@
 #include "xspcomm/xsignal_cfg.h"
 #include "xspcomm/xexpr.h"
 #include "xspcomm/detail/array_binding.h"
+#include "xspcomm/detail/config_db.h"
 #include "fkyaml/node.hpp"
 #include <stdexcept>
 #include <functional>
@@ -10,6 +11,32 @@
 namespace xspcomm
 {
     namespace {
+
+    fkyaml::node database_node(const detail::cfgdb::Value &v) {
+        using V = detail::cfgdb::Value;
+        switch (v.kind) {
+        case V::Null: return nullptr;
+        case V::False: return false;
+        case V::True: return true;
+        case V::Unsigned:
+            if (v.number > INT64_MAX) throw std::invalid_argument("XSCFG integer exceeds YAML API range");
+            return int64_t(v.number);
+        case V::Signed: return int64_t(v.number);
+        case V::Real: { double n; std::memcpy(&n, &v.number, 8); return n; }
+        case V::String: return v.text;
+        case V::Array: {
+            auto node = fkyaml::node::sequence();
+            for (const auto &x : v.array) node.get_value_ref<fkyaml::node::sequence_type &>().push_back(database_node(x));
+            return node;
+        }
+        case V::Object: {
+            auto node = fkyaml::node::mapping();
+            for (const auto &[key, x] : v.object) node[key] = database_node(x);
+            return node;
+        }
+        }
+        throw std::invalid_argument("Unknown XSCFG value");
+    }
 
     std::string trim_copy(const std::string &value){
         auto begin = value.find_first_not_of(" \t\r\n");
@@ -63,6 +90,7 @@ namespace xspcomm
         }
         if (node.is_integer()) return std::to_string(node.get_value<int64_t>());
         if (node.is_boolean()) return node.get_value<bool>() ? "true" : "false";
+        if (node.is_float_number()) { std::ostringstream out; out << std::setprecision(17) << node.get_value<double>(); return out.str(); }
         if (node.is_null()) return "null";
         throw std::invalid_argument("Native metadata contains an unsupported scalar");
     }
@@ -115,7 +143,14 @@ namespace xspcomm
         Parser parser(*this);
         fkyaml::node root;
         if (fileExists(this->cfg_data)){
-            std::ifstream ifs(this->cfg_data);
+            std::ifstream ifs(this->cfg_data, std::ios::binary);
+            char signature[8]{}; ifs.read(signature, 8); ifs.clear(); ifs.seekg(0);
+            if ((cfg_data.size() >= 6 && cfg_data.substr(cfg_data.size() - 6) == ".xscfg") ||
+                std::memcmp(signature, detail::cfgdb::magic, 8) == 0) {
+                try { database = std::make_shared<detail::cfgdb::Database>(cfg_data, expected_model); }
+                catch (const std::exception &e) { init_error_msg = e.what(); throw; }
+                return;
+            }
             root = fkyaml::node::deserialize(ifs);
             Debug("Init yaml signal from file: %s", this->cfg_data.c_str());
         }else {
@@ -173,6 +208,34 @@ namespace xspcomm
                 }
             }
         }
+    }
+
+    void XSignalCFG::load_signal(const std::string &name) {
+        load_cfg();
+        if (!database || signal_meta_map.count(name)) return;
+        // Prepare both records before changing caches. A corrupt derived
+        // override must not leave a usable native fallback on a later retry.
+        auto native = database->get('v', name);
+        auto derived = database->get('s', name);
+        auto native_node = native ? database_node(*native) : fkyaml::node();
+        auto derived_node = derived ? database_node(*derived) : fkyaml::node();
+        Parser parser(*this);
+        if (native) {
+            native_node["name"] = name;
+            if (!parser._set_cfg_data(native_node)) throw std::invalid_argument(init_error_msg);
+            _register_native_meta(name, cfg_map.at(name));
+        }
+        if (derived) {
+            derived_node["name"] = name;
+            if (!parser._set_signal_meta(derived_node)) throw std::invalid_argument(init_error_msg);
+        }
+    }
+
+    std::string XSignalCFG::Metadata(std::string name) {
+        load_cfg();
+        if (!init_error_msg.empty()) throw std::invalid_argument(init_error_msg);
+        if (database) if (auto value = database->get('m', name)) return native_json(database_node(*value));
+        return "null";
     }
 
     bool XSignalCFG::Parser::_set_cfg_data(fkyaml::node &var, std::string prefix){
@@ -319,7 +382,7 @@ namespace xspcomm
     }
 
     XData* XSignalCFG::new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return){
-        this->load_cfg();
+        this->load_signal(name);
         if(!this->init_error_msg.empty()){
             Error("%s", this->init_error_msg.c_str());
             return nullptr;
@@ -344,6 +407,11 @@ namespace xspcomm
             Error("%s", this->init_error_msg.c_str());
             return vec;
         }
+        if (database) {
+            auto names = database->names("vs", pattern);
+            std::sort(names.begin(), names.end()); names.erase(std::unique(names.begin(), names.end()), names.end());
+            return names;
+        }
         for(auto &e : this->signal_meta_map){
             if(pattern.empty() || e.first.find(pattern) != std::string::npos){
                 vec.push_back(e.first);
@@ -353,7 +421,7 @@ namespace xspcomm
     }
 
     XData* XSignalCFG::NewXData(std::string name, std::string xname){
-        this->load_cfg();
+        this->load_signal(name);
         if(!this->init_error_msg.empty()){
             Error("%s", this->init_error_msg.c_str());
             return nullptr;
@@ -429,7 +497,7 @@ namespace xspcomm
     }
 
     XView XSignalCFG::NewXView(std::string name) {
-        load_cfg();
+        load_signal(name);
         if (!init_error_msg.empty()) throw std::invalid_argument(init_error_msg);
         auto cached = native_views.find(name);
         if (cached != native_views.end()) return cached->second;
@@ -440,6 +508,7 @@ namespace xspcomm
             for (size_t end = name.size(); end > 0; --end) {
                 if (name[end - 1] != '.' && name[end - 1] != '[') continue;
                 const auto root = name.substr(0, end - 1);
+                load_signal(root);
                 auto parent = cfg_map.find(root);
                 if (parent == cfg_map.end() || parent->second.layout_id.empty()) continue;
                 auto view = NewXView(root);
@@ -482,6 +551,10 @@ namespace xspcomm
                 if (++nodes > 100000 || active.size() >= 128 || !active.insert(id).second)
                     throw std::invalid_argument("Native type references exceed bounded acyclic layout limits");
                 auto type = native_types.find(id);
+                if (type == native_types.end() && database) {
+                    if (auto v = database->get('t', id))
+                        type = native_types.emplace(id, native_json(database_node(*v))).first;
+                }
                 if (type == native_types.end()) throw std::invalid_argument("Unknown native type reference: " + id);
                 auto node = N::deserialize(type->second);
                 if (node.contains("element")) node["element"] = expand(node["element"].get_value<std::string>());
@@ -532,6 +605,7 @@ namespace xspcomm
 
     std::string XSignalCFG::String(){
         this->load_cfg();
+        if (database) for (const auto &name : GetSignalNames()) load_signal(name);
         std::string ret = "\nBaseAddress: " + std::to_string(this->cfg_base_address) + "\n";
         for(auto &e : this->signal_meta_map){
             ret += e.first + ":\n";

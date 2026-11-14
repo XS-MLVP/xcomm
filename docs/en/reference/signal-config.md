@@ -4,6 +4,12 @@
 
 ## Native layout
 
+Picker exports one `.xscfg` configuration database by default. It contains port
+metadata, native records, shared types, field bindings and derived signals, with
+no YAML/JSON/index sidecars. `XSignalCFG` recognizes the file by its magic bytes
+(including when extracted from a JAR). The YAML input shown below remains useful
+for hand-written configurations; it is not the generated runtime format.
+
 variables accepts a list or nested mapping. See the [list fixture](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/tests/fixtures/signal_cfg.yaml) and [mapping fixture](https://github.com/XS-MLVP/xcomm/blob/v1.0.0/tests/fixtures/signal_cfg_map.yaml).
 
 ```yaml
@@ -47,7 +53,8 @@ variables:
 
 | API | Behavior and constraints |
 | --- | --- |
-| `XSignalCFG(path_or_yaml, base_address=0)` | Accept an existing file path or YAML text; parse on the first query/construction operation. |
+| `XSignalCFG(path_or_yaml, base_address=0, model_id="")` | Accept an XSCFG file, a hand-written YAML file or YAML text. Load on the first actual query. Optional model_id rejects another build's database; generated DUTs always supply it. |
+| `Metadata(name)` | Explicitly decode one metadata record as JSON, e.g. `Metadata("ports")`; missing metadata returns `"null"`. |
 | `NewXData(name, xname="")` | Create a signal; for an array, create the element at flat index 0. May return nullptr on failure. C++ callers own the result. |
 | `NewXData(name, index, xname="")` | Create an array element by flat, zero-based storage index. The index must be less than the array size and is checked; out-of-range values throw. Returns nullptr for a non-array name. |
 | `NewXArray(name)` | Return the cached recursive XArray with zero-based storage bounds, or nullptr for a missing or non-array name. Size is the current dimension length; Array/Data select one index per dimension. |
@@ -80,6 +87,31 @@ assert memory.value == 0x55
 ```
 
 Keep memory alive longer than every signal bound to it. Offsets, mem_bytes, widths, dimensions and strides must match the simulator's storage, including the exact size of narrow C objects.
+
+## Single-file binary database
+
+The versioned little-endian format serializes no process pointers or native C++
+struct layouts. A 128-byte header identifies the build and locates the index and
+block directory. The 8-byte index entries contain a 32-bit name fingerprint and a
+packed block/slot locator. Fingerprints are only a search accelerator: every hit
+compares the full category/name, including collisions. Prefix-coded names and
+tagged values share independently checksummed deflate blocks, up to 256 records
+per ordinary block. A block stays uncompressed when compression would grow it.
+
+On POSIX, opening maps the file instead of parsing every record or building maps
+for every signal. The first query validates and decodes only its blocks. The
+decompressed block cache is bounded to 2 MiB; unusually large individual records
+require temporary memory outside that cache. Signal objects, type records and
+bindings are materialized on demand. Enumeration scans blocks without decoding
+all values; `String()` explicitly loads all signals and is not a startup operation.
+Header/interval checks, block checksums and value/depth bounds reject malformed
+input. Header validation is eager, block validation is lazy, not a whole-file
+integrity scan. Replacement uses an adjacent temporary file and atomic rename;
+readers of the old inode remain valid. There is no journal or persistent cache.
+
+Format version 1 and native ABI 4 are independent. This backend requires the zlib
+development package when building (`zlib1g-dev` on Debian/Ubuntu). The read-only
+database owns metadata, not DUT storage; keep the model alive while using signals.
 
 ## Recursive native types
 

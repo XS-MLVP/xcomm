@@ -18,6 +18,9 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 include(xcomm)
 init_xspcomm()
+if(NOT XSPCOMM_WASM_LIB)
+    find_package(ZLIB REQUIRED)
+endif()
 
 # Source headers must win over copies left in the build-tree install staging
 # directory.  Otherwise an incremental build can compile against yesterday's
