@@ -122,7 +122,7 @@ bval 策略，原生内存并不是 SV 四态缓冲区。
 rank 须与维度 rank 一致。不完整的布局直接拒绝，不做推断。内部视图使用从零开始的存储
 坐标；带下标的 `NewXData` 也使用同一共享后端，但其旧有下标仍表示扁平存储位置。
 
-数组布局使用原生 ABI 4。DPI/native 路径面向 Verilator 5.026 及更新版本，回归验证
+数组布局使用原生 ABI 5。DPI/native 路径面向 Verilator 5.026 及更新版本，回归验证
 版本为 5.026、5.048、5.052。
 
 原公开类型 `XDataArray` 及 `NewXDataArray`/`NewXDataArrayView` 工厂已移除，不保留

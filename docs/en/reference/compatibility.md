@@ -9,7 +9,7 @@ distribution is `uc-xcomm`, imported as `xspcomm`. See
 | Layer | Value / query | Purpose |
 | --- | --- | --- |
 | Python package/native version string | `version()` and package metadata | Identifies the package build |
-| Native C++ ABI | 4 | Object layout and dynamic linking; `abi_version()` and libxspcomm.so.4 |
+| Native C++ ABI | 5 | Object layout and dynamic linking; `abi_version()` and libxspcomm.so.5 |
 | Coverage descriptor protocol | 5 | Frontend point/bin/program structure; `XTriggerEngine.CoverageVersion()` |
 
 Picker and xcomm use a matched toolchain. Picker records its native source
