@@ -109,7 +109,7 @@ input. Header validation is eager, block validation is lazy, not a whole-file
 integrity scan. Replacement uses an adjacent temporary file and atomic rename;
 readers of the old inode remain valid. There is no journal or persistent cache.
 
-Format version 1 and native ABI 4 are independent. This backend requires the zlib
+Format version 1 and native ABI 5 are independent. This backend requires the zlib
 development package when building (`zlib1g-dev` on Debian/Ubuntu). The read-only
 database owns metadata, not DUT storage; keep the model alive while using signals.
 

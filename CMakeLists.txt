@@ -12,7 +12,7 @@ endif()
 
 # Increment for incompatibility with master / published native ABIs.
 # Commits implementing one ABI change share a single transition.
-set(XSPCOMM_ABI_VERSION 4)
+set(XSPCOMM_ABI_VERSION 5)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

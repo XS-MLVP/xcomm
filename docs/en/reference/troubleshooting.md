@@ -7,12 +7,12 @@ python3 -c 'import xspcomm as x; print(x.__file__, x.version(), x.abi_version(),
 python3 -m pip show uc-xcomm
 ```
 
-The native interfaces use ABI 4 and Coverage protocol 5. `version()` reports the
+The native interfaces use ABI 5 and Coverage protocol 5. `version()` reports the
 installed package build.
 
 | Symptom | Check | Action |
 | --- | --- | --- |
-| Import failure, undefined symbol, missing libxspcomm.so.4 | Python minor version, platform, library paths and DUT build ABI | Install a matching wheel and rebuild the DUT in that environment; avoid mixing SDKs |
+| Import failure, undefined symbol, missing libxspcomm.so.5 | Python minor version, platform, library paths and DUT build ABI | Install a matching wheel and rebuild the DUT in that environment; avoid mixing SDKs |
 | Manual Step raises an ownership error | An engine has called AcquireClock | Drive through that engine; Clear/ReleaseClock before resuming manual stepping |
 | ReleaseClock fails | Fired but undisarmed registrations | Disarm each handle or Clear, then check that ActiveCount is zero |
 | Coverage counts stay zero | Execution/sampling, phase, gate, point order and program completion | Reduce to the [minimal event/coverage example](../guides/events-coverage.md); distinguish matching from classification |

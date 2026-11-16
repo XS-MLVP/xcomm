@@ -131,7 +131,7 @@ rank must match the dimension rank. Incomplete layouts are rejected rather than
 inferred. The view uses zero-based storage coordinates. Indexed `NewXData` uses
 the same shared backend, but its legacy index is a flat storage position.
 
-Array layouts use native ABI 4. The DPI/native paths target Verilator 5.026 and
+Array layouts use native ABI 5. The DPI/native paths target Verilator 5.026 and
 newer, with regression coverage on 5.026, 5.048, and 5.052.
 
 The former public `XDataArray` type and `NewXDataArray`/`NewXDataArrayView`

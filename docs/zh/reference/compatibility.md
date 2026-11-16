@@ -8,7 +8,7 @@
 | 层次 | 取值/查询方式 | 用途 |
 | --- | --- | --- |
 | Python 包/原生版本字符串 | `version()` 与包元数据 | 标识包的构建版本 |
-| 原生 C++ ABI | 4 | 对象布局与动态链接；`abi_version()`、libxspcomm.so.4 |
+| 原生 C++ ABI | 5 | 对象布局与动态链接；`abi_version()`、libxspcomm.so.5 |
 | Coverage 描述协议 | 5 | 前端生成 point/bin/program 的结构；`XTriggerEngine.CoverageVersion()` |
 
 Picker 与 xcomm 使用匹配的工具链。Picker 在 `.build-config.yml` 中记录原生源码依赖；
