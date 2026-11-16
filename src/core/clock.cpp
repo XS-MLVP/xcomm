@@ -1,6 +1,7 @@
 #include "xspcomm/xclock.h"
 
 #include <stdexcept>
+#include <unordered_set>
 
 namespace xspcomm {
 
@@ -502,9 +503,36 @@ void XClock::_ris_refresh(){
 }
 
 void XClock::FreqDivWith(int div, XClock *clk, int shift){
+    if (clk == nullptr) {
+        Error("Clock: FreqDivWith requires a non-null clock");
+        return;
+    }
     if (this->div_clk.count(clk) > 0){
         Warn("Clock: %p already div with (div: %d, shift: %d), ignore", clk, this->div_clk[clk][0], this->div_clk[clk][1]);
         return;
+    }
+    // A div_clk edge means this clock drives clk. Adding this edge closes a
+    // cycle when clk can already reach this clock along existing edges, which
+    // would make the clocks advance each other's cycle counters on every edge.
+    // Walk the existing graph (with a visited set, so a graph that is already
+    // corrupt cannot hang the check) and reject the edge before installing it.
+    std::vector<XClock *> pending{clk};
+    std::unordered_set<XClock *> visited;
+    while (!pending.empty()) {
+        XClock *current = pending.back();
+        pending.pop_back();
+        if (current == nullptr) { continue; }
+        if (current == this) {
+            if (current == clk) {
+                Error("Clock: a clock cannot divide itself");
+            } else {
+                Error("Clock: FreqDivWith(%p -> %p) would create a divider cycle",
+                      this, clk);
+            }
+            return;
+        }
+        if (!visited.insert(current).second) { continue; }
+        for (auto &edge : current->div_clk) { pending.push_back(edge.first); }
     }
     this->div_clk[clk] = {div, shift};
 }
