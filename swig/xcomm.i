@@ -173,7 +173,7 @@ namespace std {
 
 // d_callback defines
 // XData
-%d_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int32_t, void *);
+%d_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int64_t, void *);
 %d_callback(cb_void_xsvLogicp, void, xspcomm::xsvLogic *);
 %d_callback(cb_void_xsvLogic, void, xspcomm::xsvLogic);
 %d_callback(cb_void_xsvlogicVecValp, void, xspcomm::xsvLogicVecVal *);
@@ -191,7 +191,7 @@ namespace std {
 
 // x_callback defines
 // XData
-%x_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int32_t, void *);
+%x_callback(cb_void_bool_XDatap_u43_voidp, void, bool, xspcomm::XData*, u_int64_t, void *);
 %x_callback(cb_void_xsvLogicp, void, xspcomm::xsvLogic *);
 %x_callback(cb_void_xsvLogic, void, xspcomm::xsvLogic);
 %x_callback(cb_void_xsvlogicVecValp, void, xspcomm::xsvLogicVecVal *);

@@ -169,9 +169,9 @@ int test_xdata()
                 "xdata[%d] = 0x%s, (from bin str)", z.mWidth, z.String().c_str());
 
     // test callback
-    int count;
+    int count = 0;
     z.OnChange(
-        [](bool v, XData *x, u_int32_t val, void *args) {
+        [](bool v, XData *x, u_int64_t val, void *args) {
             // Debug("callback: data is vali: %d, x= %s, d: %d, args: %p", v,
             // x->String().c_str(), val, args);
             *(int *)args += 1;
@@ -185,7 +185,39 @@ int test_xdata()
     z = 1; // change 4
     z = 1;
     z = 2; // change 5
-    test_assert(count = 5 && z.DataValid(), "test call back fail");
+    test_assert(count == 5 && z.DataValid(), "test call back fail, count=%d", count);
+
+    // The callback signature carries a 64-bit value. A narrower internal
+    // signature silently drops the high bits of any signal wider than 32 bits.
+    {
+        XData wide(64, IOType::InOut, "wide_change");
+        u_int64_t seen = 0;
+        wide.OnChange([&seen](bool, XData *, u_int64_t value, void *) { seen = value; });
+        wide.Set(uint64_t(0x123456789abcdef0ull));
+        test_assert(seen == 0x123456789abcdef0ull,
+                    "on-change must carry the full 64-bit value, got 0x%llx",
+                    (unsigned long long)seen);
+    }
+
+    // Documents the width limit: the cached callback value is the low 64 bits
+    // of a wider signal. Callers that need more must read inside the callback
+    // through the XData argument.
+    {
+        XData wider(128, IOType::InOut, "wider_change");
+        std::string initial = "0x112233445566778899aabbccddeeff00";
+        wider.Set(initial);
+        u_int64_t seen = 0;
+        int calls      = 0;
+        wider.OnChange([&](bool, XData *, u_int64_t value, void *) {
+            ++calls;
+            seen = value;
+        });
+        std::string next = "0xfedcba98765432100123456789abcdef";
+        wider.Set(next);
+        test_assert(calls == 1 && seen == 0x0123456789abcdefull,
+                    "on-change above 64 bits carries the low 64 bits, got 0x%llx (calls=%d)",
+                    (unsigned long long)seen, calls);
+    }
 
     std::vector<unsigned char> v = {0x12, 0x34, 0x56, 0x78};
     z.SetVU8(v);
@@ -205,7 +237,7 @@ int test_xdata()
 
     XData a(32, IOType::InOut, "A");
     XData b(32, IOType::Input, "B");
-    b.OnChange([](bool v, XData *x, u_int32_t val, void *args) {});
+    b.OnChange([](bool v, XData *x, u_int64_t val, void *args) {});
     a.Connect(b);
     a = 1;
     b = 1;

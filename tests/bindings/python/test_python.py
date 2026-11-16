@@ -208,8 +208,38 @@ async def test_async_event():
     await task
 
 
+def test_change_callback_contract():
+    # The change callback carries a 64-bit value. A narrower director signature
+    # silently drops the high bits, so this pins the Python-facing contract.
+    from xspcomm.pyxspcomm import cb_void_bool_XDatap_u43_voidp
+
+    class _Recorder(cb_void_bool_XDatap_u43_voidp):
+        def __init__(self):
+            super().__init__()
+            self.set_force_callable()
+            self.values = []
+
+        def call(self, _valid, _signal, value, _args):
+            self.values.append(value)
+
+    recorder = _Recorder()
+    wide_change = XData(64, XData.InOut)
+    wide_change.OnChange(recorder)
+    wide_change.value = 0x123456789ABCDEF0
+    assert recorder.values and recorder.values[-1] == 0x123456789ABCDEF0, recorder.values
+
+    # Above 64 bits the documented behaviour is the low 64 bits; wider reads
+    # must go through the XData argument inside the callback.
+    wide_recorder = _Recorder()
+    wider = XData(128, XData.InOut)
+    wider.OnChange(wide_recorder)
+    wider.Set(int("0xfedcba98765432100123456789abcdef", 16))
+    assert wide_recorder.values and wide_recorder.values[-1] == 0x0123456789ABCDEF, wide_recorder.values
+
+
 if __name__ == "__main__":
     test_xdata()
+    test_change_callback_contract()
     run(test_async())
     run(test_async_event())
     print("version: %s" % version())

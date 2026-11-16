@@ -233,7 +233,7 @@ leaves. Lua garbage collection releases owned container handles.
 | `Connect(other)` | Propagate changes: Output drives Input/InOut; InOut drives Input; with two InOut objects, the caller is the source. |
 | `Equal(other)`; `operator==` | Compare four-state XData content. Integer equality also requires known data; C++ string equality compares display text. |
 | `Comp(other, opcode, eq)`; `< <= > >=` | Opcodes 0/1/2 mean equal/less/greater; eq includes equality. Full-width unsigned order comparison requires equal widths when either is at least 64 bits. Check knownness first. |
-| `OnChange(callback, args, desc)`; `ClearOnChangeCbs/HasOnChangeCbs` | Cache-change callbacks receive valid, XData pointer, low 64-bit value and user data. No background monitoring thread is created. |
+| `OnChange(callback, args, desc)`; `ClearOnChangeCbs/HasOnChangeCbs` | Cache-change callbacks receive valid, XData pointer, low 64-bit value and user data. Signals wider than 64 bits report only their low 64 bits; read the XData argument inside the callback for the full value. No background monitoring thread is created. |
 | `CSelf()` | Native address bridge; does not extend lifetime. |
 
 Python `==` accepts another XData; compare `.value` with integers. For wide signed conversion, explicitly interpret U() using W(); see [bindings](bindings.md).
