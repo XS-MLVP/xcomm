@@ -54,8 +54,16 @@ public:
 		return this->_xfunction(cb);
 	}
 
-	xfunction & operator = (const std::nullptr_t & n) {
+	// Take nullptr by value: a const-reference parameter loses overload
+	// resolution against the forwarding operator= below, which would reset
+	// only func and leave a director forced.
+	xfunction & operator = (std::nullptr_t) {
+		// Resetting a callable must also drop the director hook: operator bool
+		// and operator==(nullptr) consult force_callable, so leaving it set
+		// would keep a cleared callback alive and undo compactions.
 		this->func = nullptr;
+		this->target = nullptr;
+		this->force_callable = false;
 		return *this;
 	}
 
