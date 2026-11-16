@@ -251,3 +251,27 @@ TEST_CASE("A director callback can remove a later director callback", "[xclock]"
     REQUIRE(order == std::vector<std::string>{"first", "first"});
 }
 
+TEST_CASE("FreqDivWith rejects divider cycles", "[xclock]") {
+    // div_clk edges point from the driving clock to the driven one, so adding
+    // this -> clk is unsafe when clk can already reach this. A cycle would let
+    // the clocks advance each other's cycle counters on every edge.
+    XClock a([](bool){ return 0; });
+    XClock b([](bool){ return 0; });
+
+    a.FreqDivWith(1, &b);
+    REQUIRE(a.div_clk.count(&b) == 1);
+
+    b.FreqDivWith(1, &a);                   // closes a -> b -> a
+    REQUIRE(b.div_clk.count(&a) == 0);
+    REQUIRE(a.div_clk.count(&b) == 1);      // the existing edge is untouched
+
+    b.FreqDivWith(1, &b);                   // still rejected directly
+    REQUIRE(b.div_clk.count(&b) == 0);
+
+    // Longer chains are detected as well: a -> b -> c, then c -> a.
+    XClock c([](bool){ return 0; });
+    b.FreqDivWith(1, &c);
+    REQUIRE(b.div_clk.count(&c) == 1);
+    c.FreqDivWith(1, &a);
+    REQUIRE(c.div_clk.count(&a) == 0);
+}
