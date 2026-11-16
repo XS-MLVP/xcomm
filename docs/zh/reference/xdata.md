@@ -20,7 +20,7 @@
 | `Set(value)`；赋值运算符 | 整数、字符串、同宽 XData 或字节数据；超出有效位宽的部分截断。 |
 | `ImmSet(value)`；`ImmSetBytes(bytes)` | 本次写入临时使用立即模式，然后恢复原写模式。 |
 | `U()`；`S()`；`B()`；`AsInt32/AsInt64` | C++ 整数读取最多 64 bit；S 对 1–64 bit 信号作符号扩展。Python 的 U/value 另外提供宽整数包装。 |
-| `String()`；`AsBinaryString()` | 十六进制显示和含 x/z 的二进制显示；String 不带 0x，含未知位的 byte 显示 ??。 |
+| `String()`；`AsBinaryString()` | 十六进制显示和含 x/z 的二进制显示；String 不带 0x，含未知位的 byte 显示 ??。输出按起始位低于宽度的 byte 逐个显示：8 bit 信号为两位十六进制，116 bit 信号仍会显示只有部分位有效的最高 byte。 |
 | `GetBytes/GetVU8`；`SetBytes/SetVU8` | little-endian 的 aval 数据；vector 返回按 32-bit word 对齐的字节数组。scalar 不使用这些 vector API。 |
 | `GetBvalBytes()`；`XMask()` | vector 的完整未知位 mask 字节数组；XMask 只返回低 64 bit。 |
 | `DataValid()` | 查询最近一次刷新后的缓存是否含 X/Z；该方法本身不主动读取后端。 |

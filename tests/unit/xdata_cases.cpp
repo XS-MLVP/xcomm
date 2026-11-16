@@ -141,6 +141,111 @@ int test_xdata()
                     && z.DataValid(),
                 "z=  %s", z.String().c_str());
 
+    // A masked partial write must take the masked-out bits from the *same*
+    // byte it is about to overwrite. The previous cases all start from zero,
+    // so an offset error read from the wrong byte goes unnoticed.
+    {
+        XData masked(16, IOType::InOut, "masked_bits");
+        masked.Set(int(0x1234));
+        u_int8_t clear_low[1] = {0x00};
+        u_int8_t low_nibble[1] = {0x0f};
+        masked.SetBits(clear_low, 1, low_nibble, 1); // byte 1, keep its high nibble
+        test_assert((masked.U() & 0xffff) == 0x1034,
+                    "masked SetBits must keep byte 1 high nibble, got 0x%llx",
+                    (unsigned long long)masked.U());
+    }
+
+    // Byte-addressed writes span the 64-bit boundary; only the callback value
+    // is limited to 64 bits (see the on-change case above).
+    {
+        XData wide(128, IOType::InOut, "wide_bits");
+        std::string initial = "0x112233445566778899aabbccddeeff00";
+        wide.Set(initial);
+        u_int8_t clear_low[1]  = {0x00};
+        u_int8_t low_nibble[1] = {0x0f};
+        wide.SetBits(clear_low, 1, low_nibble, 8); // byte 8 == bits [71:64]
+        test_assert(wide.String() == "112233445566778099aabbccddeeff00",
+                    "masked write above bit 64 must keep byte 8 high nibble, got %s",
+                    wide.String().c_str());
+    }
+
+    // String() prints one hex byte per byte that starts below mWidth. A byte
+    // whose first bit is exactly mWidth is entirely outside the signal and must
+    // not be printed; a byte that starts below mWidth is only partially valid
+    // but must still be printed. Widths that are multiples of 32 hide this,
+    // because the phantom byte would start past the last 32-bit word.
+    {
+        auto show = [](int width) {
+            XData d(width, IOType::InOut, "string_width");
+            d.Set("0xab");
+            return d.String();
+        };
+        test_assert(show(8) == "ab", "W=8 String=%s, need ab", show(8).c_str());
+        test_assert(show(16) == "00ab", "W=16 String=%s, need 00ab",
+                    show(16).c_str());
+        test_assert(show(24) == "0000ab", "W=24 String=%s, need 0000ab",
+                    show(24).c_str());
+        test_assert(show(32) == "000000ab", "W=32 String=%s, need 000000ab",
+                    show(32).c_str());
+        test_assert(show(40) == "00000000ab", "W=40 String=%s, need 00000000ab",
+                    show(40).c_str());
+        test_assert(show(48) == "0000000000ab",
+                    "W=48 String=%s, need 0000000000ab", show(48).c_str());
+        test_assert(show(56) == "000000000000ab",
+                    "W=56 String=%s, need 000000000000ab", show(56).c_str());
+        test_assert(show(64) == "00000000000000ab",
+                    "W=64 String=%s, need 00000000000000ab", show(64).c_str());
+        test_assert(show(128) == "000000000000000000000000000000ab",
+                    "W=128 String=%s, need 32 hex digits", show(128).c_str());
+
+        // The partial high byte of a non-byte-aligned width stays visible.
+        test_assert(show(116) == "0000000000000000000000000000ab",
+                    "W=116 String=%s, need 15 bytes", show(116).c_str());
+        XData partial(116, IOType::InOut, "string_partial");
+        partial.Set("0xa0000000000000000000000000000"); // bit 115..112 only
+        test_assert(partial.String() == "0a0000000000000000000000000000",
+                    "W=116 partial high byte lost, String=%s",
+                    partial.String().c_str());
+        XData w93(93, IOType::InOut, "string_w93");
+        w93.Set("0xf1010101010101010202020f");
+        test_assert(w93.String() == "11010101010101010202020f",
+                    "W=93 String=%s", w93.String().c_str());
+        XData w9(9, IOType::InOut, "string_w9");
+        w9.Set("0x1ab");
+        test_assert(w9.String() == "01ab", "W=9 String=%s", w9.String().c_str());
+
+        // Widths below one byte still print that single partial byte, and 127
+        // bits keeps the seven-bit top byte (it starts at bit 120 < 127).
+        XData w1(1, IOType::InOut, "string_w1");
+        w1.Set("0x1");
+        test_assert(w1.String() == "01", "W=1 String=%s", w1.String().c_str());
+        XData w4(4, IOType::InOut, "string_w4");
+        w4.Set("0xb");
+        test_assert(w4.String() == "0b", "W=4 String=%s", w4.String().c_str());
+        XData w7(7, IOType::InOut, "string_w7");
+        w7.Set("0x7f");
+        test_assert(w7.String() == "7f", "W=7 String=%s", w7.String().c_str());
+        test_assert(show(127) == "000000000000000000000000000000ab",
+                    "W=127 String=%s, need 32 hex digits", show(127).c_str());
+
+        // operator==(const std::string&) compares this display text, so the
+        // extra byte used to make short signals fail to compare with "ab".
+        XData c8(8, IOType::InOut, "string_eq8");
+        c8.Set("0xab");
+        test_assert(c8 == "ab" && c8 == "AB", "W=8 == \"ab\" fail: %s",
+                    c8.String().c_str());
+        test_assert(!(c8 == "00ab"), "W=8 == \"00ab\" must fail: %s",
+                    c8.String().c_str());
+        XData c16(16, IOType::InOut, "string_eq16");
+        c16.Set("0xab");
+        test_assert(c16 == "00ab" && !(c16 == "0000ab"),
+                    "W=16 == \"00ab\" fail: %s", c16.String().c_str());
+        XData c116(116, IOType::InOut, "string_eq116");
+        c116.Set("0xab");
+        test_assert(c116 == "0000000000000000000000000000ab",
+                    "W=116 compare fail: %s", c116.String().c_str());
+    }
+
     // read from string
     z = "0b1111_0011_0111_0000"; // 0xcf0e
     test_assert(
