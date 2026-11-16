@@ -20,7 +20,7 @@ Header: [xdata.h](https://github.com/XS-MLVP/xcomm/blob/master/include/xspcomm/x
 | `Set(value)`; assignment operators | Integers, strings, same-width XData or bytes; truncate excess bits. |
 | `ImmSet(value)`; `ImmSetBytes(bytes)` | Temporarily use immediate writing, then restore the write mode. |
 | `U()`; `S()`; `B()`; `AsInt32/AsInt64` | C++ reads at most 64 bits; S sign-extends widths 1–64. Python U/value adds full-width integer conversion. |
-| `String()`; `AsBinaryString()` | Hexadecimal display and binary display including x/z. String omits 0x and displays unknown bytes as ??. |
+| `String()`; `AsBinaryString()` | Hexadecimal display and binary display including x/z. String omits 0x and displays unknown bytes as ??. It prints one byte per byte that *starts* below the width, so an 8-bit signal shows two hex digits while a 116-bit one still shows its partial top byte. |
 | `GetBytes/GetVU8`; `SetBytes/SetVU8` | Little-endian aval bytes. Vector output is padded to 32-bit words; scalar signals do not use these vector APIs. |
 | `GetBvalBytes()`; `XMask()` | Full vector unknown-mask bytes; XMask returns only the low 64 bits. |
 | `DataValid()` | Inspect whether the last refreshed cache contains X/Z; does not refresh the backend itself. |

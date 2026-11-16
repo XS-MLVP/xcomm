@@ -18,7 +18,7 @@ void XData::SetBits(u_int8_t *buffer, int count, u_int8_t *mask, int start)
         uint8_t byte_val = buffer[i];
         if (mask) { // FIXME: need refine
             u_int8_t old =
-                (u_int8_t)((this->pVecData[vec_idx].aval >> vec_off * 4)
+                (u_int8_t)((this->pVecData[vec_idx].aval >> vec_off * 8)
                            & 0x000000FF);
             byte_val = (old & (~mask[i])) | (buffer[i] & mask[i]);
         }
@@ -216,7 +216,10 @@ std::string XData::String()
         *(u_int32_t *)abuffer = this->pVecData[i].aval;
         *(u_int32_t *)bbuffer = this->pVecData[i].bval;
         for (int j = 3; j >= 0; j--) {
-            if (i * 32 + j * 8 > this->mWidth) continue;
+            // i * 32 + j * 8 is the first bit of this byte. A byte that starts
+            // at or beyond mWidth is entirely outside the signal; only a byte
+            // that starts below mWidth may be partially valid.
+            if (i * 32 + j * 8 >= this->mWidth) continue;
             if (bbuffer[j] == 0) {
                 ret += sFmt("%02x", abuffer[j]);
             } else {
