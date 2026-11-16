@@ -633,16 +633,25 @@ bool XData::Connect(XData &xdata)
         std::string desc = "connet_" + a.mName + "_to_" + b.mName;
         a.OnChange(
             [](bool valid, XData *x, u_int64_t val, void *args) {
-                if (valid) {
-                    auto y        = ((XData *)args);
-                    y->mLogicData = x->mLogicData;
-                    for (int i = 0; i < x->vecSize; i++) {
-                        y->pVecData[i] = x->pVecData[i];
-                    }
-                    y->_sv_to_local();
-                    y->_dpi_write();
-                    y->_update_shadow();
+                if (!valid) { return; }
+                auto y = ((XData *)args);
+                // The connection was made for two equal widths, but ReInit can
+                // resize either side later. Copying vecSize words from the
+                // source into a narrower destination would overrun pVecData, so
+                // a stale connection is reported instead of corrupting memory.
+                if (y->mWidth != x->mWidth) {
+                    Error("Connected XData widths diverged: %s is %u bits, %s is %u bits; "
+                          "reconnect after ReInit",
+                          x->mName.c_str(), x->mWidth, y->mName.c_str(), y->mWidth);
+                    return;
                 }
+                y->mLogicData = x->mLogicData;
+                for (int i = 0; i < x->vecSize; i++) {
+                    y->pVecData[i] = x->pVecData[i];
+                }
+                y->_sv_to_local();
+                y->_dpi_write();
+                y->_update_shadow();
             },
             &b, desc);
         return true;

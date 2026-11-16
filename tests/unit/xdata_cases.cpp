@@ -354,6 +354,22 @@ int test_xdata()
     a.Invert();
     test_assert(~uint32_t(2) == a, "~ check fail: %s", a.String().c_str());
 
+    // ReInit may resize either side after Connect. The propagation callback
+    // copies the source's words, so it has to reject a diverged destination
+    // instead of writing past the smaller buffer.
+    {
+        XData src(64, IOType::InOut, "src_connect");
+        XData dst(64, IOType::Input, "dst_connect");
+        src.Connect(dst);
+        src = 1;
+        test_assert(dst == 1, "connect before ReInit: dst=%s", dst.String().c_str());
+        dst.ReInit(8, IOType::Input, "dst_connect_small");
+        src = uint64_t(0x123456789abcdef0ull);
+        test_assert((dst.U() & 0xff) == 0,
+                    "a narrowed connection target must not be written, got 0x%llx",
+                    (unsigned long long)dst.U());
+    }
+
     // test sub data
     XData full(128, IOType::InOut, "full");
     full = "0xffffffffffffffffffffffffffffffff";
