@@ -210,7 +210,7 @@ Go 容器句柄由调用者拥有，不再使用时调用 `DeleteXView`、`Delet
 | `Connect(other)` | 建立值变化驱动关系。Output 驱动 Input/InOut；InOut 可驱动 Input；两个 InOut 以调用方为源。 |
 | `Equal(other)`；`operator==` | XData 间比较四态内容；整数等值还要求没有未知位。C++ 字符串等值比较显示字符串。 |
 | `Comp(other, opcode, eq)`；`< <= > >=` | opcode=0/1/2 对应等于/小于/大于，eq 允许相等。完整宽度的无符号顺序比较；涉及 64 bit 或更宽时要求同宽。应用应先保证值已知。 |
-| `OnChange(callback, args, desc)`；`ClearOnChangeCbs/HasOnChangeCbs` | 刷新或写入导致缓存变化时回调，参数为 valid、XData 指针、低 64-bit 值、用户参数；在触发变化的调用中同步执行。 |
+| `OnChange(callback, args, desc)`；`ClearOnChangeCbs/HasOnChangeCbs` | 刷新或写入导致缓存变化时回调，参数为 valid、XData 指针、低 64-bit 值、用户参数；超过 64 位的信号只报告低 64 位，需要完整值请在回调内读取 XData 参数。回调在触发变化的调用中同步执行。 |
 | `CSelf()` | 获取地址供原生桥接使用，不延长对象寿命。 |
 
 Python 的 `==` 只接受另一个 XData；与整数比较请用 `.value`。Python 宽有符号值推荐从 `U()` 按 W 显式转换，见 [绑定差异](bindings.md)。

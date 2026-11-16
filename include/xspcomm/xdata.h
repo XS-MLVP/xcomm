@@ -127,7 +127,7 @@ public:
 class XData;
 struct XDataCallBack {
     std::string desc;
-    xfunction<void, bool, XData *, u_int32_t, void *> fc = nullptr;
+    xfunction<void, bool, XData *, u_int64_t, void *> fc = nullptr;
     void *args                                           = nullptr;
 };
 class XData

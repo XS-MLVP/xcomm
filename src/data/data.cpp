@@ -632,7 +632,7 @@ bool XData::Connect(XData &xdata)
         }
         std::string desc = "connet_" + a.mName + "_to_" + b.mName;
         a.OnChange(
-            [](bool valid, XData *x, u_int32_t val, void *args) {
+            [](bool valid, XData *x, u_int64_t val, void *args) {
                 if (valid) {
                     auto y        = ((XData *)args);
                     y->mLogicData = x->mLogicData;
