@@ -93,6 +93,9 @@ class XClock
     void _add_cb(std::vector<XClockCallBack> &cblist,
                  xfunction<void, u_int64_t, void *> func, void *args,
                  std::string desc);
+    // Deferred removals only become erasures once no callback is running, so a
+    // nested dispatch cannot shift the list another level is traversing.
+    void _compact_removed_callbacks();
 
 public:
     std::vector<xspcomm::XData *> clock_pins;

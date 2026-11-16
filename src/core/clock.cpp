@@ -79,23 +79,45 @@ void XClock::_call_back(std::vector<XClockCallBack> &list)
     if (likely(list.empty())) {
         return;
     }
-    this->in_callback = true;
+    // Callbacks may add, remove or clear entries while this list is traversed.
+    // Index-based access re-reads the buffer on every step, so an append that
+    // reallocates stays valid, and removals only null an entry instead of
+    // erasing it (see _remove_step_cb_by and Clear*CallBacks), so indices keep
+    // pointing at the right slot. The bound is captured once: callbacks added
+    // during this edge run on the next one, which also prevents a callback from
+    // extending its own edge indefinitely.
+    const size_t count = list.size();
+    // Nested dispatch is possible when a callback drives a clock that feeds
+    // this one back, so only the outermost return may clear the flag. An inner
+    // dispatch that cleared it would let a later Clear*CallBacks() erase the
+    // list the outer loop is still indexing.
+    const bool was_in_callback = this->in_callback;
+    this->in_callback          = true;
     try {
-        for (auto &e : list) {
-            if (e.func) e.func(this->clk, e.args);
+        for (size_t i = 0; i < count; ++i) {
+            if (list[i].func) list[i].func(this->clk, list[i].args);
         }
     } catch (...) {
-        this->in_callback = false;
+        this->in_callback = was_in_callback;
+        this->_compact_removed_callbacks();
         throw;
     }
-    this->in_callback = false;
-    if (callbacks_removed) {
-        for (auto *callbacks : {&list_call_back_ris, &list_call_back_fal})
-            callbacks->erase(std::remove_if(callbacks->begin(), callbacks->end(),
-                [](const auto &callback) { return !callback.func; }), callbacks->end());
-        callbacks_removed = false;
-    }
+    this->in_callback = was_in_callback;
+    this->_compact_removed_callbacks();
 }
+
+void XClock::_compact_removed_callbacks()
+{
+    // Deferred removals are only safe once no dispatch (including a nested one
+    // on this clock) is walking either list.
+    if (!this->callbacks_removed || this->in_callback) { return; }
+    for (auto *callbacks : {&this->list_call_back_ris, &this->list_call_back_fal}) {
+        callbacks->erase(std::remove_if(callbacks->begin(), callbacks->end(),
+            [](const auto &callback) { return !callback.func; }), callbacks->end());
+    }
+    this->callbacks_removed = false;
+}
+
 void XClock::_add_cb(std::vector<XClockCallBack> &cblist,
                      xfunction<void, u_int64_t, void *> func, void *args,
                      std::string desc)
@@ -106,6 +128,10 @@ void XClock::_add_cb(std::vector<XClockCallBack> &cblist,
     cb.args = args;
     cb.func = func;
     cb.desc = desc;
+    // Appending reallocates the buffer, which is fine for the index-based
+    // traversal in _call_back but would move entries other code holds
+    // references to; the bound there already keeps the new entry out of the
+    // current edge.
     cblist.push_back(cb);
 }
 
@@ -374,8 +400,24 @@ void XClock::StepFal(u_int64_t func, u_int64_t args, std::string desc){
     return this->StepFal((void(*)(u_int64_t, void*))func, (void *)args, desc);
 }
 
-void XClock::ClearRisCallBacks(){this->list_call_back_ris.clear();}
-void XClock::ClearFalCallBacks(){this->list_call_back_fal.clear();}
+void XClock::ClearRisCallBacks(){
+    // Clearing the list while callbacks run would destroy entries mid-dispatch.
+    // Null them instead and compact once the outermost dispatch returns.
+    if (this->in_callback) {
+        for (auto &callback : this->list_call_back_ris) { callback.func = nullptr; }
+        this->callbacks_removed = true;
+        return;
+    }
+    this->list_call_back_ris.clear();
+}
+void XClock::ClearFalCallBacks(){
+    if (this->in_callback) {
+        for (auto &callback : this->list_call_back_fal) { callback.func = nullptr; }
+        this->callbacks_removed = true;
+        return;
+    }
+    this->list_call_back_fal.clear();
+}
 
 int XClock::StepRisQueueSize(){ return (int)this->list_call_back_ris.size(); }
 int XClock::StepFalQueueSize(){ return (int)this->list_call_back_fal.size(); }
