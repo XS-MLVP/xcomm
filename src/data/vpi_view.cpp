@@ -86,7 +86,13 @@ N discover(Context &c, vpiHandle object, unsigned depth = 0) {
     // One packed bit-vector range describes an ordinary XData leaf, not an
     // aggregate dimension. Explicit Picker layouts bypass discovery entirely;
     // keep their recursive arrays/structs, and all multidimensional ranges.
-    if (ranges.size() == 1) return result;
+    if (ranges.size() == 1) {
+        // Retain declaration coordinates for explicit XData.ArrayView(),
+        // without changing the default bits kind or LSB-zero Data indexing.
+        result["left"] = ranges.front().first;
+        result["right"] = ranges.front().second;
+        return result;
+    }
     result["width"] = 0;
     bits = 1;
     for (auto it = ranges.rbegin(); it != ranges.rend(); ++it) {

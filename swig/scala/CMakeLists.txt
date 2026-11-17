@@ -21,7 +21,10 @@ set_property(SOURCE scala.i PROPERTY CPLUSPLUS ON)
 swig_add_library(scalaxspcomm LANGUAGE java SOURCES scala.i)
 set_property(TARGET scalaxspcomm PROPERTY SWIG_DEPENDS
     "${PROJECT_SOURCE_DIR}/swig/xcomm.i"
-    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h")
+    "${PROJECT_SOURCE_DIR}/swig/view_raw.i"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xdata.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xsignal_cfg.h")
 
 target_link_libraries(scalaxspcomm PRIVATE xspcomm)
 
@@ -92,7 +95,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E echo '' >> ${XCOMM_LIB_DIR}/../MANIFEST.MF
     COMMAND ${Java_JAVAC_EXECUTABLE} -d ${XCOMM_LIB_DIR} ${XCOMM_LIB_DIR}/*.java
     COMMAND ${SCALAC_EXECUTABLE} -cp ${XCOMM_LIB_DIR} -d ${XCOMM_LIB_DIR} ${XCOMM_LIB_DIR}/*.scala
-    DEPENDS scalaxspcomm
+    DEPENDS scalaxspcomm ${CMAKE_CURRENT_SOURCE_DIR}/xsp.scala
 )
 
 add_custom_command(

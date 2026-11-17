@@ -146,10 +146,10 @@ def _view_value(view, *, packed_arrays=False):
     kind = view.Kind()
     if kind == "bits":
         return view.Data()
+    if view.IsPacked() and (kind != "array" or not packed_arrays):
+        return view.PackedData()
     if kind == "struct":
         return view.Struct()
-    if view.IsPacked() and not packed_arrays:
-        return view.PackedData()
     return view.Array()
 
 def _struct_item(self, name):

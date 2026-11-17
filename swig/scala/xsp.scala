@@ -76,7 +76,7 @@ package object xspcomm {
         def Restore(check_point: String): Unit
         def VPIInternalSignalList(prefix: String = "", deep: Int = 99): Array[String]
         def GetInternalSignal(name: String, index: Int = -1, use_vpi: Boolean = false): XData
-        def GetInternalSignal(name: String, is_array: Boolean): Array[XData]
+        def GetInternalSignal(name: String, is_array: Boolean): XArray
         def GetInternalSignalList(prefix: String="", deep: Int = 99, use_vpi: Boolean = false): Array[String]
         def apply(key: String): XData = {
             this.GetXPort().Get(key)

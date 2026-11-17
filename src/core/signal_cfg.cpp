@@ -2,6 +2,8 @@
 #include "xspcomm/xexpr.h"
 #include "xspcomm/detail/array_binding.h"
 #include "xspcomm/detail/config_db.h"
+#include "xspcomm/detail/view_layout.h"
+#include "xspcomm/xport.h"
 #include "fkyaml/node.hpp"
 #include <stdexcept>
 #include <functional>
@@ -238,6 +240,85 @@ namespace xspcomm
         return "null";
     }
 
+    std::shared_ptr<const detail::Layout> XSignalCFG::ResolveLayout(const std::string &id, unsigned depth) {
+        if (depth >= 128) throw std::invalid_argument("Native type references exceed bounded acyclic layout limits");
+        auto cached = type_layouts.find(id);
+        if (cached != type_layouts.end()) {
+            if (depth + cached->second->depth > 128)
+                throw std::invalid_argument("Native type references exceed bounded acyclic layout limits");
+            return cached->second;
+        }
+        if (resolving_types.size() >= 128 || !resolving_types.insert(id).second)
+            throw std::invalid_argument("Native type references exceed bounded acyclic layout limits");
+        try {
+            auto type = native_types.find(id);
+            if (type == native_types.end() && database) {
+                if (auto value = database->get('t', id))
+                    type = native_types.emplace(id, native_json(database_node(*value))).first;
+            }
+            if (type == native_types.end()) throw std::invalid_argument("Unknown native type reference: " + id);
+            auto layout = detail::ParseLayout(type->second,
+                [this](const std::string &child, unsigned child_depth) { return ResolveLayout(child, child_depth); }, depth);
+            type_layouts.emplace(id, layout);
+            resolving_types.erase(id);
+            return layout;
+        } catch (...) {
+            resolving_types.erase(id);
+            throw;
+        }
+    }
+
+    void XSignalCFG::LoadPortTypes() {
+        if (port_types_loaded) return;
+        load_cfg();
+        if (!init_error_msg.empty()) throw std::invalid_argument(init_error_msg);
+        std::map<std::string, std::string> types;
+        if (database) if (auto metadata = database->get('m', "port_types")) {
+            using Value = detail::cfgdb::Value;
+            if (metadata->kind != Value::Object) throw std::invalid_argument("Port types must be a mapping");
+            for (const auto &[name, id] : metadata->object) {
+                if (id.kind != Value::String) throw std::invalid_argument("Port type ID must be a string: " + name);
+                types.emplace(name, id.text);
+            }
+        }
+        port_type_ids = std::move(types);
+        port_types_loaded = true;
+    }
+
+    XView XSignalCFG::NewPortView(XPort &port, const std::string &name) {
+        LoadPortTypes();
+        auto type = port_type_ids.find(name);
+        if (type == port_type_ids.end()) throw std::invalid_argument("RTL port layout unavailable: " + name);
+        return XView::FromPortLayout(port, name, ResolveLayout(type->second));
+    }
+
+    void XSignalCFG::BindPortLayouts(XPort &port) {
+        LoadPortTypes();
+        std::vector<std::pair<XData *, std::shared_ptr<const detail::Layout>>> pending;
+        std::function<void(std::shared_ptr<const detail::Layout>, const std::string &)> collect;
+        collect = [&](std::shared_ptr<const detail::Layout> layout, const std::string &path) {
+            if (layout->packed) {
+                if (!port.Has(path)) throw std::invalid_argument("Layout leaf missing from XPort: " + path);
+                auto &data = port.Get(path);
+                if (layout->Bits() != (data.mWidth ? data.mWidth : 1))
+                    throw std::invalid_argument("Layout leaf width does not match XData: " + path);
+                pending.emplace_back(&data, std::move(layout));
+            } else if (layout->kind == "struct") {
+                for (size_t i = 0; i < layout->names.size(); ++i)
+                    collect(layout->children[i], path + "." + layout->names[i]);
+            } else {
+                const int step = layout->left <= layout->right ? 1 : -1;
+                for (int64_t index = layout->left;; index += step) {
+                    collect(layout->children.front(), path + "[" + std::to_string(index) + "]");
+                    if (index == layout->right) break;
+                }
+            }
+        };
+        for (const auto &[name, id] : port_type_ids) collect(ResolveLayout(id), name);
+        // Validate the entire operation before changing any existing signal.
+        for (auto &[data, layout] : pending) data->AssociateLayout(std::move(layout));
+    }
+
     bool XSignalCFG::Parser::_set_cfg_data(fkyaml::node &var, std::string prefix){
         if(!var.is_mapping()){
             owner.init_error_msg = "variables item is not a map";
@@ -397,7 +478,13 @@ namespace xspcomm
         }
         if(xname.empty())xname = name;
         if (!cfg.rtl_width) return nullptr; // An unpacked struct is not a bit value.
-        return new XData(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname);
+        auto data = std::make_unique<XData>(cfg.rtl_width == 1 ? 0: cfg.rtl_width, XData::InOut, xname);
+        if (!cfg.layout_id.empty() && cfg.view_error.empty()) {
+            auto layout = ResolveLayout(cfg.layout_id);
+            while (!layout->packed && layout->kind == "array") layout = layout->children.front();
+            if (layout->packed) data->AssociateLayout(std::move(layout));
+        }
+        return data.release();
     }
 
     std::vector<std::string> XSignalCFG::GetSignalNames(std::string pattern){
@@ -491,7 +578,13 @@ namespace xspcomm
         const auto width = cfg.rtl_width == 1 ? 0 : cfg.rtl_width;
         auto binding = std::make_shared<detail::ArrayBinding>(width, left, right);
         binding->BindNativeData(cfg_base_address + cfg.offset, cfg.array_strides);
-        auto array = XArray::FromBinding(std::move(binding), width, name);
+        std::shared_ptr<const detail::Layout> element;
+        if (!cfg.layout_id.empty() && cfg.view_error.empty()) {
+            element = ResolveLayout(cfg.layout_id);
+            while (!element->packed && element->kind == "array") element = element->children.front();
+            if (!element->packed) element.reset();
+        }
+        auto array = XArray::FromBinding(std::move(binding), width, name, std::move(element));
         native_arrays.emplace(name, array);
         return array;
     }
@@ -536,57 +629,38 @@ namespace xspcomm
             if (found == cfg_map.end()) return {};
         }
         const auto &cfg = found->second;
-        using N = fkyaml::node;
+        std::shared_ptr<const detail::Layout> layout;
         if (!cfg.view_error.empty()) throw std::invalid_argument(cfg.view_error + ": " + name);
-        N layout;
         if (cfg.layout_id.empty()) {
             if (cfg.array_size)
                 throw std::invalid_argument("RTL layout unavailable for native array: " + name + "; use NewXArray for storage coordinates");
             if (!cfg.rtl_width) throw std::invalid_argument("Native aggregate has no verified RTL layout: " + name);
-            layout = N{{"kind", "bits"}, {"packed", true}, {"width", cfg.rtl_width == 1 ? 0 : cfg.rtl_width}};
+            layout = detail::ParseLayout("{\"kind\":\"bits\",\"packed\":true,\"width\":" +
+                std::to_string(cfg.rtl_width == 1 ? 0 : cfg.rtl_width) + "}");
         } else {
-            size_t nodes = 0;
-            std::set<std::string> active;
-            std::function<N(const std::string &)> expand = [&](const std::string &id) -> N {
-                if (++nodes > 100000 || active.size() >= 128 || !active.insert(id).second)
-                    throw std::invalid_argument("Native type references exceed bounded acyclic layout limits");
-                auto type = native_types.find(id);
-                if (type == native_types.end() && database) {
-                    if (auto v = database->get('t', id))
-                        type = native_types.emplace(id, native_json(database_node(*v))).first;
-                }
-                if (type == native_types.end()) throw std::invalid_argument("Unknown native type reference: " + id);
-                auto node = N::deserialize(type->second);
-                if (node.contains("element")) node["element"] = expand(node["element"].get_value<std::string>());
-                if (node.contains("fields")) for (auto &field : node["fields"])
-                    field["type"] = expand(field["type"].get_value<std::string>());
-                active.erase(id);
-                return node;
-            };
-            layout = expand(cfg.layout_id);
+            layout = ResolveLayout(cfg.layout_id);
         }
         XView view;
         if (cfg.bindings.empty()) {
             auto element = layout;
             size_t rank = 0;
-            while (!element["packed"].get_value<bool>()) {
-                if (element["kind"].get_value<std::string>() != "array")
+            while (!element->packed) {
+                if (element->kind != "array")
                     throw std::invalid_argument("Native struct requires verified member bindings: " + name);
-                const auto count = std::abs(int64_t(element["left"].get_value<int>()) - element["right"].get_value<int>()) + 1;
+                const auto count = element->Size();
                 if (rank >= cfg.array_dimensions.size() || count != cfg.array_dimensions[rank++])
                     throw std::invalid_argument("Native RTL/storage shape mismatch: " + name);
-                auto child = element["element"];
-                element = std::move(child);
+                element = element->children.front();
             }
-            const auto width = element["width"].get_value<uint32_t>();
+            const auto width = element->width;
             if (rank != cfg.array_dimensions.size() || (width ? width : 1) != cfg.rtl_width)
                 throw std::invalid_argument("Native RTL/storage width or rank mismatch: " + name);
             const uint64_t bytes = cfg.rtl_width <= 8 ? 1 : cfg.rtl_width <= 16 ? 2 : ((uint64_t(cfg.rtl_width) + 31) / 32) * 4;
             if (cfg.mem_bytes != bytes || !cfg.rtl_width) throw std::invalid_argument("Unsupported native value storage size: " + name);
             if (cfg.offset > UINT64_MAX - cfg_base_address) throw std::overflow_error("Native view base overflow");
-            view = XView::FromNative(cfg_base_address + cfg.offset, native_json(layout), cfg.array_strides);
+            view = XView::FromNativeLayout(cfg_base_address + cfg.offset, layout, cfg.array_strides);
         } else {
-            view = XView::FromNativeBindings(cfg_base_address, native_json(layout), cfg.bindings);
+            view = XView::FromNativeBindingsLayout(cfg_base_address, layout, cfg.bindings);
         }
         native_views.emplace(name, view);
         return view;

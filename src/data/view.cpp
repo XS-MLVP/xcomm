@@ -1,6 +1,7 @@
 #include "xspcomm/xview.h"
 #include "xspcomm/xport.h"
 #include "xspcomm/detail/array_binding.h"
+#include "xspcomm/detail/view_layout.h"
 #include "fkyaml/node.hpp"
 #include <algorithm>
 #include <functional>
@@ -13,18 +14,6 @@ namespace xspcomm {
 namespace detail {
 namespace {
 
-struct Layout {
-    std::string kind;
-    bool packed = false, is_signed = false, four_state = true;
-    uint32_t width = 0;
-    int left = 0, right = 0;
-    std::vector<std::string> names;
-    std::vector<uint32_t> offsets;
-    std::vector<std::shared_ptr<const Layout>> children;
-    uint64_t Bits() const { return width ? width : 1; }
-    uint64_t Size() const { return uint64_t(std::abs(int64_t(left) - right)) + 1; }
-};
-
 int64_t integer(const fkyaml::node &node, const char *key, int64_t low, int64_t high) {
     if (!node.contains(key) || !node[key].is_integer())
         throw std::invalid_argument(std::string("Layout requires integer ") + key);
@@ -34,7 +23,9 @@ int64_t integer(const fkyaml::node &node, const char *key, int64_t low, int64_t 
     return value;
 }
 
-std::shared_ptr<const Layout> parse(const fkyaml::node &value, unsigned depth = 0) {
+std::shared_ptr<const Layout> parse(const fkyaml::node &value, unsigned depth = 0,
+                                  const LayoutResolver &resolve = {}) {
+    if (value.is_string() && resolve) return resolve(value.get_value<std::string>(), depth);
     if (depth >= 128 || !value.is_mapping())
         throw std::invalid_argument("Layout must be a bounded recursive type mapping");
     auto layout = std::make_shared<Layout>();
@@ -45,12 +36,19 @@ std::shared_ptr<const Layout> parse(const fkyaml::node &value, unsigned depth = 
     if (value.contains("four_state")) layout->four_state = value["four_state"].get_value<bool>();
     if (layout->kind == "bits") {
         if (!layout->packed) throw std::invalid_argument("An XData leaf must be packed");
+        if (value.contains("left") || value.contains("right")) {
+            layout->left = int(integer(value, "left", INT32_MIN, INT32_MAX));
+            layout->right = int(integer(value, "right", INT32_MIN, INT32_MAX));
+            layout->has_range = true;
+            if (layout->Size() != layout->Bits())
+                throw std::invalid_argument("Bit-vector range does not match its width");
+        }
     } else if (layout->kind == "array") {
         layout->left = int(integer(value, "left", INT32_MIN, INT32_MAX));
         layout->right = int(integer(value, "right", INT32_MIN, INT32_MAX));
         if (layout->Size() > uint64_t(INT32_MAX))
             throw std::invalid_argument("Array dimension exceeds int range");
-        layout->children.push_back(parse(value["element"], depth + 1));
+        layout->children.push_back(parse(value["element"], depth + 1, resolve));
         const auto &element = *layout->children.front();
         if (layout->packed && (!element.packed ||
             layout->Size() * element.Bits() != layout->width))
@@ -65,7 +63,7 @@ std::shared_ptr<const Layout> parse(const fkyaml::node &value, unsigned depth = 
             auto name = field["name"].get_value<std::string>();
             if (name.empty() || !seen.insert(name).second)
                 throw std::invalid_argument("Struct field names must be nonempty and unique");
-            auto child = parse(field["type"], depth + 1);
+            auto child = parse(field["type"], depth + 1, resolve);
             uint32_t offset = 0;
             if (layout->packed) {
                 offset = uint32_t(integer(field, "offset", 0, INT32_MAX));
@@ -93,6 +91,9 @@ std::shared_ptr<const Layout> parse(const fkyaml::node &value, unsigned depth = 
         throw std::invalid_argument("Packed aggregate width must be positive");
     if (!layout->packed && layout->width)
         throw std::invalid_argument("Unpacked container has no whole-value bit width");
+    for (const auto &child : layout->children) layout->depth = std::max(layout->depth, child->depth + 1);
+    if (depth + layout->depth > 128)
+        throw std::invalid_argument("Layout must be a bounded recursive type mapping");
     return layout;
 }
 
@@ -117,7 +118,7 @@ void collect(XPort &port, const Layout &layout, const std::string &path, Binding
     if (layout.packed) {
         if (!port.Has(path)) throw std::invalid_argument("Layout leaf missing from XPort: " + path);
         auto &data = port.Get(path);
-        if (data.mWidth != layout.width)
+        if ((data.mWidth ? data.mWidth : 1) != layout.Bits())
             throw std::invalid_argument("Layout leaf width does not match XData: " + path);
         bindings.emplace(path, DataRef(data));
     } else if (layout.kind == "struct") {
@@ -134,6 +135,10 @@ void collect(XPort &port, const Layout &layout, const std::string &path, Binding
 
 } // namespace
 
+std::shared_ptr<const Layout> ParseLayout(const std::string &description, const LayoutResolver &resolve, unsigned depth) {
+    return parse(fkyaml::node::deserialize(description), depth, resolve);
+}
+
 struct ViewNode {
     std::shared_ptr<const Layout> layout;
     std::shared_ptr<const Bindings> bindings;
@@ -147,6 +152,8 @@ struct ViewNode {
     std::shared_ptr<const NativeBindings> native;
     std::string native_path;
     std::vector<int> native_indices;
+    // True at an independently bound whole value; false within a packed value.
+    bool whole_value = true;
 
     ViewNode(std::shared_ptr<const Layout> layout, std::shared_ptr<const Bindings> bindings,
              std::string path, std::shared_ptr<DataRef> backing = nullptr, uint32_t offset = 0,
@@ -203,8 +210,10 @@ struct ViewNode {
             if (uint64_t(offset) + layout->Bits() > (leaf->mWidth ? leaf->mWidth : 1))
                 throw std::runtime_error("Array field exceeds its packed element: " + path);
             if (!data) {
-                if (offset == 0 && leaf->mWidth == layout->width) data = leaf;
+                if (offset == 0 && (leaf->mWidth ? leaf->mWidth : 1) == layout->Bits() &&
+                    (whole_value || leaf->type_layout == layout)) data = leaf;
                 else data = leaf->SubDataRef(offset, layout->width, path);
+                if (!whole_value || !data->type_layout) data->AssociateLayout(layout);
                 if (data->mName.empty()) data->mName = path;
             }
             return data;
@@ -212,9 +221,11 @@ struct ViewNode {
         if (!backing) throw std::invalid_argument("Unpacked container has no whole XData value");
         auto &parent = backing->Get();
         if (!data) {
-            if (offset == 0 && parent.mWidth == layout->width)
+            if (offset == 0 && (parent.mWidth ? parent.mWidth : 1) == layout->Bits() &&
+                (whole_value || parent.type_layout == layout))
                 data = backing->owner ? backing->owner : std::shared_ptr<XData>(&parent, [](XData *) {});
             else data = parent.SubDataRef(offset, layout->width, path);
+            if (!whole_value || !data->type_layout) data->AssociateLayout(layout);
         }
         return data;
     }
@@ -244,6 +255,7 @@ struct ViewNode {
             indexed ? indexed_first + (layout->packed ? 0 : position * (indexed_count / layout->Size())) : 0,
             indexed ? (layout->packed ? indexed_count : indexed_count / layout->Size()) : 0,
             native, std::move(key), std::move(indices));
+        result->whole_value = !layout->packed;
         children.emplace(position, result);
         return result;
     }
@@ -254,18 +266,30 @@ struct ViewNode {
 XView::XView(std::shared_ptr<detail::ViewNode> node) : node(std::move(node)) {}
 
 XView XView::FromData(XData &data, const std::string &description) {
-    auto layout = detail::parse(fkyaml::node::deserialize(description));
-    if (!layout->packed || layout->width != data.mWidth)
+    return FromDataLayout(data, detail::ParseLayout(description));
+}
+
+XView XView::FromDataLayout(XData &data, std::shared_ptr<const detail::Layout> layout) {
+    if (!layout->packed || layout->Bits() != (data.mWidth ? data.mWidth : 1))
         throw std::invalid_argument("Packed layout width must match its parent XData");
+    (void)data._check_writeable();
+    if (data.type_layout == layout) {
+        if (data.type_view && data.type_view->layout == layout) return XView(data.type_view);
+    }
     auto root = std::make_shared<detail::ViewNode>(layout, nullptr, data.mName,
                                                   std::make_shared<detail::DataRef>(data));
+    if (data.type_layout == layout) data.type_view = root;
     return XView(std::move(root));
 }
 
 XView XView::FromNative(uint64_t base, const std::string &description,
                        const std::vector<unsigned long long> &strides) {
+    return FromNativeLayout(base, detail::ParseLayout(description), strides);
+}
+
+XView XView::FromNativeLayout(uint64_t base, std::shared_ptr<const detail::Layout> layout,
+                            const std::vector<unsigned long long> &strides) {
     if (!base) throw std::invalid_argument("Native view base is null");
-    auto layout = detail::parse(fkyaml::node::deserialize(description));
     auto value = layout;
     std::vector<int> left, right;
     while (!value->packed) {
@@ -280,6 +304,7 @@ XView XView::FromNative(uint64_t base, const std::string &description,
         const uint64_t bytes = value->Bits() <= 8 ? 1 : value->Bits() <= 16 ? 2 : ((value->Bits() + 31) / 32) * 4;
         if (base > UINT64_MAX - (bytes - 1)) throw std::overflow_error("Native view address overflow");
         auto data = std::make_shared<XData>(layout->width, IOType::InOut);
+        data->AssociateLayout(layout);
         data->BindNativeData(base);
         data->AsImmWrite();
         auto root = std::make_shared<detail::ViewNode>(layout, nullptr, "",
@@ -294,9 +319,13 @@ XView XView::FromNative(uint64_t base, const std::string &description,
 
 XView XView::FromNativeBindings(uint64_t base, const std::string &description,
                                const std::string &bindings) {
+    return FromNativeBindingsLayout(base, detail::ParseLayout(description), bindings);
+}
+
+XView XView::FromNativeBindingsLayout(uint64_t base, std::shared_ptr<const detail::Layout> layout,
+                                    const std::string &bindings) {
     if (!base) throw std::invalid_argument("Native view base is null");
     using N = fkyaml::node;
-    auto layout = detail::parse(N::deserialize(description));
     auto declarations = N::deserialize(bindings);
     if (!declarations.is_sequence()) throw std::invalid_argument("Native bindings must be a list");
     std::map<std::string, N> groups;
@@ -346,7 +375,11 @@ XView XView::FromNativeBindings(uint64_t base, const std::string &description,
 }
 
 XView XView::FromPort(XPort &port, const std::string &name, const std::string &description) {
-    auto layout = detail::parse(fkyaml::node::deserialize(description));
+    return FromPortLayout(port, name, detail::ParseLayout(description));
+}
+
+XView XView::FromPortLayout(XPort &port, const std::string &name,
+                          std::shared_ptr<const detail::Layout> layout) {
     auto bindings = std::make_shared<detail::Bindings>();
     detail::collect(port, *layout, name, *bindings);
     auto root = std::make_shared<detail::ViewNode>(layout, bindings, name);
@@ -408,6 +441,40 @@ std::shared_ptr<XArray> XData::ArrayView(const std::string &layout) {
     return XView::FromData(*this, layout).Array();
 }
 
+void XData::AssociateLayout(std::shared_ptr<const detail::Layout> layout) {
+    if (!layout || !layout->packed || layout->Bits() != (mWidth ? mWidth : 1))
+        throw std::invalid_argument("XData layout must describe a packed value of the same width");
+    if (type_layout != layout) {
+        type_view.reset();
+        type_layout = std::move(layout);
+    }
+}
+void XData::SetLayout(const std::string &layout) { AssociateLayout(detail::ParseLayout(layout)); }
+std::shared_ptr<XStruct> XData::StructView() {
+    if (!type_layout) throw std::invalid_argument("XData has no RTL layout; provide a layout explicitly");
+    if (type_layout->kind != "struct")
+        throw std::invalid_argument("Cannot convert view \"" + mName + "\": actual=" +
+            type_layout->kind + ", requested=struct");
+    return XView::FromDataLayout(*this, type_layout).Struct();
+}
+std::shared_ptr<XArray> XData::ArrayView() {
+    if (!type_layout) throw std::invalid_argument("XData has no RTL layout; provide a layout explicitly");
+    // A plain vector remains a bits node by default. Only this explicit call
+    // interprets its retained declaration as one array dimension.
+    if (type_layout->kind == "bits" && type_layout->has_range) {
+        if (type_view && type_view->layout->kind == "array") return XView(type_view).Array();
+        auto bit = std::make_shared<detail::Layout>();
+        bit->kind = "bits"; bit->packed = true; bit->four_state = type_layout->four_state;
+        auto array = std::make_shared<detail::Layout>(*type_layout);
+        array->kind = "array"; array->width = uint32_t(type_layout->Bits());
+        array->children = {bit}; array->depth = 2;
+        auto view = XView::FromDataLayout(*this, std::move(array));
+        type_view = view.node;
+        return view.Array();
+    }
+    return XView::FromDataLayout(*this, type_layout).Array();
+}
+
 XStruct::XStruct(std::shared_ptr<detail::ViewNode> node) : node(std::move(node)) {}
 bool XStruct::IsPacked() const { return node->layout->packed; }
 bool XStruct::Has(const std::string &name) const {
@@ -428,14 +495,18 @@ std::shared_ptr<XData> XStruct::PackedData() { return XView(node).PackedData(); 
 
 XArray::XArray(std::shared_ptr<detail::ViewNode> node) : node(std::move(node)) {}
 std::shared_ptr<XArray> XArray::FromBinding(std::shared_ptr<detail::ArrayBinding> binding,
-                                          uint32_t width, const std::string &name) {
+    uint32_t width, const std::string &name, std::shared_ptr<const detail::Layout> element_layout) {
     auto left = binding->Left(), right = binding->Right();
     if (left.size() >= 128 || width > uint32_t(INT32_MAX))
         throw std::invalid_argument("Array rank or element width exceeds supported layout limits");
-    auto layout = std::make_shared<detail::Layout>();
-    layout->kind = "bits";
-    layout->packed = true;
-    layout->width = width;
+    if (!element_layout) {
+        auto bits = std::make_shared<detail::Layout>();
+        bits->kind = "bits"; bits->packed = true; bits->width = width;
+        element_layout = std::move(bits);
+    }
+    if (!element_layout->packed || element_layout->Bits() != (width ? width : 1))
+        throw std::invalid_argument("Array element layout width mismatch");
+    auto layout = std::move(element_layout);
     for (size_t d = left.size(); d-- > 0;) {
         auto parent = std::make_shared<detail::Layout>();
         parent->kind = "array";

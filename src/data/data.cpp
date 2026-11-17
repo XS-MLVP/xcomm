@@ -293,7 +293,9 @@ XData::XData(uint32_t width, IOType itype, std::string name) :
 }
 void XData::ReInit(uint32_t width, IOType itype, std::string name)
 {
-    if (this->mWidth != width) this->view_lifetime.Renew();
+    if (this->mWidth != width || this->type_layout) this->view_lifetime.Renew();
+    this->type_layout.reset();
+    this->type_view.reset();
     this->sub_parent = nullptr;
     this->sub_lifetime.reset();
     this->vpi_owner.reset();
@@ -371,6 +373,7 @@ XData::XData(XData &t) :
     this->sub_offset = t.sub_offset;
     this->sub_parent = t.sub_parent;
     this->sub_lifetime = t.sub_lifetime;
+    this->type_layout = t.type_layout;
     // pointers
     if (this->vecSize > 0) {
         this->pVecData =

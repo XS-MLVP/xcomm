@@ -18,11 +18,12 @@ namespace xspcomm {
 
 namespace detail { struct ArrayStorage; class ArrayBinding; }
 namespace detail { struct VpiOwnedHandle; }
-namespace detail { struct ViewNode; }
+namespace detail { struct ViewNode; struct Layout; }
 class XVPI;
 class XView;
 class XStruct;
 class XArray;
+class XSignalCFG;
 class ExprEngine;
 
 typedef unsigned char xsvLogic; /* scalar */
@@ -135,6 +136,8 @@ class XData
     friend class detail::ArrayBinding;
     friend class XVPI;
     friend struct detail::ViewNode;
+    friend class XView;
+    friend class XSignalCFG;
 public:
     static const IOType In      = IOType::Input;
     static const IOType Out     = IOType::Output;
@@ -176,6 +179,11 @@ private:
     bool readonly_backend         = false;
     std::shared_ptr<detail::ArrayStorage> array_storage;
     uint64_t array_location = 0; // DPI flat index or precomputed native address.
+    std::shared_ptr<const detail::Layout> type_layout;
+    // The cached node observes this Data through a weak lifetime token; it
+    // never owns this Data. Keeping it alive preserves selected leaf identity.
+    std::shared_ptr<detail::ViewNode> type_view;
+    void AssociateLayout(std::shared_ptr<const detail::Layout> layout);
 
     // For VPI
     func_vpi_get vpi_get             = nullptr;
@@ -222,6 +230,11 @@ public:
     ~XData();
     void ReInit(uint32_t width, IOType itype, std::string name = "");
     std::shared_ptr<XData> SubDataRef(uint32_t start, uint32_t width, std::string name = "");
+    // Type metadata is independent of value storage and write scheduling.
+    void SetLayout(const std::string &layout);
+    bool HasLayout() const { return bool(type_layout); }
+    std::shared_ptr<XStruct> StructView();
+    std::shared_ptr<XArray> ArrayView();
     std::shared_ptr<XStruct> StructView(const std::string &layout);
     std::shared_ptr<XArray> ArrayView(const std::string &layout);
 #ifndef SWIG
