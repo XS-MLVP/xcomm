@@ -156,7 +156,7 @@ Picker 的 RTL 聚合端口集成要求 Verilator 5.048 及更新版本；xcomm 
 | unpacked struct | 独立字段 `XData` 与递归容器 |
 | unpacked array | XArray 组织独立元素值与递归容器；同类叶子共享内部索引后端 |
 
-Picker 生成递归布局并在初始化时由 `xcfg.BindPortLayouts(port)` 关联到实际的端口 Data；
+Picker 生成递归布局并在初始化时由 `xcfg.BindDataLayouts(group)` 关联到实际的端口 Data；
 不自动增加 packed `*_view` 成员。内部原生 `NewXData()` 也会关联可用的类型。
 Data 与布局的关联不改变 DPI/native 绑定、写模式或 `XPort` 注册。
 

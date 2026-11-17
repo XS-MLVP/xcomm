@@ -56,8 +56,8 @@ variables:
 | `NewXData(name, index, xname="")` | 按扁平、从零开始的存储下标创建数组元素；下标必须小于数组大小并会检查，越界抛出异常。非数组名称返回 nullptr。 |
 | `NewXArray(name)` | 返回缓存的递归 XArray，边界为从零开始的存储坐标；名称不存在或不是数组时返回 nullptr。Size 为当前维度长度，Array/Data 每层选择一个下标。 |
 | `NewXView(name)` | 返回缓存的 RTL 坐标视图，支持字段/数组路径；名称不存在时为空视图，缺少或不匹配的类型/绑定抛出异常。动态叶子默认立即写入。 |
-| `BindPortLayouts(port)` | 为已有端口 Data 关联配置中的类型；不创建视图、不替换后端。DPI 工程的 base 为 0 时也可使用。 |
-| `NewPortView(port, name)` | 使用配置中的端口类型组织已有叶子；生成器用它创建 unpacked 容器，packed 值通常通过 Data 的显式视图入口访问。 |
+| `BindDataLayouts(group)` | 从 XPort group 查找已有 Data，关联配置中的 RTL 类型；不创建视图、不替换后端。DPI 工程的 base 为 0 时也可使用。 |
+| `NewViewFromPort(group, name)` | 用配置中指定 RTL 对象的类型，从 group 查找已有叶子并创建视图；生成器用它创建 unpacked 容器，packed 值通常通过 Data 的显式视图入口访问。 |
 | `GetSignalNames(pattern="")` | 列出名称；pattern 按名称子串筛选。 |
 | `At(name)`；`operator[]` | 原生布局查询；不存在时 is_empty=true，Python 包装成 None。 |
 | `Address(name)` | 返回 base+offset；先核对 At 的存在性，不能用这个结果判断信号是否存在。 |
@@ -121,10 +121,14 @@ unpacked struct 没有整体位值，应使用视图，不能用 `NewXData()` �
 字段位宽推算 padding。`XView.FromNative()` 则适用于一个 packed 值或它的固定 unpacked 数组。
 
 二进制库的 `port_types` 元数据将精确的逻辑端口名映射到同一类型表的 ID；原有 `ports`
-展示树及其 `Layout` 保持可读。`BindPortLayouts()` 在所有叶子与位宽校验通过后才建立
+展示树及其 `Layout` 保持可读。`BindDataLayouts()` 在所有叶子与位宽校验通过后才建立
 关联，不从宿主属性名或名称前缀猜类型。Data 保留只读类型引用，不保留指向已销毁 xcfg
 的裸指针。`NewXData()` 和存储数组中的 packed 叶子也保留可用的类型，支持随后无参的
 `StructView()` / `ArrayView()`；这不改变这些入口原有的绑定和提交模式。
+
+`XPort` 只是命名 Data 的 group，本身没有 RTL 类型或字段/元素关系。`port_types` 指真正的
+RTL 导出端口类型；结构来自配置，不来自 group。`NewViewFromPort()` 创建的是视图，不是
+XPort 或新信号；不增加 XPort 成员或时钟调度登记。
 
 ## 只读派生信号
 

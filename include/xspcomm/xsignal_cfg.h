@@ -64,11 +64,12 @@ class XSignalCFG {
         expected_model(std::move(model_id)), cfg_data(std::move(path_or_str_data)), cfg_base_address(base_address){};
     // Explicit inspection only: runtime lookups never decode all metadata.
     std::string Metadata(std::string name);
-    // Associate configuration types with the existing port leaves, without
-    // constructing views or replacing their DPI/native backends.
-    void BindPortLayouts(XPort &port);
-    // Explicit containers for unpacked ports use the same cached type graph.
-    XView NewPortView(XPort &port, const std::string &name);
+    // Associate configured RTL types with existing Data found in a group,
+    // without constructing views or replacing their DPI/native backends.
+    void BindDataLayouts(XPort &group);
+    // Construct a view from named Data in a group and a configured RTL layout.
+    // The XPort group itself has no RTL type or array/struct relationships.
+    XView NewViewFromPort(XPort &group, const std::string &name);
     XData* NewXData(std::string name, std::string xname="");
     XData* NewXData(std::string name, int array_index, std::string xname="");
     // Internal arrays use zero-based storage bounds unless RTL bounds are known.

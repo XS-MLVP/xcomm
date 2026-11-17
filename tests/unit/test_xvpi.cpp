@@ -404,3 +404,85 @@ TEST_CASE("XVPI discovery still validates widths and releases failed lookup hand
     model.session.Close();
     REQUIRE(model.Outstanding() == 0);
 }
+
+TEST_CASE("configured vector metadata does not hide simulator bit and part selections", "[xvpi][selection]") {
+    MockVpiModel model;
+    model.Vector("word", 8, {{7, 0}});
+    model.Add("word[3]", vpiReg, 1).value[0].aval = 1;
+    model.Vector("word[3:2]", 2, {{1, 0}}).value[0].aval = 2;
+    model.Configure(R"({"word":{"kind":"bits","packed":true,"width":8,"left":11,"right":4}})");
+    auto whole = model.session.Get("word").Data();
+    REQUIRE(whole->ArrayView()->Left() == 11);
+    REQUIRE(whole->ArrayView()->Right() == 4);
+    // Name-based queries use actual simulator coordinates. They must not
+    // reinterpret the normalized wrapper index 3 as the declared RTL index.
+    auto bit = model.session.Get("word[3]").Data();
+    REQUIRE(bit->W() == 0);
+    REQUIRE(bit->U() == 1);
+    REQUIRE(model.session.Get("word[3]").Data() == bit);
+    auto part = model.session.Get("word[3:2]").Data();
+    REQUIRE(part->W() == 2);
+    REQUIRE(part->U() == 2);
+    REQUIRE_FALSE(model.session.Get("word[12]").HasValue());
+    model.session.Close();
+    REQUIRE(model.Outstanding() == 0);
+    REQUIRE_THROWS_AS(bit->U(), std::runtime_error);
+    REQUIRE_THROWS_AS(part->U(), std::runtime_error);
+}
+
+TEST_CASE("scalar array element bit paths fall back without discarding declared array coordinates", "[xvpi][selection]") {
+    MockVpiModel model;
+    auto &array = model.Add("flags", vpiRegArray);
+    model.Bounds(array, -1, 0);
+    for (int index : {-1, 0}) {
+        const auto name = "flags[" + std::to_string(index) + "]";
+        auto &element = model.Add(name, vpiReg, 1);
+        element.scalar = true;
+        array.elements[index] = &element;
+        model.Add(name + "[0]", vpiReg, 1).value[0].aval = 1;
+    }
+    model.Configure(R"({"flags":{"kind":"array","packed":false,"width":0,"left":-1,"right":0,
+        "element":{"kind":"bits","packed":true,"width":0}}})");
+    auto view = model.session.Get("flags").Array();
+    REQUIRE(model.session.Get("flags[-1]").PackedData() == view->Data(-1));
+    REQUIRE(model.session.Get("flags[-1][0]").Data()->U() == 1);
+    REQUIRE_THROWS_AS(model.session.Get("flags[1][0]"), std::out_of_range);
+    REQUIRE_THROWS_AS(model.session.Get("flags[not_an_index]"), std::invalid_argument);
+    model.session.Close();
+    REQUIRE(model.Outstanding() == 0);
+}
+
+TEST_CASE("VPI one-bit leaves keep the scalar representation regardless of semantic type", "[xvpi][selection]") {
+    MockVpiModel model;
+    auto &array = model.Add("flags", vpiRegArray);
+    model.Bounds(array, 1, 0);
+    for (int index : {1, 0}) {
+        auto &element = model.Vector("flags[" + std::to_string(index) + "]", 1, {{0, 0}});
+        element.value[0].aval = 1;
+        array.elements[index] = &element;
+    }
+    model.Vector("packet", 1, {{0, 0}}).value[0].aval = 1;
+    model.Configure(R"({"flags":{"kind":"array","packed":false,"width":0,"left":1,"right":0,
+        "element":{"kind":"array","packed":true,"width":1,"left":9,"right":9,
+            "element":{"kind":"bits","packed":true,"width":0}}},
+        "packet":{"kind":"struct","packed":true,"width":1,"fields":[
+            {"name":"valid","offset":0,"type":{"kind":"bits","packed":true,"width":0}}]}})");
+    auto flags = model.session.Get("flags").Array();
+    for (int index : {1, 0}) {
+        auto leaf = flags->Data(index);
+        REQUIRE(leaf->W() == 0);
+        REQUIRE(leaf->S() == 1);
+        REQUIRE(leaf->HasLayout());
+        REQUIRE(leaf->ArrayView()->Left() == 9);
+        REQUIRE(leaf->ArrayView()->Data(9)->U() == 1);
+        std::unique_ptr<XData> direct(XData::FromVPI(as_handle(*array.elements[index]),
+            mock_vpi_get, mock_vpi_get_value, mock_vpi_put_value));
+        REQUIRE(direct->W() == leaf->W());
+        REQUIRE(direct->S() == leaf->S());
+    }
+    auto packet = model.session.Get("packet").PackedData();
+    REQUIRE(packet->W() == 0);
+    REQUIRE(packet->StructView()->Data("valid")->U() == 1);
+    model.session.Close();
+    REQUIRE(model.Outstanding() == 0);
+}

@@ -59,8 +59,8 @@ variables:
 | `NewXData(name, index, xname="")` | Create an array element by flat, zero-based storage index. The index must be less than the array size and is checked; out-of-range values throw. Returns nullptr for a non-array name. |
 | `NewXArray(name)` | Return the cached recursive XArray with zero-based storage bounds, or nullptr for a missing or non-array name. Size is the current dimension length; Array/Data select one index per dimension. |
 | `NewXView(name)` | Return a cached RTL-indexed view, including field/array paths. Missing names return an empty view; missing or inconsistent types/bindings throw. Dynamic leaves default to immediate writes. |
-| `BindPortLayouts(port)` | Associate configuration types with existing port Data without constructing views or replacing backends; also works for DPI projects with base 0. |
-| `NewPortView(port, name)` | Group existing leaves using the configured port type; generators use it for unpacked containers, while packed values normally use explicit Data views. |
+| `BindDataLayouts(group)` | Find existing Data in an XPort group and associate configured RTL types without constructing views or replacing backends; also works for DPI projects with base 0. |
+| `NewViewFromPort(group, name)` | Use the configured type of the named RTL object to find existing leaves in a group and construct a view; generators use it for unpacked containers, while packed values normally use explicit Data views. |
 | `GetSignalNames(pattern="")` | List names using pattern as a substring filter. |
 | `At(name)`; `operator[]` | Query native layout; missing entries have is_empty=true and become None in Python. |
 | `Address(name)` | Return base+offset. Check existence with At first; an address alone does not prove existence. |
@@ -137,11 +137,16 @@ widths. `XView.FromNative()` handles one packed value or fixed unpacked arrays o
 
 Binary `port_types` metadata maps exact logical port names to IDs in that same
 type table. The existing `ports` presentation tree and its `Layout` remain readable.
-`BindPortLayouts()` validates all leaves and widths before associating types,
+`BindDataLayouts()` validates all leaves and widths before associating types,
 without guessing from host attributes or name prefixes. Data retain immutable
 types, not dangling pointers into a destroyed xcfg. `NewXData()` and packed storage
 array leaves retain available types for subsequent argument-free `StructView()` /
 `ArrayView()` calls, without changing their existing bindings or commit modes.
+
+XPort is only a group of named Data, not an RTL type or a field/element hierarchy.
+`port_types` describes actual exported RTL ports; configuration supplies the
+structure, not the group. `NewViewFromPort()` creates a view, not an XPort or new
+signals, and adds no XPort members or clock registrations.
 
 ## Read-only derived signals
 
