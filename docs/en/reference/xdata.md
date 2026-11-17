@@ -169,7 +169,7 @@ the xcomm containers themselves do not depend on a simulator version.
 | Unpacked array | XArray with independent element values and recursive containers; homogeneous leaves share an internal indexed backend |
 
 Picker emits recursive layouts and associates them with the actual port Data
-through `xcfg.BindPortLayouts(port)` during initialization. It does not add packed
+through `xcfg.BindDataLayouts(group)` during initialization. It does not add packed
 `*_view` members. Native internal `NewXData()` also associates available types.
 Associating a type does not change DPI/native bindings, write modes or XPort registration.
 

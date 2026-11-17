@@ -285,21 +285,21 @@ namespace xspcomm
         port_types_loaded = true;
     }
 
-    XView XSignalCFG::NewPortView(XPort &port, const std::string &name) {
+    XView XSignalCFG::NewViewFromPort(XPort &group, const std::string &name) {
         LoadPortTypes();
         auto type = port_type_ids.find(name);
         if (type == port_type_ids.end()) throw std::invalid_argument("RTL port layout unavailable: " + name);
-        return XView::FromPortLayout(port, name, ResolveLayout(type->second));
+        return XView::FromPortLayout(group, name, ResolveLayout(type->second));
     }
 
-    void XSignalCFG::BindPortLayouts(XPort &port) {
+    void XSignalCFG::BindDataLayouts(XPort &group) {
         LoadPortTypes();
         std::vector<std::pair<XData *, std::shared_ptr<const detail::Layout>>> pending;
         std::function<void(std::shared_ptr<const detail::Layout>, const std::string &)> collect;
         collect = [&](std::shared_ptr<const detail::Layout> layout, const std::string &path) {
             if (layout->packed) {
-                if (!port.Has(path)) throw std::invalid_argument("Layout leaf missing from XPort: " + path);
-                auto &data = port.Get(path);
+                if (!group.Has(path)) throw std::invalid_argument("Layout leaf missing from XPort group: " + path);
+                auto &data = group.Get(path);
                 if (layout->Bits() != (data.mWidth ? data.mWidth : 1))
                     throw std::invalid_argument("Layout leaf width does not match XData: " + path);
                 pending.emplace_back(&data, std::move(layout));

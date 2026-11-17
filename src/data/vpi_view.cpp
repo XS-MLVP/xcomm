@@ -3,6 +3,7 @@
 #include "fkyaml/node.hpp"
 #include <climits>
 #include <functional>
+#include <optional>
 #include <set>
 
 namespace xspcomm {
@@ -154,7 +155,7 @@ void bind_handles(Context &c, const N &layout, Handle object, const std::string 
     }
 }
 
-XView select(XView view, std::string suffix) {
+std::optional<XView> select(XView view, std::string suffix) {
     size_t position = 0;
     while (position < suffix.size()) {
         if (suffix[position] == '.') {
@@ -162,6 +163,10 @@ XView select(XView view, std::string suffix) {
             while (position < suffix.size() && suffix[position] != '.' && suffix[position] != '[') ++position;
             view = view.Struct()->Field(suffix.substr(start, position - start));
         } else if (suffix[position] == '[') {
+            // A bits node is still an ordinary value, not an RTL array node.
+            // Preserve existing name-based VPI bit/part selections, which may
+            // use normalized wrapper coordinates rather than the RTL layout.
+            if (view.Kind() == "bits") return std::nullopt;
             const auto close = suffix.find(']', position);
             if (close == std::string::npos) throw std::invalid_argument("Incomplete RTL array index");
             size_t used = 0;
@@ -233,9 +238,10 @@ XView XVPI::Get(const std::string &name) {
             (path[root_path.size()] == '.' || path[root_path.size()] == '[')) parent = root_path;
     }
     if (!parent.empty()) {
-        auto result = select(Get(parent), path.substr(parent.size()));
-        views.emplace(path, result);
-        return result;
+        if (auto result = select(Get(parent), path.substr(parent.size()))) {
+            views.emplace(path, *result);
+            return *result;
+        }
     }
     std::string full = context->scope.empty() ? path : context->scope + "." + path;
     auto raw = context->by_name(full.data(), nullptr);
@@ -250,7 +256,9 @@ XView XVPI::Get(const std::string &name) {
     bind_handles(*context, layout, object, path, handles);
     std::map<std::string, std::shared_ptr<XData>> signals;
     for (auto &[path, entry] : handles) {
-        auto data = std::make_shared<XData>(entry.second, IOType::Input, "VPI:" + path);
+        // Match FromVPI's long-standing scalar representation for every
+        // independently bound one-bit leaf, while retaining its semantic type.
+        auto data = std::make_shared<XData>(entry.second == 1 ? 0 : entry.second, IOType::Input, "VPI:" + path);
         if (!data->BindVPI(entry.first->value, context->get, context->get_value, context->put_value, "VPI:" + path))
             throw std::runtime_error("Cannot bind VPI value: " + path);
         data->vpi_owner = entry.first;

@@ -155,13 +155,13 @@ TEST_CASE("configuration associates port types without a native base or replacin
     port.Add("p", first);
     {
         xspcomm::XSignalCFG cfg(f.path(), 0, "ports");
-        REQUIRE_THROWS_AS(cfg.BindPortLayouts(port), std::invalid_argument);
+        REQUIRE_THROWS_AS(cfg.BindDataLayouts(port), std::invalid_argument);
         REQUIRE_FALSE(first.HasLayout()); // The entire association is validated first.
         port.Add("other", second);
-        cfg.BindPortLayouts(port);
+        cfg.BindDataLayouts(port);
         REQUIRE(first.HasLayout());
         REQUIRE(second.HasLayout());
-        REQUIRE(cfg.NewPortView(port, "p").PackedData().get() == &first);
+        REQUIRE(cfg.NewViewFromPort(port, "p").PackedData().get() == &first);
         first.StructView()->Data("payload")->Set(0x5a);
         REQUIRE(first.U() == 0xb4);
         REQUIRE(second.U() == 0);
