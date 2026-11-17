@@ -8,11 +8,15 @@
 | 层次 | 取值/查询方式 | 用途 |
 | --- | --- | --- |
 | Python 包/原生版本字符串 | `version()` 与包元数据 | 标识包的构建版本 |
-| 原生 C++ ABI | 5 | 对象布局与动态链接；`abi_version()`、libxspcomm.so.5 |
+| 原生 C++ ABI | 6 | 对象布局与动态链接；`abi_version()`、libxspcomm.so.6 |
 | Coverage 描述协议 | 5 | 前端生成 point/bin/program 的结构；`XTriggerEngine.CoverageVersion()` |
 
 Picker 与 xcomm 使用匹配的工具链。Picker 在 `.build-config.yml` 中记录原生源码依赖；
-升级工具链后重新生成 DUT 和布局 YAML。
+升级工具链后重新生成并编译 DUT 和单文件 `.xscfg` 配置。
+
+ABI 6 为 `XData` 增加共享类型和按需视图缓存，不能与 ABI 5 的 `v1.5.0` SDK 混用。
+packed 值通过 `StructView()` / `ArrayView()` 显式解释自身布局；不再自动增加 `*_view`
+成员。类型信息、普通位索引和视图下标的区别见 [XData](xdata.md)。
 
 发布 wheel 按 CPython 小版本及平台构建，矩阵覆盖 Linux x86-64、CPython 3.11/3.12 和
 GLIBC 2.17/2.28。源码构建及 C++ SDK 用法见安装指南。

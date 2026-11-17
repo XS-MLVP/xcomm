@@ -59,6 +59,8 @@ variables:
 | `NewXData(name, index, xname="")` | Create an array element by flat, zero-based storage index. The index must be less than the array size and is checked; out-of-range values throw. Returns nullptr for a non-array name. |
 | `NewXArray(name)` | Return the cached recursive XArray with zero-based storage bounds, or nullptr for a missing or non-array name. Size is the current dimension length; Array/Data select one index per dimension. |
 | `NewXView(name)` | Return a cached RTL-indexed view, including field/array paths. Missing names return an empty view; missing or inconsistent types/bindings throw. Dynamic leaves default to immediate writes. |
+| `BindPortLayouts(port)` | Associate configuration types with existing port Data without constructing views or replacing backends; also works for DPI projects with base 0. |
+| `NewPortView(port, name)` | Group existing leaves using the configured port type; generators use it for unpacked containers, while packed values normally use explicit Data views. |
 | `GetSignalNames(pattern="")` | List names using pattern as a substring filter. |
 | `At(name)`; `operator[]` | Query native layout; missing entries have is_empty=true and become None in Python. |
 | `Address(name)` | Return base+offset. Check existence with At first; an address alone does not prove existence. |
@@ -109,15 +111,17 @@ input. Header validation is eager, block validation is lazy, not a whole-file
 integrity scan. Replacement uses an adjacent temporary file and atomic rename;
 readers of the old inode remain valid. There is no journal or persistent cache.
 
-Format version 1 and native ABI 5 are independent. This backend requires the zlib
+Format version 1 and native ABI 6 are independent. This backend requires the zlib
 development package when building (`zlib1g-dev` on Debian/Ubuntu). The read-only
 database owns metadata, not DUT storage; keep the model alive while using signals.
 
 ## Recursive native types
 
 The optional top-level `types` table interns type nodes; `element` and each field's
-`type` reference another type ID. `NewXView()` expands types only on demand,
-checking depth, cycles, widths, shapes and storage sizes. Packed structs/arrays
+`type` reference another type ID. Types are parsed and shared on demand when Data
+are created, ports are associated, or views are requested, checking depth, cycles,
+and widths. Native views additionally check shapes and storage sizes; constructing
+xcfg does not expand every type. Packed structs/arrays
 share one complete `XData`; unpacked structs bind independent homogeneous field
 groups. Array elements are created lazily, without repeated element type trees or
 per-element callbacks. Ordinary single-dimension bit vectors are value leaves.
@@ -130,6 +134,14 @@ have no whole bit value: use their view, not `NewXData()` on their first byte.
 description; the caller owns the storage lifetime. Offsets, sizes and strides must
 come from the native compiler that built the model, not guessed padding from bit
 widths. `XView.FromNative()` handles one packed value or fixed unpacked arrays of it.
+
+Binary `port_types` metadata maps exact logical port names to IDs in that same
+type table. The existing `ports` presentation tree and its `Layout` remain readable.
+`BindPortLayouts()` validates all leaves and widths before associating types,
+without guessing from host attributes or name prefixes. Data retain immutable
+types, not dangling pointers into a destroyed xcfg. `NewXData()` and packed storage
+array leaves retain available types for subsequent argument-free `StructView()` /
+`ArrayView()` calls, without changing their existing bindings or commit modes.
 
 ## Read-only derived signals
 

@@ -9,12 +9,17 @@ distribution is `uc-xcomm`, imported as `xspcomm`. See
 | Layer | Value / query | Purpose |
 | --- | --- | --- |
 | Python package/native version string | `version()` and package metadata | Identifies the package build |
-| Native C++ ABI | 5 | Object layout and dynamic linking; `abi_version()` and libxspcomm.so.5 |
+| Native C++ ABI | 6 | Object layout and dynamic linking; `abi_version()` and libxspcomm.so.6 |
 | Coverage descriptor protocol | 5 | Frontend point/bin/program structure; `XTriggerEngine.CoverageVersion()` |
 
 Picker and xcomm use a matched toolchain. Picker records its native source
-dependency in `.build-config.yml`; regenerate DUTs and layout YAML after
-toolchain upgrades.
+dependency in `.build-config.yml`; regenerate and rebuild DUTs and single-file
+`.xscfg` configuration after toolchain upgrades.
+
+ABI 6 adds shared types and an on-demand view cache to `XData`; it is incompatible
+with the ABI 5 `v1.5.0` SDK. Packed values explicitly interpret their own layout
+through `StructView()` / `ArrayView()` instead of automatically added `*_view`
+members. See [XData](xdata.md) for type metadata, ordinary bit offsets, and view indices.
 
 Release wheels target a CPython minor version and platform. The wheel matrix
 covers Linux x86-64, CPython 3.11/3.12, and GLIBC 2.17/2.28. See the installation
