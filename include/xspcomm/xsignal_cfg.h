@@ -47,6 +47,10 @@ class XSignalCFG {
     std::map<std::string, std::shared_ptr<XArray>> native_arrays;
     std::map<std::string, XView> native_views;
     std::map<std::string, std::string> native_types;
+    std::map<std::string, std::shared_ptr<const detail::Layout>> type_layouts;
+    std::set<std::string> resolving_types;
+    bool port_types_loaded = false;
+    std::map<std::string, std::string> port_type_ids;
     std::shared_ptr<detail::cfgdb::Database> database;
     std::string expected_model;
     public:
@@ -60,6 +64,11 @@ class XSignalCFG {
         expected_model(std::move(model_id)), cfg_data(std::move(path_or_str_data)), cfg_base_address(base_address){};
     // Explicit inspection only: runtime lookups never decode all metadata.
     std::string Metadata(std::string name);
+    // Associate configuration types with the existing port leaves, without
+    // constructing views or replacing their DPI/native backends.
+    void BindPortLayouts(XPort &port);
+    // Explicit containers for unpacked ports use the same cached type graph.
+    XView NewPortView(XPort &port, const std::string &name);
     XData* NewXData(std::string name, std::string xname="");
     XData* NewXData(std::string name, int array_index, std::string xname="");
     // Internal arrays use zero-based storage bounds unless RTL bounds are known.
@@ -78,6 +87,8 @@ class XSignalCFG {
     XData* new_empty_xdata(std::string name, std::string xname, s_xsignal_cfg &cfg, bool no_return=false);
     void load_cfg();
     void load_signal(const std::string &name);
+    std::shared_ptr<const detail::Layout> ResolveLayout(const std::string &id, unsigned depth = 0);
+    void LoadPortTypes();
     class Parser;
     void _register_native_meta(const std::string &name, const s_xsignal_cfg &cfg);
     std::string _normalize_expr(std::string expr) const;

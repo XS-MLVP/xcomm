@@ -233,6 +233,11 @@ TEST_CASE("XVPI discovers scalars and single packed dimensions as bits", "[xvpi]
             REQUIRE(view.IsFourState() == (type != vpiBitVar));
             const auto data = view.Data();
             REQUIRE(data->W() == (width == 1 ? 0 : width));
+            REQUIRE(data->HasLayout());
+            const auto explicit_array = data->ArrayView();
+            REQUIRE(explicit_array->Left() == range.first);
+            REQUIRE(explicit_array->Right() == range.second);
+            REQUIRE(explicit_array->PackedData() == data);
             const uint64_t expected = width == 1 ? 1 : 0xfedcba9876543210ULL;
             data->Set(expected);
             REQUIRE(data->U() == expected);

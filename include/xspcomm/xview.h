@@ -23,6 +23,15 @@ class XView {
     void Require(const char *kind) const;
     friend class XStruct;
     friend class XArray;
+    friend class XData;
+    friend class XSignalCFG;
+    static XView FromDataLayout(XData &data, std::shared_ptr<const detail::Layout> layout);
+    static XView FromPortLayout(XPort &port, const std::string &name,
+                               std::shared_ptr<const detail::Layout> layout);
+    static XView FromNativeLayout(uint64_t base, std::shared_ptr<const detail::Layout> layout,
+        const std::vector<unsigned long long> &strides);
+    static XView FromNativeBindingsLayout(uint64_t base, std::shared_ptr<const detail::Layout> layout,
+                                         const std::string &bindings);
 public:
     XView() = default;
     // Layout is the recursive JSON type description emitted by Picker.
@@ -85,7 +94,8 @@ class XArray {
     friend class XView;
     friend class XSignalCFG;
     static std::shared_ptr<XArray> FromBinding(std::shared_ptr<detail::ArrayBinding> binding,
-                                             uint32_t width, const std::string &name);
+        uint32_t width, const std::string &name,
+        std::shared_ptr<const detail::Layout> element_layout = nullptr);
     void BindElement(XData &element, uint64_t index) const;
 public:
     // Homogeneous unpacked arrays use the same recursive interface as aggregate

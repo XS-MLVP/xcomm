@@ -8,7 +8,9 @@ swig_add_library(golangxspcomm TYPE SHARED LANGUAGE go SOURCES golang.i)
 set_property(TARGET golangxspcomm PROPERTY SWIG_DEPENDS
     "${PROJECT_SOURCE_DIR}/swig/xcomm.i"
     "${PROJECT_SOURCE_DIR}/swig/view_raw.i"
-    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h")
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xdata.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xsignal_cfg.h")
 target_link_libraries(golangxspcomm PRIVATE xspcomm)
 
 # set buld output directory

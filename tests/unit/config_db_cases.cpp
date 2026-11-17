@@ -136,3 +136,38 @@ TEST_CASE("XSignalCFG reads only requested database records and preserves recurs
     REQUIRE_THROWS_AS(wrong.NewXView("Top.packet"), std::invalid_argument);
     REQUIRE_THROWS_AS(wrong.NewXView("Top.packet"), std::invalid_argument);
 }
+
+TEST_CASE("configuration associates port types without a native base or replacing leaves", "[xscfg][layout]") {
+    Fixture f;
+    db::Writer writer("ports");
+    const db::Value packed{db::Value::True};
+    writer.add('t', "bit", object({{"kind", db::Value::str("bits")}, {"packed", packed}, {"width", db::Value::uint(0)}}));
+    writer.add('t', "byte", object({{"kind", db::Value::str("array")}, {"packed", packed}, {"width", db::Value::uint(8)},
+        {"left", db::Value::uint(7)}, {"right", db::Value::uint(0)}, {"element", db::Value::str("bit")}}));
+    db::Value fields; fields.kind = db::Value::Array;
+    fields.array = {object({{"name", db::Value::str("payload")}, {"offset", db::Value::uint(1)}, {"type", db::Value::str("byte")}}),
+                    object({{"name", db::Value::str("valid")}, {"offset", db::Value::uint(0)}, {"type", db::Value::str("bit")}})};
+    writer.add('t', "packet", object({{"kind", db::Value::str("struct")}, {"packed", packed}, {"width", db::Value::uint(9)}, {"fields", fields}}));
+    writer.add('m', "port_types", object({{"p", db::Value::str("packet")}, {"other", db::Value::str("packet")}}));
+    writer.write(f.path());
+    xspcomm::XData first(9, xspcomm::IOType::Input), second(9, xspcomm::IOType::Input);
+    xspcomm::XPort port;
+    port.Add("p", first);
+    {
+        xspcomm::XSignalCFG cfg(f.path(), 0, "ports");
+        REQUIRE_THROWS_AS(cfg.BindPortLayouts(port), std::invalid_argument);
+        REQUIRE_FALSE(first.HasLayout()); // The entire association is validated first.
+        port.Add("other", second);
+        cfg.BindPortLayouts(port);
+        REQUIRE(first.HasLayout());
+        REQUIRE(second.HasLayout());
+        REQUIRE(cfg.NewPortView(port, "p").PackedData().get() == &first);
+        first.StructView()->Data("payload")->Set(0x5a);
+        REQUIRE(first.U() == 0xb4);
+        REQUIRE(second.U() == 0);
+        REQUIRE(port.PortCount() == 2);
+    }
+    first.StructView()->Data("valid")->Set(1);
+    REQUIRE(first.U() == 0xb5);
+    REQUIRE(first.StructView()->Data("payload")->ArrayView()->Left() == 7);
+}

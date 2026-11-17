@@ -8,9 +8,11 @@ wide:Set(7)
 assert(wide:U() == 7)
 
 local signal = xsp.XData(8, xsp.XData.In)
-local view = signal:ArrayView([[{"kind":"array","packed":true,"width":8,"left":1,"right":0,
+signal:SetLayout([[{"kind":"array","packed":true,"width":8,"left":1,"right":0,
  "element":{"kind":"array","packed":true,"width":4,"left":-2,"right":1,
  "element":{"kind":"bits","packed":true,"width":0}}}]])
+assert(signal:HasLayout())
+local view = signal:ArrayView()
 signal:Set(0)
 view:Array(1):Data(-2):Set(1)
 view:Array(0):Data(1):Set(1)

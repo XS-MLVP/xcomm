@@ -29,8 +29,20 @@
 }
 %enddef
 
-%owned_view(XData, StructView, XStruct, const std::string &layout, layout)
-%owned_view(XData, ArrayView, XArray, const std::string &layout, layout)
+%define %typed_data_view(Method, Result)
+%rename(Method) xspcomm::XData::Method##Handle;
+%newobject xspcomm::XData::Method##Handle;
+%extend xspcomm::XData {
+    xspcomm::Result *Method##Handle() {
+        return new xspcomm::Result(*$self->Method());
+    }
+    xspcomm::Result *Method##Handle(const std::string &layout) {
+        return new xspcomm::Result(*$self->Method(layout));
+    }
+}
+%enddef
+%typed_data_view(StructView, XStruct)
+%typed_data_view(ArrayView, XArray)
 %owned_view(XView, Struct, XStruct, , )
 %owned_view(XView, Array, XArray, , )
 %owned_node(XStruct, Field, const std::string &name, name)

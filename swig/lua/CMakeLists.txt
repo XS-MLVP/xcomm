@@ -23,7 +23,9 @@ swig_add_library(luaxspcomm LANGUAGE lua SOURCES lua.i)
 set_property(TARGET luaxspcomm PROPERTY SWIG_DEPENDS
     "${PROJECT_SOURCE_DIR}/swig/xcomm.i"
     "${PROJECT_SOURCE_DIR}/swig/view_raw.i"
-    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h")
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xview.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xdata.h"
+    "${PROJECT_SOURCE_DIR}/include/xspcomm/xsignal_cfg.h")
 target_link_libraries(luaxspcomm PRIVATE xspcomm)
 
 # set buld output directory
