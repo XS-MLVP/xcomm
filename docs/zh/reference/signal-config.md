@@ -56,6 +56,8 @@ variables:
 | `NewXData(name, index, xname="")` | 按扁平、从零开始的存储下标创建数组元素；下标必须小于数组大小并会检查，越界抛出异常。非数组名称返回 nullptr。 |
 | `NewXArray(name)` | 返回缓存的递归 XArray，边界为从零开始的存储坐标；名称不存在或不是数组时返回 nullptr。Size 为当前维度长度，Array/Data 每层选择一个下标。 |
 | `NewXView(name)` | 返回缓存的 RTL 坐标视图，支持字段/数组路径；名称不存在时为空视图，缺少或不匹配的类型/绑定抛出异常。动态叶子默认立即写入。 |
+| `BindPortLayouts(port)` | 为已有端口 Data 关联配置中的类型；不创建视图、不替换后端。DPI 工程的 base 为 0 时也可使用。 |
+| `NewPortView(port, name)` | 使用配置中的端口类型组织已有叶子；生成器用它创建 unpacked 容器，packed 值通常通过 Data 的显式视图入口访问。 |
 | `GetSignalNames(pattern="")` | 列出名称；pattern 按名称子串筛选。 |
 | `At(name)`；`operator[]` | 原生布局查询；不存在时 is_empty=true，Python 包装成 None。 |
 | `Address(name)` | 返回 base+offset；先核对 At 的存在性，不能用这个结果判断信号是否存在。 |
@@ -100,13 +102,14 @@ POSIX 上映射文件，不在打开时解析全部记录或为每个信号建�
 文件头立即验证、数据块按需验证，不进行启动时的全文件完整性扫描。写入使用相邻临时
 文件及原子重命名，旧文件已映射的读者继续有效；不产生日志或长期缓存文件。
 
-文件格式版本 1 与原生 ABI 5 相互独立。构建需要 zlib 开发包（Debian/Ubuntu 为
+文件格式版本 1 与原生 ABI 6 相互独立。构建需要 zlib 开发包（Debian/Ubuntu 为
 `zlib1g-dev`）。只读配置库拥有元数据，不拥有 DUT 存储，使用信号时模型必须存活。
 
 ## 递归原生类型
 
 可选顶层 `types` 是去重的类型节点表，节点的 `element` 和字段的 `type` 引用其他类型 ID。
-类型只有在查询 `NewXView()` 时才展开，并检查深度、循环引用、位宽、维度和存储大小。
+类型在实际创建 Data、关联端口或请求视图时按需解析并共享，检查深度、循环引用和位宽；
+原生视图还核对维度和存储大小，不在构造 xcfg 时全量展开。
 packed struct/array 共享完整 `XData`，unpacked struct 按独立字段组绑定；数组元素按需创建，
 不按元素重复存类型或注册回调。普通单维 bit-vector 为位值叶子。
 
@@ -116,6 +119,12 @@ unpacked struct 没有整体位值，应使用视图，不能用 `NewXData()` �
 `XView.FromNativeBindings(base, layout, bindings)` 消费同一组经过核验的描述；调用方负责
 存储生命周期。绑定组偏移、大小和 stride 必须由生成该模型的原生编译器确定，不能用
 字段位宽推算 padding。`XView.FromNative()` 则适用于一个 packed 值或它的固定 unpacked 数组。
+
+二进制库的 `port_types` 元数据将精确的逻辑端口名映射到同一类型表的 ID；原有 `ports`
+展示树及其 `Layout` 保持可读。`BindPortLayouts()` 在所有叶子与位宽校验通过后才建立
+关联，不从宿主属性名或名称前缀猜类型。Data 保留只读类型引用，不保留指向已销毁 xcfg
+的裸指针。`NewXData()` 和存储数组中的 packed 叶子也保留可用的类型，支持随后无参的
+`StructView()` / `ArrayView()`；这不改变这些入口原有的绑定和提交模式。
 
 ## 只读派生信号
 

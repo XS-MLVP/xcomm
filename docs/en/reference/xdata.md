@@ -131,7 +131,7 @@ rank must match the dimension rank. Incomplete layouts are rejected rather than
 inferred. The view uses zero-based storage coordinates. Indexed `NewXData` uses
 the same shared backend, but its legacy index is a flat storage position.
 
-Array layouts use native ABI 5. The DPI/native paths target Verilator 5.026 and
+Array layouts use native ABI 6. The DPI/native paths target Verilator 5.026 and
 newer, with regression coverage on 5.026, 5.048, and 5.052.
 
 The former public `XDataArray` type and `NewXDataArray`/`NewXDataArrayView`
@@ -168,10 +168,60 @@ the xcomm containers themselves do not depend on a simulator version.
 | Unpacked struct | Independent field `XData` values and recursive containers |
 | Unpacked array | XArray with independent element values and recursive containers; homogeneous leaves share an internal indexed backend |
 
-Picker emits the recursive layout and bound leaf paths. `XView.FromPort(port,
-name, layout_json)` groups existing leaves without changing their binding,
-write mode or `XPort` registration. `XData.StructView(layout_json)` and
-`XData.ArrayView(layout_json)` create packed views directly from a single value.
+Picker emits recursive layouts and associates them with the actual port Data
+through `xcfg.BindPortLayouts(port)` during initialization. It does not add packed
+`*_view` members. Native internal `NewXData()` also associates available types.
+Associating a type does not change DPI/native bindings, write modes or XPort registration.
+
+| API | Behavior |
+| --- | --- |
+| `HasLayout()` | Whether a type is associated; conversion still checks width, kind, and source lifetime |
+| `SetLayout(layout_json)` | Explicit type association for manual Data; validate before replacing the type and clearing its view cache |
+| `StructView()` / `ArrayView()` | Explicitly obtain a view on demand using the associated layout; missing layouts and kind mismatches throw |
+| `StructView(layout_json)` / `ArrayView(layout_json)` | Create a view using an explicit layout; still available for manual Data |
+
+Data of the same configuration type share an immutable parsed description instead
+of duplicating JSON per element. Views and their selected leaves are cached on the
+Data on demand. Ordinary Data bit indexing remains LSB-zero even when RTL bounds
+are available. Data selected by typed fields or elements inherit their child type;
+arbitrary `SubDataRef()` slices do not inherit the entire parent layout. Copying
+Data preserves its type without adding ownership of model storage. `ReInit()`
+clears types and caches and invalidates associated views/slices even at the same
+width. Type metadata outlives xcfg, but does not extend DUT storage lifetime.
+
+Ordinary vectors remain bits/Data. If the type retains actual `left`/`right`
+bounds such as `[7:4]` or `[0:3]`, explicit `ArrayView()` selects bits with those
+RTL indices; `data[0]` still selects the least significant bit. Manual Data,
+scalars, or incomplete VPI types without declared ranges do not guess them from
+width; provide a layout explicitly instead.
+
+The JSON below only demonstrates manually constructed Data. Picker-generated
+signals already have their configuration types and use argument-free views
+without users writing the layout again.
+
+<!-- runnable:python -->
+```python
+import json
+import xspcomm as xs
+
+signal = xs.XData(8, xs.XData.In)
+signal.SetLayout(json.dumps({
+    "kind": "array", "packed": True, "width": 8, "left": 1, "right": 0,
+    "element": {
+        "kind": "array", "packed": True, "width": 4, "left": -2, "right": 1,
+        "element": {"kind": "bits", "packed": True, "width": 0},
+    },
+}))
+assert signal.HasLayout()
+array = signal.ArrayView()
+array[1][-2].value = 1
+assert signal.value == 0x80
+signal[0] = 1
+assert signal.value == 0x81
+assert array.bounds == ((1, 0), (-2, 1))
+```
+
+`XView.FromPort(port, name, layout_json)` remains available to group existing leaves.
 Layouts include `kind`, `packed`, `width` (zero for scalar leaves), optional
 `signed`/`four_state`, array `left`/`right`/`element`, or struct `fields` with
 `name`, `type`, and packed `offset`. Widths, bounds, duplicate names, overlapping
@@ -194,8 +244,8 @@ std::shared_ptr<XStruct> wrong = node; // throws; an existing target stays uncha
 
 Packed containers never implicitly convert to `XData`; explicitly use `PackedData()`
 for their complete packed value. `XStruct.Data(name)` and `XArray.Data(index)` also
-explicitly select a whole packed field/element. Python normally unwraps nodes to
-their concrete type; Python annotations do not enforce variable-assignment checks.
+explicitly select a whole packed field/element. Default Python field/element
+access unwraps packed values to Data; Python annotations do not enforce assignment checks.
 
 `XStruct.Names()` retains
 RTL field declaration order. `Field(name)` returns a typed node; `Data(name)`,
@@ -206,9 +256,12 @@ return the selected object. `Shape`, `LeftBounds` and `RightBounds` describe the
 consecutive dimensions of the same packed/unpacked kind.
 
 Python containers support `view[name]`, struct field attributes, array `[index]`,
-`bounds`, `shape`, and declaration-order iteration. Packed struct fields and
-packed values selected from unpacked arrays remain complete `XData` values;
-request `Array(name)` or `Array(index)` explicitly to index their packed bits.
+`bounds`, `shape`, and declaration-order iteration. Default field access and packed
+struct/array values selected from unpacked arrays return complete `XData`; then
+explicitly use `StructView()` / `ArrayView()`. `Struct(name)`, `Array(name)`,
+`Struct(index)` and `Array(index)` are themselves explicit structural selections.
+An explicitly obtained packed array view continues to index its declared dimensions
+instead of treating an inner array as a Data bit offset.
 Method-name collisions are accessible with `view[name]`. Container structure is
 read-only; drive the referenced signal's `.value` instead of replacing a field.
 
@@ -219,8 +272,9 @@ and edge commits; do not register slices as additional ordinary data pins.
 Layout and child containers can outlive their outer view, but the source
 `XData`, DUT memory and DPI library must remain alive. Access through a slice
 whose parent was destroyed fails rather than dereferencing the parent.
-Go/Lua expose cached `XData` leaves as borrowed references; keep their source
-view alive while retaining a leaf. Generated DUTs retain those views themselves.
+Go/Lua expose cached `XData` leaves as borrowed references; keep their source alive
+while retaining a leaf. Data retain argument-free explicit views and their leaves;
+callers still manage the lifetime of containers created by other factories or XView.
 Go container handles are owned resources: release them with `DeleteXView`,
 `DeleteXStruct` or `DeleteXArray` when no longer needed, including handles
 returned by `Field`, `At`, `Struct` and `Array`. Do not delete borrowed `XData`

@@ -122,7 +122,7 @@ bval 策略，原生内存并不是 SV 四态缓冲区。
 rank 须与维度 rank 一致。不完整的布局直接拒绝，不做推断。内部视图使用从零开始的存储
 坐标；带下标的 `NewXData` 也使用同一共享后端，但其旧有下标仍表示扁平存储位置。
 
-数组布局使用原生 ABI 5。DPI/native 路径面向 Verilator 5.026 及更新版本，回归验证
+数组布局使用原生 ABI 6。DPI/native 路径面向 Verilator 5.026 及更新版本，回归验证
 版本为 5.026、5.048、5.052。
 
 原公开类型 `XDataArray` 及 `NewXDataArray`/`NewXDataArrayView` 工厂已移除，不保留
@@ -156,10 +156,54 @@ Picker 的 RTL 聚合端口集成要求 Verilator 5.048 及更新版本；xcomm 
 | unpacked struct | 独立字段 `XData` 与递归容器 |
 | unpacked array | XArray 组织独立元素值与递归容器；同类叶子共享内部索引后端 |
 
-Picker 自动生成递归布局和绑定叶子的路径。`XView.FromPort(port, name, layout_json)`
-组织已有叶子，不改变其绑定、写模式或 `XPort` 注册。
-`XData.StructView(layout_json)`、`XData.ArrayView(layout_json)` 直接在一个值上建立
-packed 视图。布局包含 `kind`、`packed`、`width`（标量叶子为零），可选的
+Picker 生成递归布局并在初始化时由 `xcfg.BindPortLayouts(port)` 关联到实际的端口 Data；
+不自动增加 packed `*_view` 成员。内部原生 `NewXData()` 也会关联可用的类型。
+Data 与布局的关联不改变 DPI/native 绑定、写模式或 `XPort` 注册。
+
+| API | 行为 |
+| --- | --- |
+| `HasLayout()` | 是否关联了类型；视图转换时仍检查位宽、类型和来源生命周期 |
+| `SetLayout(layout_json)` | 手工 Data 的显式类型设置；校验通过后才替换原类型并清除其视图缓存 |
+| `StructView()` / `ArrayView()` | 使用 Data 已关联的布局，显式、按需取得相应视图；无布局或种类不匹配时报错 |
+| `StructView(layout_json)` / `ArrayView(layout_json)` | 以显式提供的布局建立视图；仍适用于手工 Data |
+
+同类型 Data 共享配置解析出的只读类型描述，不在每个元素上复制 JSON；视图与其已选择的
+叶子在 Data 上按需缓存。普通 Data 位索引仍以最低位为 0，不因保存了 RTL 边界而改变。
+类型字段和数组元素取得的 Data 会继承对应子类型，任意 `SubDataRef()` 不继承整个父布局。
+复制 Data 保留类型，但不因此增加模型存储所有权；`ReInit()` 清除类型及缓存，已有类型
+视图和切片失效，即使位宽没有变化。类型描述不依赖 xcfg 的生命周期，但不延长 DUT 存储寿命。
+
+普通位向量仍是 `bits`/Data。若类型记录保留了真实 `left`/`right`，例如 `[7:4]` 或
+`[0:3]`，显式 `ArrayView()` 可按这些 RTL 下标选择位；`data[0]` 仍是最低有效位。
+没有声明范围的手工 Data、标量或不完整 VPI 类型不会按位宽猜出范围，必须显式提供布局。
+
+下面的 JSON 只用于演示手工创建的 Data。Picker 生成的信号已经从配置关联类型，直接调用
+无参视图入口，不需要用户重写布局。
+
+<!-- runnable:python -->
+```python
+import json
+import xspcomm as xs
+
+signal = xs.XData(8, xs.XData.In)
+signal.SetLayout(json.dumps({
+    "kind": "array", "packed": True, "width": 8, "left": 1, "right": 0,
+    "element": {
+        "kind": "array", "packed": True, "width": 4, "left": -2, "right": 1,
+        "element": {"kind": "bits", "packed": True, "width": 0},
+    },
+}))
+assert signal.HasLayout()
+array = signal.ArrayView()
+array[1][-2].value = 1
+assert signal.value == 0x80
+signal[0] = 1
+assert signal.value == 0x81
+assert array.bounds == ((1, 0), (-2, 1))
+```
+
+`XView.FromPort(port, name, layout_json)` 仍可用来组织已有叶子。
+布局包含 `kind`、`packed`、`width`（标量叶子为零），可选的
 `signed`/`four_state`，数组的 `left`/`right`/`element`，或 struct 的 `fields`；字段含
 `name`、`type`，packed 字段还含 `offset`。会检查位宽、边界、重名、字段重叠、空隙和
 递归深度，再访问数据。
@@ -180,7 +224,7 @@ std::shared_ptr<XStruct> wrong = node; // 抛异常；赋给已有目标时，�
 
 packed 容器不隐式转换为 `XData`，需要完整 packed 值时显式调用 `PackedData()`。
 `XStruct.Data(name)`、`XArray.Data(index)` 同样是显式选择完整 packed 字段或元素。
-Python 通常直接解包为具体类型；Python 类型注解不检查普通变量赋值。
+Python 的默认字段/元素访问将 packed 值解包为 Data；Python 类型注解不检查普通变量赋值。
 
 `XStruct.Names()` 保留 RTL 字段声明顺序，`Field(name)` 返回类型节点，
 `Data(name)`、`Struct(name)`、`Array(name)` 直接访问字段。`PackedData()` 返回完整
@@ -189,16 +233,18 @@ packed 值，对 unpacked 容器报错。`XArray.At(index)` 使用真实 RTL 下
 描述连续且 packed/unpacked 类型相同的各层维度。
 
 Python 支持 `view[name]`、struct 字段属性、数组 `[index]`、`bounds`、`shape` 与按
-声明顺序遍历。packed struct 的位向量字段、从 unpacked 数组取出的 packed 值仍是
-完整 `XData`；需要按 packed 下标访问时，显式调用 `Array(name)` 或 `Array(index)`。
+声明顺序遍历。默认字段访问和从 unpacked 数组选出的 packed struct/array 都返回完整
+`XData`；随后显式调用 `StructView()` / `ArrayView()`。`Struct(name)`、`Array(name)`、
+`Struct(index)`、`Array(index)` 本身也是显式结构选择；已明确取得的 packed 数组视图
+继续按其布局逐维索引，不会将内层数组当作 Data 的位偏移。
 与方法重名的字段使用 `view[name]`。容器结构只读，应给信号的 `.value` 赋值，不替换字段。
 
 packed 选择按需创建并缓存；切片直接经过父信号分发，不安装逐切片后端回调，同时保留
 aval/bval，字段写入不会覆盖其他位。后端写时机与边沿提交由父信号控制，不要额外把切片
 注册成普通数据引脚。布局与子容器可以比外层视图活得更久，但来源 `XData`、DUT 内存与
 DPI 动态库必须仍然存活；父信号销毁后的切片访问会报错，不解引用已销毁父对象。
-Go/Lua 返回的缓存 `XData` 叶子是借用引用，保留叶子时也须保持来源视图存活；生成的
-DUT 自身会保存这些视图。
+Go/Lua 返回的缓存 `XData` 叶子是借用引用，保留叶子时也须保持其来源存活。Data 自身会
+缓存无参显式视图及其叶子；其他工厂或 `XView` 创建的容器仍由调用者管理生命周期。
 Go 容器句柄由调用者拥有，不再使用时调用 `DeleteXView`、`DeleteXStruct` 或
 `DeleteXArray` 释放，包括 `Field`、`At`、`Struct`、`Array` 返回的句柄；不要删除
 借用的 `XData` 叶子。Lua 垃圾回收会释放拥有所有权的容器句柄。
