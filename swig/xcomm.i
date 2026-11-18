@@ -107,6 +107,15 @@ namespace std {
 %ignore xspcomm::XSignalCFG::NewXArray;
 %ignore xspcomm::XVPI::Get;
 #endif
+#ifdef SWIGPYTHON
+// Internal Python-only scalar entry points avoid the overloaded Set dispatcher.
+// Call the existing Set implementation and preserve its XData& return value;
+// do not add native members or bypass backend/write-mode/callback handling.
+%extend xspcomm::XData {
+    xspcomm::XData &_SetU64(uint64_t value) { return self->Set(value); }
+    xspcomm::XData &_SetI64(int64_t value) { return self->Set(value); }
+}
+#endif
 %include "xspcomm/xdata.h"
 %include "xspcomm/xarray.h"
 %include "xspcomm/xview.h"

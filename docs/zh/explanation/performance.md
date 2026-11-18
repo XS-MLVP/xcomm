@@ -10,6 +10,7 @@
 | 重复写入 | memcmp 检查完整 vector，变化后 memcpy 保存写入快照 | 比较也有成本；控制项不能破坏所需的重复写语义 |
 | XPort 批量刷新 | map 用于名称查找，vector 用于热路径遍历 | Add/Del/子端口需保持两种索引一致 |
 | native 内存访问 | 绑定时选择存储类型/固定 word 数；模板展开短路径，长路径循环 | 精确读取 uint8/uint16/uint32 存储；不能从窄对象过读 uint64 |
+| Python value/Set | `value` 使用 property；普通整数通过单签名绑定调用原有 Set | 每次访问使用当前数值和位宽；各参数类型沿用既有转换路径 |
 | engine 调度 | 原生半周期批处理，相位内运行 matcher | Python 边沿回调仍有跨语言调用成本 |
 | Coverage | 同一点中等价 Pattern programs 共享执行 | 各 bin 独立计数；不同点不能共享历史 |
 | typed 求值 | 显式栈、每节点结果和除法 scratch 复用，单次求值共享 DAG 节点只算一次 | 每次求值都重新读输入；不缓存上一周期结果 |
@@ -23,6 +24,21 @@ native 存储与 XData 的 aval/bval 布局不同。memcpy 风格的 `memory::Lo
 项目当前编译参数含 `-fno-strict-aliasing`，用于限制编译器基于类型不重叠假设的优化。它不会修复越界、未对齐的非法访问、悬空指针或数据竞争。边界正确性仍靠匹配的类型/尺寸与对象寿命。
 
 BindNativeData 的二态存储只保存 aval；已有四态缓存如何反映到读写由[当前 API 语义](../reference/xdata.md)说明。
+
+## Python 端口绑定
+
+`signal` 是 XData 对象，`value` property 负责读写信号数值；W、Set 和底层 proxy
+属性使用绑定的标准属性查找。普通 Python `int` 在无符号 64 位或有符号 64 位范围内时，
+通过内部单签名绑定调用原有 C++ Set，并保留 XData 返回值、写模式和回调。
+
+赋值时直接使用 Python 值。宽于 64 位端口的 Python 整数使用原有 SetBytes/to_bytes
+路径；bytes、字符串（含 X/Z）、XData、int 子类、浮点数和第三方数值类型沿用既有
+转换和错误规则。每次访问查询当前位宽，别名 proxy 可以读取 ReInit 后的位宽。
+XClock 继续执行原有调度与 DUT 求值顺序；`test_xdata_value_python` 覆盖这些绑定契约。
+
+将 Python 包装和 SWIG 扩展作为配套包一起构建、安装。`value` 遵循标准 Python
+描述符查找：子类继承该 property 来读写信号，也可以自行定义 `value` 来定制行为。
+类级反射可以获取该 property。
 
 ## 如何比较性能
 

@@ -30,9 +30,7 @@ def XData__str__(self: XData):
     return f"XData(width={self.mWidth}, value=0x{self.String()})"
 
 XData_old__setattr__ = XData.__setattr__
-def XData__setattr__(self: XData, name, value):
-    if name != "value":
-        return XData_old__setattr__(self, name, value)
+def XData__set_value(self: XData, value):
     if type(value) is bool:
         return self.Set(1 if value else 0)
     bit_length = self.W()
@@ -65,9 +63,7 @@ def XData_ImmSet(self: XData, value):
 
 XData_old__getattribute__ = XData.__getattribute__
 XData_old_U = XData.U
-def XData__getattribute__(self: XData, name):
-    if name != "value":
-        return XData_old__getattribute__(self, name)
+def XData__get_value(self: XData):
     bit_length = self.W()
     if bit_length <= 64:
         data = XData_old_U(self)
@@ -110,6 +106,13 @@ def XData_Set(self:XData, value):
         # the extra bits will be truncated in `SetBytes` method
         self.SetBytes(value.to_bytes((self.W() + 15) // 8, byteorder='little', signed=True))
         return self
+    # Only exact, representable Python ints bypass SWIG's overload probing.
+    # Keep bytes, wide ints, other numeric types and errors on their old paths.
+    if type(value) is int:
+        if 0 <= value <= 0xffffffffffffffff:
+            return self._SetU64(value)
+        if -(1 << 63) <= value < 0:
+            return self._SetI64(value)
     return XData_old_Set(self, value)
 
 def XData__getitem__(self: XData, key):
@@ -129,9 +132,12 @@ def XData__eq__(self: XData, other):
 
 XData.__init__ = XData__init__
 XData.__str__ = XData__str__
-XData.__setattr__ = XData__setattr__
+XData.__setattr__ = XData_old__setattr__
 XData.ImmSet = XData_ImmSet
-XData.__getattribute__ = XData__getattribute__
+XData.__getattribute__ = XData_old__getattribute__
+# Dispatch only value through Python; W/Set/this and other attributes retain
+# their original lookup. Query width on every access, including aliased proxies.
+XData.value = property(XData__get_value, XData__set_value)
 XData.__getitem__ = XData__getitem__
 XData.__setitem__ = XData__setitem__
 XData.S = XData_S
