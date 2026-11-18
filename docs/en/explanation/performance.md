@@ -10,6 +10,7 @@ Simulation time is spent in DUT evaluation, language calls, signal copies, expre
 | Repeated writes | memcmp checks the full vector; memcpy saves changed values | Comparison also costs work; controls must preserve required repeated-write semantics |
 | XPort batch refresh | map for names, vector for hot iteration | Add/Del/subports must maintain both indexes |
 | Native memory | Choose storage type/fixed word count at binding; expand short paths with templates, loop for long paths | Read exact uint8/uint16/uint32 storage; never overread a narrow object as uint64 |
+| Python value/Set | A property handles value; single-signature scalar bindings call the existing Set | Each access uses the current value and width; argument types retain their established conversion paths |
 | Engine scheduling | Native half-cycle batches and phase-local matching | Python edge callbacks still cross the language boundary |
 | Coverage | Equivalent Pattern programs within a point share execution | Bins count independently; separate points cannot share history |
 | Typed evaluation | Explicit stack, reusable per-node results/division scratch, shared DAG nodes evaluated once per call | Every evaluation refreshes inputs; no cache from a previous cycle |
@@ -23,6 +24,25 @@ Native storage differs from XData's aval/bval layout. memcpy-based `memory::Load
 Current build flags include `-fno-strict-aliasing`, limiting optimizations based on type-based non-aliasing assumptions. It does not repair out-of-bounds access, invalid unaligned access, dangling pointers or data races. Correct types, sizes and lifetimes remain necessary.
 
 BindNativeData's two-state storage holds aval only. See the [API contract](../reference/xdata.md) for how existing four-state cache data affects reads/writes.
+
+## Python port bindings
+
+`signal` is an XData object. The `value` property reads and writes its signal value;
+W, Set and proxy attributes use the binding's standard attribute lookup.
+Exact Python ints in unsigned/signed 64-bit range use internal single-signature
+bindings to the existing C++ Set, preserving its XData return, write mode and callbacks.
+
+Assign Python values directly. Python ints on ports wider than 64 bits use the
+existing SetBytes/to_bytes path. Bytes, strings (including X/Z), XData, int subclasses,
+floats and third-party numeric types follow their established conversion and error
+rules. Each access queries the current width, so aliased proxies see ReInit.
+XClock continues to use its existing scheduling and DUT evaluation sequence.
+`test_xdata_value_python` covers these binding contracts.
+
+Build and install the Python wrapper and SWIG extension together as a matching package.
+The `value` property follows standard Python descriptor lookup: subclasses inherit it
+for signal reads/writes, and can define their own `value` to customize that behavior.
+Class-level introspection exposes the property.
 
 ## Comparing performance
 
